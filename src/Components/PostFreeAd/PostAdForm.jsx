@@ -7,7 +7,7 @@ export default function PostAdForm() {
   const { register, handleSubmit, formState: { errors }, watch, } = useForm();
   const [images, setImages] = useState([]);
 
-  // Watch for subSubCategory selection
+  // Watch for subSubCategory selectionn
   const watchedTvSubType = watch("tvSubType");
 
   const onSubmit = () => {

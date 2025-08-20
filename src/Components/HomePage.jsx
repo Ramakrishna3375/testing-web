@@ -1,26 +1,28 @@
 import { useNavigate, useLocation } from "react-router-dom"; 
 import { useState, useEffect } from "react";
-import { FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook, FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt  } from "react-icons/fa";
+import {FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook,
+  FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt
+} from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 
 const categories = [
-  { name: "Mobiles", icon:<FaMobileAlt />, path: "mobiles" },
-  { name: "Electronics & Appliances", icon:<FaTv />, path: "electronics-appliances" },
-  { name: "Vehicles", icon:<FaCar />, path: "vehicles" },
-  { name: "Real Estate", icon:<FaCity />, path: "real-estate" },
-  { name: "Jobs", icon:<FaBriefcase />, path: "jobs" },
-  { name: "Services", icon:<FaTools />, path: "services" },
-  { name: "Furniture", icon:<FaCouch />, path: "furniture" },
-  { name: "Fashion", icon:<FaTshirt />, path: "fashion" },
-  { name: "Books, Sports & Hobbies", icon:<FaBook />, path: "books-sports-hobbies" },
-  { name: "Pets", icon:<FaPaw />, path: "pets" },
-  { name: "Others", icon:<FaPuzzlePiece />, path: "others" },
+  { name: "Mobiles", icon: <FaMobileAlt />, path: "mobiles" },
+  { name: "Electronics & Appliances", icon: <FaTv />, path: "electronics-appliances" },
+  { name: "Vehicles", icon: <FaCar />, path: "vehicles" },
+  { name: "Real Estate", icon: <FaCity />, path: "real-estate" },
+  { name: "Jobs", icon: <FaBriefcase />, path: "jobs" },
+  { name: "Services", icon: <FaTools />, path: "services" },
+  { name: "Furniture", icon: <FaCouch />, path: "furniture" },
+  { name: "Fashion", icon: <FaTshirt />, path: "fashion" },
+  { name: "Books, Sports & Hobbies", icon: <FaBook />, path: "books-sports-hobbies" },
+  { name: "Pets", icon: <FaPaw />, path: "pets" },
+  { name: "Others", icon: <FaPuzzlePiece />, path: "others" },
 ];
 
 const pathToCategory = Object.fromEntries(categories.map(cat => [`/${cat.path}`, cat.name]));
 
 const products = [
-   {
+  {
     id: 29,
     images: [
       "/products/Crosscut speaker.jpg",
@@ -98,12 +100,92 @@ const products = [
     time: "Today",
     category: "furniture"
   },
+  {
+    id: 35,
+    images: [
+      "/products/Crosscut speaker.jpg",
+      "/products/pixel 7a.avif",
+      "/products/Crosscut speaker 3.jpg",
+    ],
+    title: "CrossCut Speaker",
+    price: "28,000",
+    location: "Uppal, Hyderabad",
+    time: "Today",
+    category: "electronics-appliances"
+  },
+  {
+    id: 36,
+    images: [
+      "/products/pixel 7a.avif",
+      "/products/pixel 7a 2.jpg",
+      "/products/pixel 7a 3.jpg",
+    ],
+    title: "Pixel 7A",
+    price: "10,000",
+    location: "Karimnagar",
+    time: "Today",
+    category: "mobiles-accessories"
+  },
+  {
+    id: 37,
+    images: [
+      "/products/Titan car.jpg",
+      "/products/Titan car 2.jpg",
+      "/products/Titan car 3.jpg",
+    ],
+    title: "Titan Car",
+    price: "6.5 Lakh",
+    location: "Peddapalli",
+    time: "Today",
+    category: "cars"
+  },
+  {
+    id: 38,
+    images: [
+      "/products/Modern house.jpeg",
+      "/products/Modern house 2.jpg",
+      "/products/Modern house 3.jpg",
+    ],
+    title: "Modern House",
+    price: "50 Lakh",
+    location: "Nizamabad",
+    time: "Today",
+    category: "furniture"
+  },
+  {
+    id: 39,
+    images: [
+      "/products/office chair.jpg",
+      "/products/office chair 2.jpg",
+      "/products/office chair 3.jpg",
+    ],
+    title: "Office Chair",
+    price: "2,000",
+    location: "Ameerpet, Hyderabad",
+    time: "Today",
+    category: "furniture"
+  },
+  {
+    id: 40,
+    images: [
+      "/products/office chair.jpg",
+      "/products/office chair 2.jpg",
+      "/products/office chair 3.jpg",
+    ],
+    title: "Office Chair",
+    price: "2,000",
+    location: "Warangal",
+    time: "Today",
+    category: "furniture"
+  },
 ];
 
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [current, setCurrent] = useState(0);
+  const [showAllPremium, setShowAllPremium] = useState(false);
+  const [showAllRecent, setShowAllRecent] = useState(false);
 
   const banners = [
     "/Website logos/Banner1.png",
@@ -128,144 +210,241 @@ const HomePage = () => {
   return (
     <div className="min-h-screen text-sm">
       {/* Header */}
-      <header className="bg-white p-4 border-b border-gray-200">
-        <div className="flex flex-wrap items-center justify-between gap-4 max-w-6xl mx-auto">
-          <div className="flex flex-wrap items-center gap-2">
-            <img src="/Website logos/LocalMartIcon.png"
-              alt="Local Mart Logo"
-              className="h-9"/>
-              <div className=" flex items-center bg-white rounded px-2 ml-3">
-              <FaMapMarkerAlt className="text-lg"/>
-              <select className="w-[90px] bg-transparent text-xs font-semibold rounded px-1">
-              <option>Hyderabad</option>
-              <option>Visakhapatnam</option>
-              <option>Vijayawada</option>
-              <option>Chennai</option>
-              <option>Bengaluru</option>
-              <option>Mumbai</option>
-              <option>Delhi</option>
-              <option>Kolkata</option>
-              <option>Pune</option>
-            </select>
+      <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-4 border-b border-gray-200">
+    <div className="max-w-6xl w-full mx-auto">
+      <div className="flex flex-col sm:flex-row gap-2 md:gap-6 items-stretch md:items-center justify-between">            
+        {/* Left side: controls */}
+             <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full flex-1">
+                   <div className="flex items-center gap-2">
+                        <img src="/Website logos/LocalMartIcon.png" alt="Local Mart Logo" className="h-9" />
+                   <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
+                      <button onClick={() => navigate("/login")}
+                         className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
+                        <VscAccount className="text-sm sm:text-xl mr-1" />
+                        Login | Signup
+                      </button>
+                  </div>
+              </div>
+                  
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+              <div className="flex flex-row gap-1">
+                 {/* Location selector */}
+             <div className="flex items-center bg-white rounded">
+                <FaMapMarkerAlt className="text-lg" />
+                 <select className="w-[100px] md:w-[120px] bg-transparent text-xs font-semibold rounded px-1">
+                     <option>Hyderabad</option>
+                     <option>Visakhapatnam</option>
+                     <option>Vijayawada</option>
+                     <option>Chennai</option>
+                     <option>Bengaluru</option>
+                     <option>Mumbai</option>
+                    <option>Delhi</option>
+                    <option>Kolkata</option>
+                    <option>Pune</option>
+                    </select>
+              </div>
+                  
+              {/* Categories dropdown */}
+                <div className="border border-gray-400 rounded-full flex items-center gap-2 px-2 py-1 md:px-5 md:py-2">
+                  <select className="w-full text-[10px] sm:text-xs md:w-32 text-black" defaultValue="" 
+                  onChange={(e) => {const path = e.target.value; if (path) navigate(`/${path}`); }}>
+                  <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.name} value={cat.path}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  </div>
+                  </div>
+                  
+              {/* Search Bar */}
+            <div className="flex items-center border border-gray-400 rounded-full w-full sm:w-72 overflow-hidden">
+            <input type="text" className="flex-1 px-2 py-1 sm:px-4 sm:py-2 sm:text-sm outline-none placeholder-gray-500" 
+            placeholder="Search product" />
+            <button className="bg-orange-500 text-white text-[12px] px-1 py-2 sm:px-3 sm:py-2 sm:text-sm font-medium hover:bg-orange-600">
+            Search
+            </button>
             </div>
-      <div className="flex items-center text-xs border border-gray-400 rounded-full p-1">
-      <div className="flex items-center gap-2 px-4 w-1/2">
-        <div className="flex flex-col gap-1">
-          <div className="w-0 h-0 mb-[-2px] border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-red-500"></div>
-          <div className="w-2 h-2 ml-[-1px] bg-red-600"></div>
-          <div className="w-2 h-2 ml-2 mt-[-12px] rounded-full bg-red-600"></div>
+          </div>
         </div>
-        <select className="w-30 text-black" defaultValue="" 
-        onChange={e => { const path = e.target.value;
-            if (path) navigate(`/${path}`);}}>
-          <option value="">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat.name} value={cat.path} >{cat.name}</option>
-          ))}
-        </select>
-      </div>
-      <div className="h-9 w-px bg-gray-400" />
-      <div className="flex items-center gap-1 px-4 py-1 w-40">
-        <div className="bg-blue-500 rounded-full ml-2">🔍
-        </div>
-        <input className="w-29.5 h-7" placeholder="Search product" />
-      </div>
-    </div>
-            </div>
-          <button
-            onClick={() => navigate("/login")}
-            className="flex bg-orange-500 text-white rounded-full px-2 sm:px-4 py-2 text-sm md:text-base font-semibold">
-            <VscAccount className="text-xl mr-1"/> Login | Signup
-          </button>
-        </div>
-      </header>
+                  
+        {/* Right side: Login button */}
+          <div className="hidden sm:block justify-end mt-2 md:mt-0 sm:h-10">
+            <button onClick={() => navigate("/login")}
+            className="flex items-center sm:bg-orange-500 sm:text-white text-xs rounded-full sm:px-3 sm:py-2 hover:underline md:px-5 md:py-2 md:text-base font-semibold">
+            <VscAccount className="text-sm sm:text-xl mr-1" />
+              Login | Signup
+            </button>
+          </div>
+          </div>
+          </div>
+    </header>
 
-      <div className="flex flex-col sm:flex-row gap-6 px-2 items-start">
-        {/* Sidebar */}
-        <aside className="w-full sm:w-65 bg-white rounded-lg p-2 shadow">
-          <h3 className="text-2xl font-semibold mb-1 text-center">All Categories</h3>
+      {/* Categories Top Bar (Mobile Only) */}
+      <div className="sm:hidden top-14 bg-white z-10 p-1 pb-1 shadow">
+        <div className="flex overflow-x-auto w-full gap-2 scrollbar-hide">
+          {categories.map((cat) => (
+            <div key={cat.name} onClick={() => navigate(`/${cat.path}`)}
+              className="flex-shrink-0 min-w-[70px] px-3 py-2 bg-white border border-gray-300 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-gray-100">
+              <span className="text-base mb-1">{cat.icon}</span>
+              <span className="text-[10px] text-center">{cat.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Layout: Sidebar (desktop/tablet) */}
+      <div className="flex flex-col sm:flex-row gap-5 px-2 items-start max-w-7xl mx-auto">
+
+        {/* Sidebar: hidden on mobile, visible on sm+ */}
+        <aside className="hidden sm:block sticky top-20 h-120 w-60 min-w-[160px] max-w-[250px] bg-white rounded-lg p-3 shadow overflow-y-auto">
+          <h3 className="text-lg font-semibold mb-1 text-center">All Categories</h3>
           <ul>
             {categories.map((cat) => (
-              <li
-                key={cat.name}
-                className="px-2 py-3 border border-gray-300 rounded-xl  mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
+              <li key={cat.name}
+                className="px-2 py-3 border border-gray-300 rounded-xl mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
                 onClick={() => navigate(`/${cat.path}`)}>
-                <span className="text-xs font-semibold flex items-center gap-2 ml-2">
-                  {cat.icon}
-                  {cat.name}
+                <span className="text-xs font-semibold flex items-center px-1 gap-2">
+                  {cat.icon} {cat.name}
                 </span>
-                <span className="font-bold">&gt;</span>
+                <span>&gt;</span>
               </li>
             ))}
           </ul>
         </aside>
 
         {/* Main Section */}
-        <main className="flex-1 mt-4">
-          <div className="bg-yellow-200 rounded-lg py-5 text-center font-bold text-lg sm:text-2xl mb-5 mr-5 cursor-pointer hover:bg-yellow-400"
-          onClick={() => navigate("/post-free-ad")}>
+        <main className="flex-1 mt-3 ml-0">
+
+          {/* Post Ad Button */}
+          <div
+            className="bg-yellow-200 rounded-lg py-2 sm:py-4 text-center font-bold text-sm sm:text-xl mb-5 cursor-pointer hover:bg-yellow-400"
+            onClick={() => navigate("/post-free-ad")}
+          >
             Post Free AD
           </div>
 
           {/* Banner Section */}
-          <div className="relative overflow-hidden rounded-lg shadow-sm mb-4 mr-5">
+          <div className="relative overflow-hidden rounded-lg shadow-md mb-4 h-38 sm:h-44 md:h-77">
             <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ transform: `translateX(-${current * 100}%)` }}
-            >
+              className="flex transition-transform duration-700 ease-in-out h-full"
+              style={{ transform: `translateX(-${current * 100}%)` }}>
               {banners.map((src, index) => (
-                <div key={index} className="min-w-full flex-shrink-0 cursor-pointer">
-                  <img src={src} alt={`Banner ${index + 1}`}
-                    className="w-full h-63 object-cover hover:scale-105 transition-transform" />
+                <div key={index} className="w-full flex-shrink-0 h-full">
+                  <img
+                    src={src}
+                    alt={`Banner ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
                 </div>
               ))}
             </div>
             {/* Dots */}
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-2">
+            <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
               {banners.map((_, index) => (
-                <div
+                <button
                   key={index}
-                  className={`w-3 h-3 rounded-full cursor-pointer ${
+                  aria-label={`go to banner ${index + 1}`}
+                  className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
                     index === current ? "bg-orange-500" : "bg-gray-300"
                   }`}
                   onClick={() => setCurrent(index)}
-                ></div>
+                />
               ))}
             </div>
           </div>
 
-          {/* Product Grid */}
-          <h2 className="text-lg sm:text-xl font-semibold mb-2">Fresh Recommended</h2>
-          <div className="mr-5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-400 p-2 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
-                onClick={() => navigate(`/product/${product.id}`)}>
-                <img src={product.images[0]} alt={product.title} className="w-40 h-25 object-cover rounded-xl"/>
+          {/* LocalMart Recommended */}
+          <h2 className="text-base sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:gap-3 gap-2">
+            {(showAllPremium ? filteredProducts : filteredProducts.slice(0, 10)).map((product) => (
+              <div
+                key={product.id}
+                className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
+                onClick={() => navigate(`/product/${product.id}`)}
+              >
+                <img
+                  src={product.images[0]}
+                  alt={product.title}
+                  className="w-full h-22 sm:h-30 object-cover rounded-xl"
+                />
                 <div className="mt-2 flex flex-col flex-grow">
                   <div className="font-semibold text-base sm:text-md">₹ {product.price}</div>
                   <div className="text-gray-800 text-xs line-clamp-1">{product.title}</div>
-                  <div className="flex items-center text-gray-500 text-xs mt-1">
+                  <div className="flex items-center text-gray-500 text-[9px] sm:text-xs sm:mt-1">
                     <span className="text-red-500 mr-1">📍</span> {product.location}
                   </div>
                   <div className="flex-grow" />
-                  <div className="flex items-center justify-between mt-2 flex-wrap">
+                  <div className="flex items-center justify-between mt-1 sm:mt-2 flex-wrap">
                     <div className="flex gap-1">
-                      <span className="bg-blue-600 text-white rounded-full px-1 py-0.5 text-xs">📝 Text</span>
-                      <span className="bg-blue-600 text-white rounded-full px-1 py-0.5 text-xs">📞 Contact</span>
+                      <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📝 Chat</span>
+                      <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📞 Contact</span>
                     </div>
-                    <span className="text-xs text-gray-500">{product.time}</span>
+                    <span className="text-[9px] sm:text-xs text-gray-500">{product.time}</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+          {filteredProducts.length > 10 && (
+            <div className="flex justify-center mt-3">
+              <button
+                className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
+                onClick={() => setShowAllPremium((prev) => !prev)}>
+                {showAllPremium ? "Show Less" : "View All"}
+              </button>
+            </div>
+          )}
 
+          {/* Recently Ad Grid */}
+          <h2 className="text-base sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:gap-3 gap-2">
+            {(showAllRecent ? filteredProducts : filteredProducts.slice(0, 10)).map((product) => (
+              <div
+                key={product.id}
+                className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
+                onClick={() => navigate(`/product/${product.id}`)}
+              >
+                <img
+                  src={product.images[0]}
+                  alt={product.title}
+                  className="w-full h-22 sm:h-30 object-cover rounded-xl"
+                />
+                <div className="mt-2 flex flex-col flex-grow">
+                  <div className="font-semibold text-base sm:text-md">₹ {product.price}</div>
+                  <div className="text-gray-800 text-xs line-clamp-1">{product.title}</div>
+                  <div className="flex items-center text-gray-500 text-[9px] sm:text-xs sm:mt-1">
+                    <span className="text-red-500 mr-1">📍</span> {product.location}
+                  </div>
+                  <div className="flex-grow" />
+                  <div className="flex items-center justify-between mt-1 sm:mt-2 flex-wrap">
+                    <div className="flex gap-1">
+                      <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📝 Chat</span>
+                      <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📞 Contact</span>
+                    </div>
+                    <span className="text-[9px] sm:text-xs text-gray-500">{product.time}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {filteredProducts.length > 10 && (
+            <div className="flex justify-center mt-3">
+              <button
+                className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
+                onClick={() => setShowAllRecent((prev) => !prev)}
+              >
+                {showAllRecent ? "Show Less" : "View All"}
+              </button>
+            </div>
+          )}
         </main>
       </div>
 
       {/* Footer */}
-      <footer className="bg-white mt-5 pt-8 pb-4 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto mt-10 p-7 flex flex-wrap justify-between items-start gap-8">
+      <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
+        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-8">
           <div>
             <img src="/Website logos/LocalMartIconBot.png" alt="Local Mart Logo" className="h-9" />
             <div className="text-gray-800 max-w-xs font-semibold mt-3">
@@ -275,8 +454,7 @@ const HomePage = () => {
               <img src="/Website logos/instagram.png" onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
               <img src="/Website logos/facebook.jpg" onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
               <img src="/Website logos/twitter logo.jpg" onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
-              <img src="/Website logos/linkedin.png" onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />
-            </div>
+              <img src="/Website logos/linkedin.png" onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
           </div>
           <div>
             <h4 className="font-semibold mb-2">Our Services</h4>

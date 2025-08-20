@@ -135,13 +135,13 @@ export default function PostFreeAdPage() {
   return (
     <div className="min-h-screen text-sm">
       {/* Header */}
-      <header className="bg-white p-4 border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-white p-2 sm:p-4 border-b border-gray-200">
         <div className="flex flex-wrap items-center justify-between gap-4 max-w-6xl mx-auto">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
             <img src="/Website logos/LocalMartIcon.png" alt="Local Mart Logo" className="h-9" />
-            <div className="flex ml-2 px-2 text-sm">
-              <FaMapMarkerAlt className="text-lg" />
-              <select className="w-23">
+            <div className="flex ml-2 px-2 text-xs sm:text-sm">
+              <FaMapMarkerAlt className="text-sm sm:text-lg" />
+              <select className="w-22 sm:w-30">
                 <option>Hyderabad</option>
                 <option>Visakhapatnam</option>
                 <option>Vijayawada</option>
@@ -154,42 +154,65 @@ export default function PostFreeAdPage() {
               </select>
             </div>
           </div>
-          <button onClick={() => navigate("/login")} className="flex bg-orange-500 text-white rounded-full px-2 sm:px-4 py-2 text-sm md:font-semibold">
-            <VscAccount className="text-xl mr-1" /> Login | Signup
+          <button onClick={() => navigate("/login")} className="flex hover:underline sm:bg-orange-500 sm:text-white rounded-full sm:px-4 sm:py-2 text-xs sm:text-sm md:font-semibold">
+            <VscAccount className="text-sm sm:text-xl mr-1" /> Login | Signup
           </button>
         </div>
       </header>
       {/* BODY */}
+      {/* Mobile Categories Bar (visible on small screens only) */}
+<div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-3 scrollbar-hide">
+  <div className="flex gap-2 min-w-max">
+    {categories.map(({ name, icon }) => (
+      <button
+        key={name}
+        onClick={() => selectCategory(name)}
+        className={`flex flex-col items-center justify-center cursor-pointer rounded-lg p-2 whitespace-nowrap
+          ${selectedCategory === name ? "bg-green-500 text-white" : "bg-white text-gray-800 border border-gray-300 hover:bg-green-100"}`}
+      >
+        <span className="text-xl">{icon}</span>
+        <span className="text-xs">{name}</span>
+      </button>
+    ))}
+  </div>
+</div>
+
       <div className="flex">
-        {/* SIDEBAR */}
-        <form className="w-1/4 border-r bg-white p-4">
-          <h2 className="text-lg font-semibold mb-4">Select a category</h2>
-          <ul className="space-y-2">
-            {categories.map(({ name, icon }) => (
-              <li key={name} onMouseEnter={() => selectCategory(name)}
-                onClick={() => selectCategory(name)} className={`flex flex-col items-center gap-2 border border-gray-300 p-4 rounded-md cursor-pointer md:flex-row
-                  ${selectedCategory === name ? "bg-green-500 text-white" : ""}`}>
-                <span className="text-xl">{icon}</span>
-                <span className="text-sm md:text-base">{name}</span>
-              </li>
-            ))}
-          </ul>
-        </form>
+{/* Sidebar (visible on md and above) */}
+<form className="hidden md:block sticky top-20 h-[30rem] w-72 min-w-[18rem] max-w-[22.5rem] border-r border-gray-300 bg-white p-4 overflow-y-auto">
+  <h2 className="text-lg font-semibold mb-4">Select a category</h2>
+  <ul className="space-y-3">
+    {categories.map(({ name, icon }) => (
+      <li
+        key={name}
+        onMouseEnter={() => selectCategory(name)}
+        onClick={() => selectCategory(name)}
+        className={`flex flex-col items-center gap-2 border border-gray-300 p-4 rounded-md cursor-pointer transition-colors duration-200 md:flex-row md:items-center
+          ${selectedCategory === name ? "bg-green-500 text-white border-green-600" : "hover:bg-green-100"}`}
+      >
+        <span className="text-xl md:text-2xl">{icon}</span>
+        <span className="text-sm md:text-base">{name}</span>
+      </li>
+    ))}
+  </ul>
+</form>
+
+
         {/* MAIN */}
-        <main className="w-3/4 p-8">
-          <h1 className="text-2xl font-semibold mb-4">Post Free Ad</h1>
+        <main className="flex-1 p-4 sm:p-8 ml-0">
+          <h1 className="text-lg sm:text-2xl font-semibold mb-1 sm:mb-4">Post Free Ad</h1>
           {/*---------- Sub Categories mapping ----------*/}
           {selectedCategory in subcategoriesMap && (
             <>
-              <h2 className="font-bold text-lg mb-2">Select a subcategory</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <h2 className="font-bold text-sm sm:text-lg mb-1 sm:mb-2">Select a subcategory</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
                 {subcategoriesMap[selectedCategory].map((sub) => (
-                  <div key={sub} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl shadow-md p-4 cursor-pointer hover:bg-blue-100 hover:shadow-lg transition-all duration-200 min-h-[120px] group"
+                  <div key={sub} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-md p-2 sm:p-4 cursor-pointer hover:bg-blue-100 hover:shadow-lg transition-all duration-200 min-h-[120px] group"
                     onClick={() => navigate(`/post-free-ad/${encodeURIComponent(selectedCategory)}/${encodeURIComponent(sub)}`)}>
-                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-2 group-hover:bg-blue-200 transition-all">
-                      <span className="text-4xl text-blue-600">{subCategoryIcons[sub] || <FaPuzzlePiece />}</span>
+                    <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-blue-50 mb-1 sm:mb-2 group-hover:bg-blue-200 transition-all">
+                      <span className="text-2xl sm:text-4xl text-blue-600">{subCategoryIcons[sub] || <FaPuzzlePiece />}</span>
                     </div>
-                    <span className="font-semibold text-base text-gray-800 text-center break-words leading-tight">{sub}</span>
+                    <span className="font-semibold text-xs sm:text-base text-gray-800 text-center break-words leading-tight">{sub}</span>
                   </div>
                 ))}
               </div>

@@ -1,21 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getAllCategories } from "../../Services/api";
 import { useNavigate } from "react-router-dom";
-import { FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook, FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt  } from "react-icons/fa";
+import { FaMapMarkerAlt } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
-
-const categories = [
-  { name: "Mobiles", icon:<FaMobileAlt />, path: "mobiles" },
-  { name: "Electronics & Appliances", icon:<FaTv />, path: "electronics-appliances" },
-  { name: "Vehicles", icon:<FaCar />, path: "vehicles" },
-  { name: "Real Estate", icon:<FaCity />, path: "real-estate" },
-  { name: "Jobs", icon:<FaBriefcase />, path: "jobs" },
-  { name: "Services", icon:<FaTools />, path: "services" },
-  { name: "Furniture", icon:<FaCouch />, path: "furniture" },
-  { name: "Fashion", icon:<FaTshirt />, path: "fashion" },
-  { name: "Books, Sports & Hobbies", icon:<FaBook />, path: "books-sports-hobbies" },
-  { name: "Pets", icon:<FaPaw />, path: "pets" },
-  { name: "Others", icon:<FaPuzzlePiece />, path: "others" },
-];
 
 const brands = [
   {name:"Apple", path:"apple" },
@@ -31,7 +18,7 @@ const brands = [
 
 // Generate 28 unique products
 const products = Array.from({ length: 28 }, (_, index) => ({
-  id: index + 1,
+  _id: index + 1,
   images: ["/products/iphone13promax.avif"],
   title: `iPhone 13 Pro Max, 256GB - #${index + 1}`,
   price: `${90000 + index * 1000}`,
@@ -43,6 +30,20 @@ const MobilesPage = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+  const [categories, setCategories] = useState([]);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const res = await getAllCategories();
+      if (res && res.data && Array.isArray(res.data.categories)) {
+        setCategories(res.data.categories);
+      } else if (res && Array.isArray(res.data)) {
+        setCategories(res.data);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const productsPerPage = 15;
   const totalPages = Math.ceil(products.length / productsPerPage);
@@ -89,10 +90,10 @@ const MobilesPage = () => {
                     {/* Categories dropdown */}
                       <div className="border border-gray-400 rounded-full flex items-center gap-2 px-2 py-1 md:px-5 md:py-2">
                         <select className="w-full text-[10px] sm:text-xs md:w-32 text-black" defaultValue="" 
-                        onChange={(e) => {const path = e.target.value; if (path) navigate(`/${path}`); }}>
+                        onChange={(e) => { const categoryId = e.target.value; if (categoryId) navigate(`/ads/${categoryId}`); }}>
                         <option value="">All Categories</option>
                           {categories.map((cat) => (
-                            <option key={cat.name} value={cat.path}>
+                            <option key={cat._id} value={cat._id}>
                               {cat.name}
                             </option>
                           ))}
@@ -162,7 +163,7 @@ const MobilesPage = () => {
           </ul>
         </aside>
 
-        {/* Main Section */}
+        {/* Main Section. */}
         <main className="flex-1 text-xs">
           <div className="flex flex-row sm:flex-row items-start sm:items-center justify-between mb-2 border-b border-gray-400 p-2">
   <div className="w-full sm:w-auto">
@@ -210,8 +211,7 @@ const MobilesPage = () => {
       key={idx}
       className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2 md:p-3 transition-all duration-200 hover:shadow-lg hover:scale-102
         ${viewMode === "list" ? "flex flex-row sm:flex-row gap-3 sm:gap-5 sm:items-center w-full md:w-150 lg:w-220" : ""}`}
-      onClick={() => navigate(`/product/${startIndex + idx}`)}
-    >
+      onClick={() => navigate(`/ad/${prod._id}`)}>
       <img
         src={prod.images[0]}
         alt={prod.title}
@@ -286,13 +286,13 @@ const MobilesPage = () => {
 
       {/* Footer */}
       <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-8">
+        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
           <div>
             <img src="/Website logos/LocalMartIconBot.png" alt="Local Mart Logo" className="h-9" />
-            <div className="text-gray-800 max-w-xs font-semibold mt-3">
+            <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
               We gather and verify service provider details across various categories & display them on our website
             </div>
-            <div className="flex gap-6 mt-8">
+            <div className="flex gap-6 mt-3 sm:mt-8">
               <img src="/Website logos/instagram.png" onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
               <img src="/Website logos/facebook.jpg" onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
               <img src="/Website logos/twitter logo.jpg" onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
@@ -301,28 +301,28 @@ const MobilesPage = () => {
           <div>
             <h4 className="font-semibold mb-2">Our Services</h4>
             <ul className="text-gray-900">
-              <li onClick={() => navigate("/business-2-business")} className="cursor-pointer mb-2">Business 2 Business</li>
-              <li onClick={() => navigate("/booking-services")} className="cursor-pointer mb-2">Booking Services</li>
-              <li onClick={() => navigate("/food-delivery")} className="cursor-pointer mb-2">Food Delivery</li>
-              <li onClick={() => navigate("/local-businesses")} className="cursor-pointer mb-2">Local Businesses</li>
-              <li onClick={() => navigate("/e-commerce")} className="cursor-pointer mb-2">E-Commerce</li>
+              <li onClick={() => navigate("/business-2-business")} className="cursor-pointer mb-1 sm:mb-2">Business 2 Business</li>
+              <li onClick={() => navigate("/booking-services")} className="cursor-pointer mb-1 sm:mb-2">Booking Services</li>
+              <li onClick={() => navigate("/food-delivery")} className="cursor-pointer mb-1 sm:mb-2">Food Delivery</li>
+              <li onClick={() => navigate("/local-businesses")} className="cursor-pointer mb-1 sm:mb-2">Local Businesses</li>
+              <li onClick={() => navigate("/e-commerce")} className="cursor-pointer mb-1 sm:mb-2">E-Commerce</li>
             </ul>
           </div>
           <div>
             <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/advertise-here")} className="cursor-pointer mb-2">Advertise Here</li>
-              <li onClick={() => navigate("/buy-sell")} className="cursor-pointer mb-2">Buy & Sell</li>
-              <li onClick={() => navigate("/local-stores")} className="cursor-pointer mb-2">Local Stores</li>
-              <li onClick={() => navigate("/explore-brands")} className="cursor-pointer mb-2">Explore Brands</li>
-              <li onClick={() => navigate("/shopping")} className="cursor-pointer mb-2">Shopping</li>
+              <li onClick={() => navigate("/advertise-here")} className="cursor-pointer mb-1 sm:mb-2">Advertise Here</li>
+              <li onClick={() => navigate("/buy-sell")} className="cursor-pointer mb-1 sm:mb-2">Buy & Sell</li>
+              <li onClick={() => navigate("/local-stores")} className="cursor-pointer mb-1 sm:mb-2">Local Stores</li>
+              <li onClick={() => navigate("/explore-brands")} className="cursor-pointer mb-1 sm:mb-2">Explore Brands</li>
+              <li onClick={() => navigate("/shopping")} className="cursor-pointer mb-1 sm:mb-2">Shopping</li>
             </ul>
           </div>
           <div>
             <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-2">Terms & Conditions</li>
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-2">Privacy Policy</li>
-              <li onClick={() => navigate("/cancellation-policy")} className="cursor-pointer mb-2">Cancellation Policy</li>
-              <li onClick={() => navigate("/local-mart")} className="cursor-pointer mb-2">Local Mart</li>
+              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Terms & Conditions</li>
+              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Privacy Policy</li>
+              <li onClick={() => navigate("/cancellation-policy")} className="cursor-pointer mb-1 sm:mb-2">Cancellation Policy</li>
+              <li onClick={() => navigate("/local-mart")} className="cursor-pointer mb-1 sm:mb-2">Local Mart</li>
             </ul>
           </div>
         </div>

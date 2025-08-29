@@ -4,26 +4,26 @@ import {FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook,
   FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt
 } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
+import { getAllCategories, getAllActiveAds } from "../Services/api";
 
-const categories = [
-  { name: "Mobiles", icon: <FaMobileAlt />, path: "mobiles" },
-  { name: "Electronics & Appliances", icon: <FaTv />, path: "electronics-appliances" },
-  { name: "Vehicles", icon: <FaCar />, path: "vehicles" },
-  { name: "Real Estate", icon: <FaCity />, path: "real-estate" },
-  { name: "Jobs", icon: <FaBriefcase />, path: "jobs" },
-  { name: "Services", icon: <FaTools />, path: "services" },
-  { name: "Furniture", icon: <FaCouch />, path: "furniture" },
-  { name: "Fashion", icon: <FaTshirt />, path: "fashion" },
-  { name: "Books, Sports & Hobbies", icon: <FaBook />, path: "books-sports-hobbies" },
-  { name: "Pets", icon: <FaPaw />, path: "pets" },
-  { name: "Others", icon: <FaPuzzlePiece />, path: "others" },
-];
+// Helper: map category names to icons from API
+const categoryIcons = {
+  "Mobiles": <FaMobileAlt />, 
+  "Electronics & Appliances": <FaTv />, 
+  "Vehicles": <FaCar />, 
+  "Real Estate": <FaCity />, 
+  "Jobs": <FaBriefcase />, 
+  "Services": <FaTools />, 
+  "Furniture": <FaCouch />, 
+  "Fashion": <FaTshirt />, 
+  "Books, Sports & Hobbies": <FaBook />, 
+  "Pets": <FaPaw />, 
+  "Others": <FaPuzzlePiece />
+};
 
-const pathToCategory = Object.fromEntries(categories.map(cat => [`/${cat.path}`, cat.name]));
-
-const products = [
+const ads = [
   {
-    id: 29,
+    _id: 29,
     images: [
       "/products/Crosscut speaker.jpg",
       "/products/pixel 7a.avif",
@@ -36,7 +36,7 @@ const products = [
     category: "electronics-appliances"
   },
   {
-    id: 30,
+    _id: 30,
     images: [
       "/products/pixel 7a.avif",
       "/products/pixel 7a 2.jpg",
@@ -49,7 +49,7 @@ const products = [
     category: "mobiles-accessories"
   },
   {
-    id: 31,
+    _id: 31,
     images: [
       "/products/Titan car.jpg",
       "/products/Titan car 2.jpg",
@@ -62,7 +62,7 @@ const products = [
     category: "cars"
   },
   {
-    id: 32,
+    _id: 32,
     images: [
       "/products/Modern house.jpeg",
       "/products/Modern house 2.jpg",
@@ -75,7 +75,7 @@ const products = [
     category: "furniture"
   },
   {
-    id: 33,
+    _id: 33,
     images: [
       "/products/office chair.jpg",
       "/products/office chair 2.jpg",
@@ -88,7 +88,7 @@ const products = [
     category: "furniture"
   },
   {
-    id: 34,
+    _id: 34,
     images: [
       "/products/office chair.jpg",
       "/products/office chair 2.jpg",
@@ -101,7 +101,7 @@ const products = [
     category: "furniture"
   },
   {
-    id: 35,
+    _id: 35,
     images: [
       "/products/Crosscut speaker.jpg",
       "/products/pixel 7a.avif",
@@ -114,7 +114,7 @@ const products = [
     category: "electronics-appliances"
   },
   {
-    id: 36,
+    _id: 36,
     images: [
       "/products/pixel 7a.avif",
       "/products/pixel 7a 2.jpg",
@@ -127,7 +127,7 @@ const products = [
     category: "mobiles-accessories"
   },
   {
-    id: 37,
+    _id: 37,
     images: [
       "/products/Titan car.jpg",
       "/products/Titan car 2.jpg",
@@ -140,7 +140,7 @@ const products = [
     category: "cars"
   },
   {
-    id: 38,
+    _id: 38,
     images: [
       "/products/Modern house.jpeg",
       "/products/Modern house 2.jpg",
@@ -153,7 +153,7 @@ const products = [
     category: "furniture"
   },
   {
-    id: 39,
+    _id: 39,
     images: [
       "/products/office chair.jpg",
       "/products/office chair 2.jpg",
@@ -166,7 +166,7 @@ const products = [
     category: "furniture"
   },
   {
-    id: 40,
+    _id: 40,
     images: [
       "/products/office chair.jpg",
       "/products/office chair 2.jpg",
@@ -186,6 +186,14 @@ const HomePage = () => {
   const [current, setCurrent] = useState(0);
   const [showAllPremium, setShowAllPremium] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [catError, setCatError] = useState(null);
+  const [ads, setAds] = useState([]);
+  const [loadingAds, setLoadingAds] = useState(true);
+  const [adsError, setAdsError] = useState(null);
+
+  const getCategoryId = (cat) => cat._id;
 
   const banners = [
     "/Website logos/Banner1.png",
@@ -202,10 +210,66 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, [banners.length]);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      setCatError(null);
+      try {
+        const res = await getAllCategories();
+        console.log('getAllCategories response:', res);
+        // Accept array or categories array or (legacy) { success, categories }
+        if (Array.isArray(res.data)) {
+          setCategories(res.data);
+        } else if (res && res.data && Array.isArray(res.data.categories)) {
+          setCategories(res.data.categories);
+        } else {
+          setCategories([]);
+          setCatError("Could not fetch categories");
+        }
+      } catch (err) {
+        setCatError("Could not fetch categories");
+        setCategories([]);
+      }
+      setLoadingCategories(false);
+    };
+    fetchCategories();
+  }, []);
+
+  {/* useEffect(() => {
+    const fetchAds = async () => {
+      setLoadingAds(true);
+      setAdsError(null);
+      try {
+        const res = await getAllActiveAds();
+        // Use postAds array from response
+        if (res && res.data && Array.isArray(res.data.postAds)) {
+          setAds(res.data.postAds);
+        } else {
+          setAds([]);
+          setAdsError("Could not fetch ads");
+        }
+      } catch (err) {
+        setAds([]);
+        setAdsError("Could not fetch ads");
+      }
+      setLoadingAds(false);
+    };
+    fetchAds();
+  }, []); */ }
+
+  // Category path helper and path-to-name map
+  const getCategoryPath = (cat) => {
+    if (cat && cat.categoryId) return cat.categoryId;
+    return (cat.name || "others").toLowerCase().replace(/\s+/g, "-");
+  };
+  const pathToCategory = Object.fromEntries(
+    categories.map(cat => ["/" + getCategoryPath(cat), cat.name])
+  );
+
   const selectedCategory = pathToCategory[location.pathname];
-  const filteredProducts = selectedCategory
-    ? products.filter((prod) => prod.category === selectedCategory)
-    : products;
+  const filteredAds = selectedCategory
+    ? ads.filter((ad) => ad.category === selectedCategory)
+    : ads;
 
   return (
     <div className="min-h-screen text-sm">
@@ -247,13 +311,19 @@ const HomePage = () => {
               {/* Categories dropdown */}
                 <div className="border border-gray-400 rounded-full flex items-center gap-2 px-2 py-1 md:px-5 md:py-2">
                   <select className="w-full text-[10px] sm:text-xs md:w-32 text-black" defaultValue="" 
-                  onChange={(e) => {const path = e.target.value; if (path) navigate(`/${path}`); }}>
+                  onChange={(e) => {const categoryId = e.target.value; if (categoryId) navigate(`/ads/${categoryId}`);}}>
                   <option value="">All Categories</option>
-                    {categories.map((cat) => (
-                      <option key={cat.name} value={cat.path}>
-                        {cat.name}
-                      </option>
-                    ))}
+                    {loadingCategories ? (
+                      <option disabled>Loading...</option>
+                    ) : catError ? (
+                      <option disabled>Error loading categories</option>
+                    ) : (
+                      categories.map((cat) => (
+                        <option key={cat._id} value={getCategoryId(cat)}>
+                          {cat.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                   </div>
                   </div>
@@ -284,13 +354,19 @@ const HomePage = () => {
       {/* Categories Top Bar (Mobile Only) */}
       <div className="sm:hidden top-14 bg-white z-10 p-1 pb-1 shadow">
         <div className="flex overflow-x-auto w-full gap-2 scrollbar-hide">
-          {categories.map((cat) => (
-            <div key={cat.name} onClick={() => navigate(`/${cat.path}`)}
-              className="flex-shrink-0 min-w-[70px] px-3 py-2 bg-white border border-gray-300 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-gray-100">
-              <span className="text-base mb-1">{cat.icon}</span>
-              <span className="text-[10px] text-center">{cat.name}</span>
-            </div>
-          ))}
+          {loadingCategories ? (
+            <div className="px-3 py-2">Loading...</div>
+          ) : catError ? (
+            <div className="px-3 py-2 text-red-600">Error loading categories</div>
+          ) : (
+            categories.map((cat) => (
+              <div key={cat._id} onClick={() => navigate(`/ads/${getCategoryId(cat)}`)}
+                className="flex-shrink-0 min-w-[70px] px-3 py-2 bg-white border border-gray-300 rounded-xl cursor-pointer flex flex-col items-center justify-center hover:bg-gray-100">
+                <span className="text-base mb-1">{cat.icon || categoryIcons[cat.name]}</span>
+                <span className="text-[10px] text-center">{cat.name}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -300,18 +376,24 @@ const HomePage = () => {
         {/* Sidebar: hidden on mobile, visible on sm+ */}
         <aside className="hidden sm:block sticky top-20 h-120 w-60 min-w-[160px] max-w-[250px] bg-white rounded-lg p-3 shadow overflow-y-auto">
           <h3 className="text-lg font-semibold mb-1 text-center">All Categories</h3>
-          <ul>
-            {categories.map((cat) => (
-              <li key={cat.name}
-                className="px-2 py-3 border border-gray-300 rounded-xl mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
-                onClick={() => navigate(`/${cat.path}`)}>
-                <span className="text-xs font-semibold flex items-center px-1 gap-2">
-                  {cat.icon} {cat.name}
-                </span>
-                <span>&gt;</span>
-              </li>
-            ))}
-          </ul>
+          {loadingCategories ? (
+            <div className="p-2">Loading...</div>
+          ) : catError ? (
+            <div className="p-2 text-red-600">Failed to load categories</div>
+          ) : (
+            <ul>
+              {categories.map((cat) => (
+                <li key={cat._id}
+                  className="px-2 py-3 border border-gray-300 rounded-xl mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
+                  onClick={() => navigate(`/ads/${getCategoryId(cat)}`)}>
+                  <span className="text-xs font-semibold flex items-center px-1 gap-2">
+                    {cat.icon || categoryIcons[cat.name]} {cat.name}
+                  </span>
+                  <span>&gt;</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </aside>
 
         {/* Main Section */}
@@ -356,24 +438,33 @@ const HomePage = () => {
           </div>
 
           {/* LocalMart Recommended */}
-          <h2 className="text-base sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
+          <h2 className="text-lg sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
+        {/* {loadingAds ? (
+          <div className="py-8 text-center text-xl text-blue-600 font-semibold">
+            Loading ads . . .
+          </div>
+        ) : adsError ? (
+          <div className="py-8 text-center text-red-600 font-semibold">
+            {adsError}
+          </div>
+        ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:gap-3 gap-2">
-            {(showAllPremium ? filteredProducts : filteredProducts.slice(0, 10)).map((product) => (
+            {(showAllPremium ? filteredAds : filteredAds.slice(0, 10)).map((ad) => (
               <div
-                key={product.id}
+                key={ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
-                onClick={() => navigate(`/product/${product.id}`)}
+                onClick={() => navigate(`/ad/${ad._id}`)}
               >
                 <img
-                  src={product.images[0]}
-                  alt={product.title}
+                  src={ad.images}
+                  alt={ad.title}
                   className="w-full h-22 sm:h-30 object-cover rounded-xl"
                 />
                 <div className="mt-2 flex flex-col flex-grow">
-                  <div className="font-semibold text-base sm:text-md">₹ {product.price}</div>
-                  <div className="text-gray-800 text-xs line-clamp-1">{product.title}</div>
+                  <div className="font-semibold text-base sm:text-md">₹ {ad.price}</div>
+                  <div className="text-gray-800 text-xs line-clamp-1">{ad.title}</div>
                   <div className="flex items-center text-gray-500 text-[9px] sm:text-xs sm:mt-1">
-                    <span className="text-red-500 mr-1">📍</span> {product.location}
+                    <span className="text-red-500 mr-1">📍</span> {ad.location}
                   </div>
                   <div className="flex-grow" />
                   <div className="flex items-center justify-between mt-1 sm:mt-2 flex-wrap">
@@ -381,41 +472,51 @@ const HomePage = () => {
                       <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📝 Chat</span>
                       <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📞 Contact</span>
                     </div>
-                    <span className="text-[9px] sm:text-xs text-gray-500">{product.time}</span>
+                    <span className="text-[9px] sm:text-xs text-gray-500">{ad.time}</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          {filteredProducts.length > 10 && (
-            <div className="flex justify-center mt-3">
-              <button
-                className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
-                onClick={() => setShowAllPremium((prev) => !prev)}>
-                {showAllPremium ? "Show Less" : "View All"}
-              </button>
-            </div>
-          )}
+        )}
+        {filteredAds.length > 10 && (
+          <div className="flex justify-center mt-3">
+            <button
+              className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
+              onClick={() => setShowAllPremium((prev) => !prev)}>
+              {showAllPremium ? "Show Less" : "View All"}
+            </button>
+          </div>
+        )} */}
 
           {/* Recently Ad Grid */}
-          <h2 className="text-base sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
+         <h2 className="text-lg sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
+        {/* {loadingAds ? (
+          <div className="py-8 text-center text-xl text-blue-600 font-semibold">
+            Loading ads . . .
+          </div>
+        ) : adsError ? (
+          <div className="py-8 text-center text-red-600 font-semibold">
+            {adsError}
+          </div>
+        ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:gap-3 gap-2">
-            {(showAllRecent ? filteredProducts : filteredProducts.slice(0, 10)).map((product) => (
+            {(showAllRecent ? filteredAds : filteredAds.slice(0, 10)).map((ad) => (
               <div
-                key={product.id}
+                key={ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
-                onClick={() => navigate(`/product/${product.id}`)}
+                onClick={() => navigate(`/ad/${ad._id}`)}
               >
                 <img
-                  src={product.images[0]}
-                  alt={product.title}
+                  src={ad.images}
+                  alt={ad.title}
                   className="w-full h-22 sm:h-30 object-cover rounded-xl"
                 />
                 <div className="mt-2 flex flex-col flex-grow">
-                  <div className="font-semibold text-base sm:text-md">₹ {product.price}</div>
-                  <div className="text-gray-800 text-xs line-clamp-1">{product.title}</div>
+                  <div className="font-semibold text-base sm:text-md">₹ {ad.price}</div>
+                  <div className="text-gray-800 text-xs line-clamp-1">{ad.title}</div>
                   <div className="flex items-center text-gray-500 text-[9px] sm:text-xs sm:mt-1">
-                    <span className="text-red-500 mr-1">📍</span> {product.location}
+                    <span className="text-red-500 mr-1">📍</span> {ad.location}
                   </div>
                   <div className="flex-grow" />
                   <div className="flex items-center justify-between mt-1 sm:mt-2 flex-wrap">
@@ -423,34 +524,35 @@ const HomePage = () => {
                       <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📝 Chat</span>
                       <span className="bg-blue-500 text-white rounded-lg px-2 py-1 sm:px-1.5 text-[10px] sm:text-[11px]">📞 Contact</span>
                     </div>
-                    <span className="text-[9px] sm:text-xs text-gray-500">{product.time}</span>
+                    <span className="text-[9px] sm:text-xs text-gray-500">{ad.time}</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          {filteredProducts.length > 10 && (
-            <div className="flex justify-center mt-3">
-              <button
-                className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
-                onClick={() => setShowAllRecent((prev) => !prev)}
-              >
-                {showAllRecent ? "Show Less" : "View All"}
-              </button>
-            </div>
-          )}
+        )}
+        {filteredAds.length > 10 && (
+          <div className="flex justify-center mt-3">
+            <button
+              className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
+              onClick={() => setShowAllRecent((prev) => !prev)}
+            >
+              {showAllRecent ? "Show Less" : "View All"}
+            </button>
+          </div>
+        )} */}
         </main>
       </div>
 
       {/* Footer */}
       <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-8">
+        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
           <div>
             <img src="/Website logos/LocalMartIconBot.png" alt="Local Mart Logo" className="h-9" />
-            <div className="text-gray-800 max-w-xs font-semibold mt-3">
+            <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
               We gather and verify service provider details across various categories & display them on our website
             </div>
-            <div className="flex gap-6 mt-8">
+            <div className="flex gap-6 mt-3 sm:mt-8">
               <img src="/Website logos/instagram.png" onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
               <img src="/Website logos/facebook.jpg" onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
               <img src="/Website logos/twitter logo.jpg" onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
@@ -459,28 +561,28 @@ const HomePage = () => {
           <div>
             <h4 className="font-semibold mb-2">Our Services</h4>
             <ul className="text-gray-900">
-              <li onClick={() => navigate("/business-2-business")} className="cursor-pointer mb-2">Business 2 Business</li>
-              <li onClick={() => navigate("/booking-services")} className="cursor-pointer mb-2">Booking Services</li>
-              <li onClick={() => navigate("/food-delivery")} className="cursor-pointer mb-2">Food Delivery</li>
-              <li onClick={() => navigate("/local-businesses")} className="cursor-pointer mb-2">Local Businesses</li>
-              <li onClick={() => navigate("/e-commerce")} className="cursor-pointer mb-2">E-Commerce</li>
+              <li onClick={() => navigate("/business-2-business")} className="cursor-pointer mb-1 sm:mb-2">Business 2 Business</li>
+              <li onClick={() => navigate("/booking-services")} className="cursor-pointer mb-1 sm:mb-2">Booking Services</li>
+              <li onClick={() => navigate("/food-delivery")} className="cursor-pointer mb-1 sm:mb-2">Food Delivery</li>
+              <li onClick={() => navigate("/local-businesses")} className="cursor-pointer mb-1 sm:mb-2">Local Businesses</li>
+              <li onClick={() => navigate("/e-commerce")} className="cursor-pointer mb-1 sm:mb-2">E-Commerce</li>
             </ul>
           </div>
           <div>
             <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/advertise-here")} className="cursor-pointer mb-2">Advertise Here</li>
-              <li onClick={() => navigate("/buy-sell")} className="cursor-pointer mb-2">Buy & Sell</li>
-              <li onClick={() => navigate("/local-stores")} className="cursor-pointer mb-2">Local Stores</li>
-              <li onClick={() => navigate("/explore-brands")} className="cursor-pointer mb-2">Explore Brands</li>
-              <li onClick={() => navigate("/shopping")} className="cursor-pointer mb-2">Shopping</li>
+              <li onClick={() => navigate("/advertise-here")} className="cursor-pointer mb-1 sm:mb-2">Advertise Here</li>
+              <li onClick={() => navigate("/buy-sell")} className="cursor-pointer mb-1 sm:mb-2">Buy & Sell</li>
+              <li onClick={() => navigate("/local-stores")} className="cursor-pointer mb-1 sm:mb-2">Local Stores</li>
+              <li onClick={() => navigate("/explore-brands")} className="cursor-pointer mb-1 sm:mb-2">Explore Brands</li>
+              <li onClick={() => navigate("/shopping")} className="cursor-pointer mb-1 sm:mb-2">Shopping</li>
             </ul>
           </div>
           <div>
             <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-2">Terms & Conditions</li>
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-2">Privacy Policy</li>
-              <li onClick={() => navigate("/cancellation-policy")} className="cursor-pointer mb-2">Cancellation Policy</li>
-              <li onClick={() => navigate("/local-mart")} className="cursor-pointer mb-2">Local Mart</li>
+              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Terms & Conditions</li>
+              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Privacy Policy</li>
+              <li onClick={() => navigate("/cancellation-policy")} className="cursor-pointer mb-1 sm:mb-2">Cancellation Policy</li>
+              <li onClick={() => navigate("/local-mart")} className="cursor-pointer mb-1 sm:mb-2">Local Mart</li>
             </ul>
           </div>
         </div>

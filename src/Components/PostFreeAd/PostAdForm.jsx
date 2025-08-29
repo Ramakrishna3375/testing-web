@@ -108,7 +108,7 @@ export default function PostAdForm() {
 
         {/* Sub-subcategory for TVs, Video - Audio */}
         {category === "Electronics & Appliances" &&
-          subcategory === "TVs, Video - Audio" && (
+          subcategory === "TVs,Video - Audio" && (
             <div className="mb-4">
               <label className="block font-semibold mb-1"> Type <span className="text-red-500">*</span></label>
               <select {...register("tvSubType", { required: true })}
@@ -126,7 +126,7 @@ export default function PostAdForm() {
 
         {/* TV-specific fields */}
         {category === "Electronics & Appliances" &&
-          subcategory === "TVs, Video - Audio" && watchedTvSubType === "TV" && (
+          subcategory === "TVs,Video - Audio" && watchedTvSubType === "TV" && (
           <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded border border-blue-200">
             <div>
               <label className="block font-semibold mb-1"> Screen Size (inches) </label>
@@ -200,7 +200,7 @@ export default function PostAdForm() {
 
         {/* Audio-specific fields */}
         {category === "Electronics & Appliances" &&
-          subcategory === "TVs, Video - Audio" && watchedTvSubType === "Audio" && (
+          subcategory === "TVs,Video - Audio" && watchedTvSubType === "Audio" && (
           <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded border border-blue-200">
             <div>
               <label className="block font-semibold mb-1"> Type </label>
@@ -752,6 +752,39 @@ export default function PostAdForm() {
           </div>
         )}
 
+        {/* Furniture-specific fields */}
+        {category === "Furniture" && (
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-semibold mb-1">Type</label>
+              <input type="text" {...register("type")} className="w-full border rounded px-3 py-2" placeholder="e.g. Study Table & Chair Set" />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Features</label>
+              <input type="text" {...register("features")} className="w-full border rounded px-3 py-2" placeholder="e.g. Adjustable Height" />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Includes</label>
+              <input type="text" {...register("includes")} className="w-full border rounded px-3 py-2" placeholder="e.g. Storage Drawer, Book Holder" />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Condition</label>
+              <select {...register("condition")} className="w-full border rounded px-3 py-2">
+                <option value="">Select</option>
+                <option value="New">New</option>
+                <option value="Like New">Like New</option>
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Furniture Material</label>
+              <input type="text" {...register("furnitureMaterial")} className="w-full border rounded px-3 py-2" placeholder="e.g. Safe, Non-toxic" />
+            </div>
+          </div>
+        )}
+
         {/* Extra fields for Pets */}
         {category === "Pets" && (
           <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -821,9 +854,23 @@ export default function PostAdForm() {
         </div>
 
         {/* Location */}
-        <div className="mb-4">
-          <label className="block font-semibold mb-1"> Location </label>
-          <input type="text" className="w-full border rounded px-3 py-2" placeholder="Enter location or use auto-detect" />
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block font-semibold mb-1">City</label>
+            <input type="text" {...register("city")} className="w-full border rounded px-3 py-2" placeholder="e.g. Chennai" />
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">State</label>
+            <input type="text" {...register("state")} className="w-full border rounded px-3 py-2" placeholder="e.g. Tamil Nadu" />
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">Pincode</label>
+            <input type="text" {...register("pincode")} className="w-full border rounded px-3 py-2" placeholder="e.g. 600001" />
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">Address</label>
+            <input type="text" {...register("address")} className="w-full border rounded px-3 py-2" placeholder="e.g. Anna Nagar, Chennai" />
+          </div>
         </div>
 
         {/* Contact Info */}

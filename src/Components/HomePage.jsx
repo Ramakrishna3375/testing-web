@@ -21,6 +21,11 @@ const categoryIcons = {
   "Others": <FaPuzzlePiece />
 };
 
+const adImages = [
+  "/Website logos/advertise1.jpg",
+  "/Website logos/advertise2.jpg"
+];
+
 const ads = [
   {
     _id: 29,
@@ -370,34 +375,65 @@ const HomePage = () => {
         </div>
       </div>
 
+      {/* Mobile Advertisement below categories bar */}
+<div className="sm:hidden w-full px-2 py-3 flex flex-col items-center">
+  <span className="font-semibold text-xs text-gray-600 mb-2">Advertisements</span>
+  <div className="flex flex-nowrap gap-3 justify-start w-full overflow-x-auto scrollbar-hide">
+    {adImages.map((src, idx) => (
+      <img
+        key={idx}
+        src={src}
+        alt={`Ad Banner ${idx + 1}`}
+        className="h-24 object-cover rounded-lg shadow border min-w-[220px] max-w-[400px]"
+      />
+    ))}
+  </div>
+</div>
+
       {/* Main Layout: Sidebar (desktop/tablet) */}
       <div className="flex flex-col sm:flex-row gap-5 px-2 items-start max-w-7xl mx-auto">
+  {/* Sidebar: hidden on mobile, visible on sm+ */}
+  <aside className="sticky">
+    <div className="hidden sm:block top-20 h-120 w-60 min-w-[160px] max-w-[250px] bg-white rounded-lg p-3 shadow overflow-y-auto">
+      <h3 className="text-lg font-semibold mb-1 text-center">All Categories</h3>
+      {loadingCategories ? (
+        <div className="p-2">Loading...</div>
+      ) : catError ? (
+        <div className="p-2 text-red-600">Failed to load categories</div>
+      ) : (
+        <ul>
+          {categories.map((cat) => (
+            <li key={cat._id}
+              className="px-2 py-3 border border-gray-300 rounded-xl mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
+              onClick={() => navigate(`/ads/${getCategoryId(cat)}`)}>
+              <span className="text-xs font-semibold flex items-center px-1 gap-2">
+                {cat.icon || categoryIcons[cat.name]} {cat.name}
+              </span>
+              <span>&gt;</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
 
-        {/* Sidebar: hidden on mobile, visible on sm+ */}
-        <aside className="hidden sm:block sticky top-20 h-120 w-60 min-w-[160px] max-w-[250px] bg-white rounded-lg p-3 shadow overflow-y-auto">
-          <h3 className="text-lg font-semibold mb-1 text-center">All Categories</h3>
-          {loadingCategories ? (
-            <div className="p-2">Loading...</div>
-          ) : catError ? (
-            <div className="p-2 text-red-600">Failed to load categories</div>
-          ) : (
-            <ul>
-              {categories.map((cat) => (
-                <li key={cat._id}
-                  className="px-2 py-3 border border-gray-300 rounded-xl mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
-                  onClick={() => navigate(`/ads/${getCategoryId(cat)}`)}>
-                  <span className="text-xs font-semibold flex items-center px-1 gap-2">
-                    {cat.icon || categoryIcons[cat.name]} {cat.name}
-                  </span>
-                  <span>&gt;</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
+  {/* Advertisement images below sidebar (desktop/tablet only) */}
+<div className="hidden sm:flex flex-col items-center w-60 min-w-[160px] max-w-[250px] mt-2 mb-4">
+  <span className="font-semibold text-sm text-gray-600 mb-2">Advertisements</span>
+  <div className="flex flex-col gap-3 w-full">
+    {adImages.map((src, idx) => (
+      <img
+        key={idx}
+        src={src}
+        alt={`Ad Banner ${idx + 1}`}
+        className="w-full h-25 object-cover rounded-lg shadow border max-w-[220px]"
+      />
+    ))}
+  </div>
+</div>
+  </aside>
 
         {/* Main Section */}
-        <main className="flex-1 mt-3 ml-0">
+        <main className="flex-1 mt-0 sm:mt-3 ml-0">
 
           {/* Post Ad Button */}
           <div

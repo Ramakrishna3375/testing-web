@@ -217,10 +217,21 @@ export default function PostFreeAdPage() {
                 <option>Pune</option>
               </select>
             </div>
+            <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
+                      <button onClick={() => navigate("/login")}
+                         className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
+                        <VscAccount className="text-sm sm:text-xl mr-1" />
+                        Login | Signup
+                      </button>
+                  </div>
           </div>
-          <button onClick={() => navigate("/login")} className="flex hover:underline sm:bg-orange-500 sm:text-white rounded-full sm:px-4 sm:py-2 text-xs sm:text-sm md:font-semibold">
-            <VscAccount className="text-sm sm:text-xl mr-1" /> Login | Signup
-          </button>
+          <div className="hidden sm:block justify-end mt-2 md:mt-0 sm:h-10">
+            <button onClick={() => navigate("/login")}
+            className="flex items-center sm:bg-orange-500 sm:text-white text-xs rounded-full sm:px-3 sm:py-2 hover:underline md:px-5 md:py-2 md:text-base font-semibold">
+            <VscAccount className="text-sm sm:text-xl mr-1" />
+              Login | Signup
+            </button>
+          </div>
         </div>
       </header>
       {/* BODY */}

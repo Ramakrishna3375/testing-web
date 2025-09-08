@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
-import { getAllCategories } from "../../Services/api";
+import { getAllCategories, getAllActiveAds } from "../../Services/api";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 import { IoIosShareAlt } from "react-icons/io";
+import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
+import LocalMartIconBot from '../../assets/Website logos/LocalMartIconBot.png';
+import InstagramIcon from '../../assets/Website logos/instagram.png';
+import FacebookIcon from '../../assets/Website logos/facebook.jpg';
+import TwitterIcon from '../../assets/Website logos/twitter logo.jpg';
+import LinkedinIcon from '../../assets/Website logos/linkedin.png';
+import iPhone13ProMax from '../../assets/products/iphone13promax.avif';
 
 // Dynamically fetched categories
 
@@ -12,157 +19,224 @@ const ProductDetailPage = () => {
   const navigate = useNavigate();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [catError, setCatError] = useState(null);
+  const [loadingAd, setLoadingAd] = useState(true);
+  const [ad, setAd] = useState(null);
+  const [adError, setAdError] = useState(null);
+  // Simple login detection: change per your app's logic if needed
+  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
+
+  const getCategoryId = (cat) => cat._id;
 
   // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
-      const res = await getAllCategories();
-      if (res && res.data && Array.isArray(res.data.categories)) {
-        setCategories(res.data.categories);
-      } else if (res && Array.isArray(res.data)) {
-        setCategories(res.data);
+      setLoadingCategories(true);
+      setCatError(null);
+      try {
+        const res = await getAllCategories();
+        if (Array.isArray(res.data)) {
+          setCategories(res.data);
+        } else if (res && res.data && Array.isArray(res.data.categories)) {
+          setCategories(res.data.categories);
+        } else {
+          setCategories([]);
+          setCatError("Could not fetch categories");
+        }
+      } catch (err) {
+        setCatError("Could not fetch categories");
+        setCategories([]);
       }
+      setLoadingCategories(false);
     };
     fetchCategories();
   }, []);
 
-  const products = Array.from({ length: 28 }, (_, index) => ({
-    id: index,
-    images: [
-      "/products/iphone13promax.avif",
-      "/products/Titan car.jpg",
-      "/products/Modern house.jpeg",
-    ],
-    title: `iPhone 13 Pro Max, 256GB - #${index + 1}`,
-    price: `₹ ${90000 + index * 1000}`,
-    location: `Location ${index + 1}`,
-    owner: `User ${index + 1}`,
-    posted: "Today",
-    description: `
-      Selling my iPhone 13 Pro Max - 256GB, hardly used.
-      Includes box, bill, and charger. Very well maintained.
-      Serious buyers only.
-    `,
-  }));
+  // Fetch ad by id
+  useEffect(() => {
+    const fetchAd = async () => {
+      setLoadingAd(true);
+      setAdError(null);
+      try {
+        const res = await getAllActiveAds();
+        if (res && res.data && Array.isArray(res.data.postAds)) {
+          const found = res.data.postAds.find(item => (item.id || item._id) === id);
+          setAd(found || null);
+          if (!found) setAdError("Ad not found");
+        } else {
+          setAd(null);
+          setAdError("Could not fetch ads");
+        }
+      } catch (err) {
+        setAd(null);
+        setAdError("Error fetching ad");
+      }
+      setLoadingAd(false);
+    };
+    fetchAd();
+  }, [id]);
 
-  const product = products.find((p) => p.id === Number(id));
-
-  if (!product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-xl text-red-500">
-        Product not found.
-      </div>
-    );
-  }
+  const adImages = ad && ad.images && ad.images.length > 0 ? ad.images : [iPhone13ProMax];
 
   const handlePrev = () => {
     setCurrentImgIndex((prev) =>
-      prev === 0 ? product.images.length - 1 : prev - 1
+      prev === 0 ? adImages.length - 1 : prev - 1
     );
   };
 
   const handleNext = () => {
     setCurrentImgIndex((prev) =>
-      prev === product.images.length - 1 ? 0 : prev + 1
+      prev === adImages.length - 1 ? 0 : prev + 1
     );
   };
+
+  if (loadingAd) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-lg text-gray-500">Loading...</div>
+    );
+  }
+  if (adError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl text-red-500">{adError}</div>
+    );
+  }
+  if (!ad) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl text-red-500">
+        Ad not found.
+      </div>
+    );
+  }
+
+  const date = new Date(ad.createdAt);
+const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth()+1).padStart(2, '0')}/${date.getFullYear()}`;
 
   return (
     <div className="text-sm">
 {/* Header */}
-      <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-4 border-b border-gray-200">
-    <div className="max-w-6xl w-full mx-auto">
-      <div className="flex flex-col sm:flex-row gap-2 md:gap-6 items-stretch md:items-center justify-between">            
-        {/* Left side: controls */}
-             <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full flex-1">
-                   <div className="flex items-center gap-2">
-                        <img src="/Website logos/LocalMartIcon.png" alt="Local Mart Logo" className="h-9" />
-                   <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
-                      <button onClick={() => navigate("/login")}
-                         className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
-                        <VscAccount className="text-sm sm:text-xl mr-1" />
-                        Login | Signup
-                      </button>
-                  </div>
-              </div>
-                  
-              <div className="flex flex-col sm:flex-row gap-2 flex-1">
-              <div className="flex flex-row gap-1">
-                 {/* Location selector */}
-             <div className="flex items-center bg-white rounded">
-                <FaMapMarkerAlt className="text-lg" />
-                 <select className="w-[100px] md:w-[120px] bg-transparent text-xs font-semibold rounded px-1">
-                     <option>Hyderabad</option>
-                     <option>Visakhapatnam</option>
-                     <option>Vijayawada</option>
-                     <option>Chennai</option>
-                     <option>Bengaluru</option>
-                     <option>Mumbai</option>
-                    <option>Delhi</option>
-                    <option>Kolkata</option>
-                    <option>Pune</option>
-                    </select>
-              </div>
-                  
-              {/* Categories dropdown */}
-                <div className="border border-gray-400 rounded-full flex items-center gap-2 px-2 py-1 md:px-5 md:py-2">
-                  <select className="w-full text-[10px] sm:text-xs md:w-32 text-black" defaultValue="" 
-                  onChange={(e) => { const categoryId = e.target.value; if (categoryId) navigate(`/ads/${categoryId}`); }}>
-                  <option value="">All Categories</option>
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat._id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  </div>
-                  </div>
-                  
-              {/* Search Bar */}
-            <div className="flex items-center border border-gray-400 rounded-full w-full sm:w-72 overflow-hidden">
-            <input type="text" className="flex-1 px-2 py-1 sm:px-4 sm:py-2 sm:text-sm outline-none placeholder-gray-500" 
-            placeholder="Search product" />
-            <button className="bg-orange-500 text-white text-[12px] px-1 py-2 sm:px-3 sm:py-2 sm:text-sm font-medium hover:bg-orange-600">
-            Search
-            </button>
-            </div>
-          </div>
-        </div>
-                  
-        {/* Right side: Login button */}
-          <div className="hidden sm:block justify-end mt-2 md:mt-0 sm:h-10">
-            <button onClick={() => navigate("/login")}
-            className="flex items-center sm:bg-orange-500 sm:text-white text-xs rounded-full sm:px-3 sm:py-2 hover:underline md:px-5 md:py-2 md:text-base font-semibold">
-            <VscAccount className="text-sm sm:text-xl mr-1" />
+<header className="sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
+  <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
+    {/* Flex container for header content */}
+    <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
+      {/* Left side: logo and mobile button */}
+      <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
+        {/* Logo */}
+        <img
+          src={LocalMartIcon}
+          alt="Local Mart Logo"
+          className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2"
+        />
+        {/* Mobile login button */}
+        {!isLoggedIn && (
+          <div className="sm:hidden ml-auto mt-1">
+            <button
+              onClick={() => navigate("/login")}
+              className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline"
+            >
+              <VscAccount className="text-sm sm:text-xl mr-1" />
               Login | Signup
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Center: controls */}
+      <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
+        {/* Location and categories */}
+        <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
+          {/* Location selector */}
+          <div className="flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border border-gray-300">
+            <FaMapMarkerAlt className="text-lg text-orange-500" />
+            <select className="w-[110px] sm:w-[130px] text-xs font-semibold bg-transparent focus:outline-none">
+              <option>Hyderabad</option>
+              <option>Visakhapatnam</option>
+              <option>Vijayawada</option>
+              <option>Chennai</option>
+              <option>Bengaluru</option>
+              <option>Mumbai</option>
+              <option>Delhi</option>
+              <option>Kolkata</option>
+              <option>Pune</option>
+            </select>
           </div>
+          {/* Categories dropdown */}
+          <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">
+            <select
+              className="w-full text-xs md:text-sm bg-transparent focus:outline-none p-1"
+              defaultValue=""
+              onChange={(e) => {
+                const categoryId = e.target.value;
+                if (categoryId) navigate(`/ads/${categoryId}`);
+              }}
+            >
+              <option value="">All Categories</option>
+              {loadingCategories ? (
+                <option disabled>Loading...</option>
+              ) : catError ? (
+                <option disabled>Error loading categories</option>
+              ) : (
+                categories.map((cat) => (
+                  <option key={cat._id} value={getCategoryId(cat)}>
+                    {cat.name}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
-    </header>
+        </div>
+        {/* Search Bar */}
+        <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6">
+          <input
+            type="text"
+            className="flex-1 px-3 py-1 text-xs sm:text-sm md:text-base bg-white outline-none placeholder-gray-500 min-w-0"
+            placeholder="Search product"
+          />
+          <button className="bg-orange-500 text-white text-xs sm:text-sm px-4 h-full rounded-l-none rounded-r-full hover:bg-orange-600 transition min-w-[70px]">
+            Search
+          </button>
+        </div>
+      </div>
+
+      {/* Right side: desktop login button */}
+      {!isLoggedIn && (
+        <div className="hidden sm:flex justify-end mt-2 w-full sm:w-auto md:mt-0 sm:h-10">
+          <button
+            onClick={() => navigate("/login")}
+            className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
+          >
+            <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
+            Login | Signup
+          </button>
+        </div>
+      )}
+
+    </div>
+  </div>
+</header>
+
 
       {/* Breadcrumb */}
-<div className="flex flex-col sm:flex-row items-start sm:items-center text-sm sm:text-xl font-semibold max-w-6xl mx-auto py-4 px-4 sm:px-0">
-  <div className="flex flex-wrap gap-1 sm:gap-2">
+<div className="flex flex-row sm:flex-row items-start sm:items-center text-sm sm:text-xl font-semibold max-w-6xl mx-auto py-3 px-4 sm:px-0">
+  <div className="flex flex-wrap gap-1 sm:gap-2 ml-2 sm:ml-9">
     Home &gt; Categories &gt;
-    <span className="text-orange-400 ml-1">Mobiles</span>
+    <span className="text-orange-400 ml-1">{ad.category && ad.category.name}</span>
   </div>
 
   <div className="flex items-center sm:mt-0 ml-auto sm:ml-auto gap-4">
-    <span className="text-2xl sm:text-4xl cursor-pointer hover:text-blue-500" aria-label="Share">
+    <span className="text-xl sm:text-3xl cursor-pointer hover:text-blue-500" aria-label="Share">
       <IoIosShareAlt />
     </span>
-    <span className="text-3xl sm:text-5xl cursor-pointer sm:mr-4 hover:text-orange-600" aria-label="Favorite">𖹭</span>
+    <span className="text-2xl sm:text-4xl cursor-pointer sm:mr-4 hover:text-orange-600" aria-label="Favorite">𖹭</span>
   </div>
 </div>
 
-
       {/* Product Section */}
-      <div className="max-w-7xl px-4 sm:px-6 lg:px-8 pb-4 sm:pb-8 mx-auto">
-        <div className="flex flex-col md:flex-row gap-10">
+      <div className="max-w-7xl px-6 sm:px-6 lg:px-8 pb-4 sm:pb-8 mx-auto">
+        <div className="flex flex-col lg:flex-row gap-10">
 
           {/* Image Carousel */}
-          <div className="relative w-full h-[200px] md:w-[450px] md:h-[420px] flex items-center justify-center">
+          <div className="relative w-full h-66 sm:h-100 md:h-95 md:pl-10 md:pr-10 lg:w-115 lg:h-95 lg:pl-0 lg:pr-0 flex items-center justify-center">
             <button
               onClick={handlePrev}
               className="absolute left-0 bg-gray-200 text-black px-1 sm:px-3 sm:py-2 rounded-l hover:bg-gray-300 z-10"
@@ -170,8 +244,8 @@ const ProductDetailPage = () => {
               ←
             </button>
             <img
-              src={product.images[currentImgIndex]}
-              alt={`Product image ${currentImgIndex + 1}`}
+              src={adImages[currentImgIndex]}
+              alt={`Ad image ${currentImgIndex + 1}`}
               className="border border-gray-300 rounded-xl sm:rounded-3xl shadow h-full w-full object-contain"
             />
             <button
@@ -183,39 +257,39 @@ const ProductDetailPage = () => {
           </div>
 
           {/* Product Info */}
-          <div className="flex-1 mt-3 space-y-4">
-            <div className="border border-gray-300 p-3 sm:p-6 rounded-xl sm:rounded-2xl shadow">
-              <div className="text-3xl sm:text-5xl md:text-6xl font-bold text-gray-900">{product.price}</div>
-              <div className="text-lg sm:text-xl md:text-2xl sm:font-bold text-gray-800 mt-1">{product.title}</div>
+          <div className="flex-1 space-y-3 mt-1">
+            <div className="border border-gray-300 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">₹ {ad.price}</div>
+              <div className="text-lg sm:text-lg md:text-xl lg:font-semibold text-gray-800 mt-1">{ad.title}</div>
             </div>
 
-            <div className="border border-gray-300 p-3 sm:p-5 rounded-xl sm:rounded-2xl shadow">
+            <div className="border border-gray-300 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow">
               <div className="flex flex-row sm:flex-row justify-between text-center sm:p-4 rounded text-sm sm:text-lg md:text-2xl font-light gap-4">
                 <div>
-                  <strong>👤 Owner</strong>
+                  <strong>👤 Contact</strong>
                   <br />
-                  <span className="text-sm md:text-base text-gray-500 font-medium">{product.owner}</span>
+                  <span className="text-sm md:text-md text-gray-500 font-medium">{ad.contactInfo && ad.contactInfo.phone}</span>
                 </div>
                 <div>
                   <strong>📍 Location</strong>
                   <br />
-                  <span className="text-sm md:text-base text-gray-500 font-medium">{product.location}</span>
+                  <span className="text-sm md:text-base text-gray-500 font-medium">{ad.location && (ad.location.city || ad.location.address)}</span>
                 </div>
                 <div>
                   <strong>📅 Date Posted</strong>
                   <br />
-                  <span className="text-sm md:text-base text-gray-500 font-medium">{product.posted}</span>
+                  <span className="text-sm md:text-base text-gray-500 font-medium">{formatted}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 sm:mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 sm:mt-4">
                 <button
                   type="submit"
-                  className="border border-gray-300 shadow bg-blue-500 text-white p-2 sm:p-4 rounded-lg hover:bg-blue-600 transition cursor-pointer"
+                  className="border border-gray-300 shadow bg-blue-500 text-white p-1 sm:p-2 lg:p-3 rounded-lg hover:bg-blue-600 transition cursor-pointer"
                 >
                   💬 Chat with seller
                 </button>
-                <button className="border border-gray-300 shadow rounded-lg p-1 sm:p-4 hover:bg-orange-200 transition cursor-pointer sm:text-lg flex items-center justify-center gap-1 px-3">
+                <button className="border border-gray-300 shadow rounded-lg p-1 sm:p-2 lg:p-3 hover:bg-orange-200 transition cursor-pointer sm:text-lg flex items-center justify-center gap-1 px-3">
                   <span className="border rounded-full text-white bg-amber-600 px-2 py-0.5">%</span>
                   Make an offer
                 </button>
@@ -228,7 +302,7 @@ const ProductDetailPage = () => {
         <div className="mt-10 max-w-6xl mx-auto px-2 sm:px-0">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-normal mb-5">Description</h2>
           <p className="text-sm sm:text-lg md:text-xl text-gray-600 whitespace-pre-line">
-            {product.description.trim()}
+            {ad.description && ad.description.trim()}
           </p>
         </div>
       </div>
@@ -237,15 +311,15 @@ const ProductDetailPage = () => {
       <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
         <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
           <div>
-            <img src="/Website logos/LocalMartIconBot.png" alt="Local Mart Logo" className="h-9" />
+            <img src={LocalMartIconBot} alt="Local Mart Logo" className="h-9" />
             <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
               We gather and verify service provider details across various categories & display them on our website
             </div>
             <div className="flex gap-6 mt-3 sm:mt-8">
-              <img src="/Website logos/instagram.png" onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
-              <img src="/Website logos/facebook.jpg" onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
-              <img src="/Website logos/twitter logo.jpg" onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
-              <img src="/Website logos/linkedin.png" onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
+              <img src={InstagramIcon} onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
+              <img src={FacebookIcon} onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
+              <img src={TwitterIcon} onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
+              <img src={LinkedinIcon} onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
           </div>
           <div>
             <h4 className="font-semibold mb-2">Our Services</h4>

@@ -16,7 +16,15 @@ export const getAllActiveAds = async () => {
   return await commonRequest("GET", `/api/post-ads`);
 };
 
+//Get Banners
+export const getBanners = async () => {
+  return await commonRequest("GET", `/api/banners`);
+};
+
 //Post New Ad
-export const postNewAd = async (adData) => {
-  return await commonRequest("POST", `/api/post-ads`, adData);
+export const postNewAd = async (adData, token) => {
+  return await commonRequest("POST", `/api/post-ads`, adData, {
+    Authorization: token,
+    // Do NOT set 'Content-Type' here for FormData; let browser handle it
+  });
 };

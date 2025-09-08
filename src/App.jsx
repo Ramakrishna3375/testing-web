@@ -6,8 +6,8 @@ import ProductDetailPage from "./Components/Mobiles/AdDetailsPage.jsx";
 import PostFreeAdPage from "./Components/PostFreeAd/PostFreeAdPage.jsx";
 import PostAdForm from "./Components/PostFreeAd/PostAdForm.jsx";
 
-function App() {
-  return (
+function App(){
+return(
     <>
       <Routes>
         {/* Default route */}

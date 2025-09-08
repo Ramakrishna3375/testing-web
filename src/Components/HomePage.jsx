@@ -297,7 +297,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen text-sm">
       {/* Header */}
-<header className="sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
+<header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
        <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
          {/* Flex container for header content */}
          <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
@@ -539,11 +539,8 @@ const HomePage = () => {
                   <div className="font-bold text-base sm:text-md">₹ {ad.price}</div>
                   <div className="text-gray-800 text-xs line-clamp-1">{ad.title}</div>
                   <div className="flex items-center text-gray-600 text-[9px] sm:text-xs sm:mt-1">
-                    <span className="mr-1"><FaMapMarkerAlt className="text-md" /></span> {ad.location.city}
-                  </div>
-                  <div className="flex-grow" />
-                  <div className="flex items-center justify-between mt-1 sm:mt-2 flex-wrap">
-                    <span className="text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]">
+                    <span className="mr-1"><FaMapMarkerAlt className="text-orange-500 text-md" /></span> {ad.location.city}
+                    <span className="ml-auto text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]">
                       {(() => {
                         const d = new Date(ad.createdAt);
                         const day = String(d.getDate()).padStart(2, '0');
@@ -552,10 +549,8 @@ const HomePage = () => {
                         return `${day}/${month}/${year}`;
                       })()}
                     </span>
-                    <span className="text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px] hover:underline cursor-pointer">
-                       View Details
-                    </span>
                   </div>
+                  
                 </div>
               </div>
             ))}
@@ -598,11 +593,8 @@ const HomePage = () => {
                   <div className="font-bold text-base sm:text-md">₹ {ad.price}</div>
                   <div className="text-gray-800 text-xs line-clamp-1">{ad.title}</div>
                   <div className="flex items-center text-gray-600 text-[9px] sm:text-xs sm:mt-1">
-                    <span className="mr-1"><FaMapMarkerAlt className="text-md" /></span> {ad.location.city}
-                  </div>
-                  <div className="flex-grow" />
-                  <div className="flex items-center justify-between mt-1 sm:mt-2 flex-wrap">
-                    <span className="text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]">
+                    <span className="mr-1"><FaMapMarkerAlt className="text-orange-500 text-md" /></span> {ad.location.city}
+                    <span className="ml-auto text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]">
                       {(() => {
                         const d = new Date(ad.createdAt);
                         const day = String(d.getDate()).padStart(2, '0');
@@ -610,9 +602,6 @@ const HomePage = () => {
                         const year = d.getFullYear();
                         return `${day}/${month}/${year}`;
                       })()}
-                    </span>
-                    <span className="text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px] hover:underline">
-                       View Details
                     </span>
                   </div>
                 </div>

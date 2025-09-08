@@ -93,9 +93,11 @@ formData.append("subcategory", subcategoryId);
       formData.append("categorySpecific[storage]", data.storage || "");
       formData.append("categorySpecific[condition]", data.condition || "");
       if (data.color) formData.append("categorySpecific[color]", data.color);
-      if (data.chip) formData.append("categorySpecific[chip]", data.chip);
-    }
-
+      if (data.features) {
+      data.features.split(',').map(f => f.trim()).filter(Boolean).forEach(f =>
+      formData.append('categorySpecific[features][]', f)
+      );
+    }}
     if (category === "Furniture") {
       formData.append("categorySpecific[type]", data.type || "");
       formData.append("categorySpecific[features]", data.features || "");
@@ -361,6 +363,10 @@ formData.append("subcategory", subcategoryId);
         <label className="block font-semibold mb-1"> Storage </label>
         <input type="text" {...register("storage")} className="w-full border rounded px-3 py-2" placeholder="e.g. 64GB, 128GB" />
         </div>
+        <div>
+      <label className="block font-semibold mb-1"> Features </label>
+      <input type="text" {...register("features")} className="w-full border rounded px-3 py-2" placeholder="Comma separated, e.g. 5G, Wireless Charging, Face ID"/>
+    </div>
         </div>
         )}
 
@@ -370,7 +376,7 @@ formData.append("subcategory", subcategoryId);
             <div className="mb-4">
               <label className="block font-semibold mb-1"> Type </label>
               <select {...register("tvSubType")}
-                className="w-full border rounded px-3 py-2" defaultValue="" >
+                className="w-full border rounded px-3 py-2">
                 <option value="">Select</option>
                 <option value="TV">Television (TV)</option>
                 <option value="Video">Video</option>

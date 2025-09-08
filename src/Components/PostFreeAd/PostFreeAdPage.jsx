@@ -133,6 +133,7 @@ const subCategoryIcons = {
 
 export default function PostFreeAdPage() {
   const navigate = useNavigate();
+  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -200,44 +201,58 @@ export default function PostFreeAdPage() {
   return (
     <div className="min-h-screen text-sm">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white p-2 sm:p-4 border-b border-gray-200">
-        <div className="flex flex-wrap items-center justify-between gap-4 max-w-6xl mx-auto">
-          <div className="flex flex-row items-center gap-2">
-            <img src={LocalMartIcon} alt="Local Mart Logo" className="h-9" />
-            <div className="flex ml-2 px-2 text-xs sm:text-sm">
-              <FaMapMarkerAlt className="text-sm sm:text-lg" />
-              <select className="w-22 sm:w-30">
-                <option>Hyderabad</option>
-                <option>Visakhapatnam</option>
-                <option>Vijayawada</option>
-                <option>Chennai</option>
-                <option>Bengaluru</option>
-                <option>Mumbai</option>
-                <option>Delhi</option>
-                <option>Kolkata</option>
-                <option>Pune</option>
-              </select>
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4">
+          <div className="flex flex-row items-center justify-between gap-2 py-2 sm:py-4 w-full">
+            {/* Left: logo and location */}
+            <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 w-auto">
+              <img src={LocalMartIcon} alt="Local Mart Logo" className="h-9 sm:h-12 w-auto min-w-[2.5rem] max-w-[7rem]" />
+              <div className="flex items-center ml-2 gap-1 px-2 py-1 text-xs sm:text-base border border-gray-200 rounded bg-gray-50">
+                <FaMapMarkerAlt className="text-sm text-orange-500 sm:text-lg" />
+                <select className="w-22 sm:w-28 md:w-36 pl-1 bg-transparent outline-none">
+                  <option>Hyderabad</option>
+                  <option>Visakhapatnam</option>
+                  <option>Vijayawada</option>
+                  <option>Chennai</option>
+                  <option>Bengaluru</option>
+                  <option>Mumbai</option>
+                  <option>Delhi</option>
+                  <option>Kolkata</option>
+                  <option>Pune</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
-                      <button onClick={() => navigate("/login")}
-                         className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
-                        <VscAccount className="text-sm sm:text-xl mr-1" />
-                        Login | Signup
-                      </button>
-                  </div>
-          <div className="hidden sm:block justify-end mt-2 md:mt-0 sm:h-10">
-            <button onClick={() => navigate("/login")}
-            className="flex items-center sm:bg-orange-500 sm:text-white text-xs rounded-full sm:px-3 sm:py-2 hover:underline md:px-5 md:py-2 md:text-base font-semibold">
-            <VscAccount className="text-sm sm:text-xl mr-1" />
-              Login | Signup
-            </button>
+            {/* Right: login/signup button (hidden if logged in) */}
+            
+              <>
+                {/* Mobile button */}
+                <div className="sm:hidden  ml-auto">
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-2 leading-none font-medium hover:bg-orange-600 transition"
+                    style={{ minWidth: 80 }}
+                  >
+                    <VscAccount className="text-lg mr-0.5" />
+                    Login | Signup
+                  </button>
+                </div>
+                {/* Desktop/tablet button */}
+                <div className="hidden sm:flex flex-shrink-0 justify-end">
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="flex items-center bg-orange-500 text-white text-base rounded-full px-5 py-2 font-semibold hover:bg-orange-600 transition min-w-[120px]" >
+                    <VscAccount className="text-xl mr-2" />
+                    Login | Signup
+                  </button>
+                </div>
+              </>
+            
           </div>
         </div>
       </header>
       {/* BODY */}
       {/* Mobile Categories Bar (visible on small screens only) */}
-      <div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-1.5 scrollbar-hide">
+         <div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-1.5 scrollbar-hide">
         <div className="flex gap-2 min-w-max">
           {loadingCategories ? (
             <div className="py-8 text-center text-xl text-blue-600 font-semibold w-full">

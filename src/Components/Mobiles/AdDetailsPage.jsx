@@ -77,7 +77,7 @@ const ProductDetailPage = () => {
     fetchAd();
   }, [id]);
 
-  const adImages = ad && ad.images && ad.images.length > 0 ? ad.images : [iPhone13ProMax];
+  const adImages = ad && ad.images && ad.images.length > 0 ? ad.images : "";
 
   const handlePrev = () => {
     setCurrentImgIndex((prev) =>
@@ -115,7 +115,7 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
   return (
     <div className="text-sm">
 {/* Header */}
-<header className="sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
+<header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
   <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
     {/* Flex container for header content */}
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
@@ -232,64 +232,59 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
 </div>
 
       {/* Product Section */}
-      <div className="max-w-7xl px-6 sm:px-6 lg:px-8 pb-4 sm:pb-8 mx-auto">
-        <div className="flex flex-col lg:flex-row gap-10">
+      <div className="max-w-7xl px-2 md:px-6 lg:px-8 pb-5 sm:pb-10 mx-auto">
+        <div className="flex flex-col lg:flex-row lg:items-stretch gap-8 xl:gap-14">
 
           {/* Image Carousel */}
-          <div className="relative w-full h-66 sm:h-100 md:h-95 md:pl-10 md:pr-10 lg:w-115 lg:h-95 lg:pl-0 lg:pr-0 flex items-center justify-center">
+          <div className="relative w-full max-w-xl mx-auto lg:mx-0 flex items-center justify-center shadow bg-white rounded-2xl aspect-[4/2.5] h-[19rem] sm:h-[25rem] lg:h-auto">
             <button
               onClick={handlePrev}
-              className="absolute left-0 bg-gray-200 text-black px-1 sm:px-3 sm:py-2 rounded-l hover:bg-gray-300 z-10"
+              className="absolute left-0 top-1/2 -translate-y-1/2 bg-gray-200 text-black px-2 sm:px-3 py-2 rounded-l-lg hover:bg-gray-300 z-10"
             >
               ←
             </button>
             <img
               src={adImages[currentImgIndex]}
               alt={`Ad image ${currentImgIndex + 1}`}
-              className="border border-gray-300 rounded-xl sm:rounded-3xl shadow h-full w-full object-contain"
+              className="border border-gray-200 rounded-xl sm:rounded-2xl shadow-lg w-full h-full object-contain bg-white select-none"
             />
             <button
               onClick={handleNext}
-              className="absolute right-0 bg-gray-200 text-black px-1 sm:px-3 sm:py-2 rounded-r hover:bg-gray-300 z-10"
+              className="absolute right-0 top-1/2 -translate-y-1/2 bg-gray-200 text-black px-2 sm:px-3 py-2 rounded-r-lg hover:bg-gray-300 z-10"
             >
               →
             </button>
           </div>
 
           {/* Product Info */}
-          <div className="flex-1 space-y-3 mt-1">
-            <div className="border border-gray-300 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow">
-              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">₹ {ad.price}</div>
-              <div className="text-lg sm:text-lg md:text-xl lg:font-semibold text-gray-800 mt-1">{ad.title}</div>
+          <div className="flex-1 flex flex-col justify-between mt-6 lg:mt-0 gap-6">
+            <div className="border border-gray-200 rounded-2xl shadow bg-white p-4 md:p-5 flex flex-col gap-3">
+              <div className="font-bold text-2xl sm:text-3xl md:text-4xl text-gray-900 leading-snug">₹ {ad.price}</div>
+              <div className="text-base sm:text-xl md:text-2xl font-semibold text-gray-800">{ad.title}</div>
             </div>
-
-            <div className="border border-gray-300 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow">
-              <div className="flex flex-row sm:flex-row justify-between text-center sm:p-4 rounded text-sm sm:text-lg md:text-2xl font-light gap-4">
-                <div>
-                  <strong>👤 Contact</strong>
-                  <br />
-                  <span className="text-sm md:text-md text-gray-500 font-medium">{ad.contactInfo && ad.contactInfo.phone}</span>
+            <div className="border border-gray-200 rounded-2xl shadow bg-white p-4 md:p-5 flex flex-col gap-4">
+              <div className="flex flex-row sm:flex-row gap-4 sm:gap-6 md:gap-8">
+                <div className="flex-1 text-center">
+                  <strong>👤 Owner</strong>
+                  <div className="text-sm md:text-base text-gray-500 font-medium break-words mt-1">{ad.name}</div>
                 </div>
-                <div>
+                <div className="flex-1 text-center">
                   <strong>📍 Location</strong>
-                  <br />
-                  <span className="text-sm md:text-base text-gray-500 font-medium">{ad.location && (ad.location.city || ad.location.address)}</span>
+                  <div className="text-sm md:text-base text-gray-500 font-medium break-words mt-1">{ad.location && (ad.location.city || ad.location.address)}</div>
                 </div>
-                <div>
+                <div className="flex-1 text-center">
                   <strong>📅 Date Posted</strong>
-                  <br />
-                  <span className="text-sm md:text-base text-gray-500 font-medium">{formatted}</span>
+                  <div className="text-sm md:text-base text-gray-500 font-medium mt-1">{formatted}</div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 sm:mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                 <button
                   type="submit"
-                  className="border border-gray-300 shadow bg-blue-500 text-white p-1 sm:p-2 lg:p-3 rounded-lg hover:bg-blue-600 transition cursor-pointer"
+                  className="border border-gray-200 shadow bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition cursor-pointer w-full font-semibold"
                 >
                   💬 Chat with seller
                 </button>
-                <button className="border border-gray-300 shadow rounded-lg p-1 sm:p-2 lg:p-3 hover:bg-orange-200 transition cursor-pointer sm:text-lg flex items-center justify-center gap-1 px-3">
+                <button className="border border-gray-200 shadow rounded-lg py-2 px-4 hover:bg-orange-200 transition cursor-pointer font-semibold flex items-center justify-center gap-2 w-full">
                   <span className="border rounded-full text-white bg-amber-600 px-2 py-0.5">%</span>
                   Make an offer
                 </button>

@@ -24,6 +24,7 @@ const MobilesPage = () => {
   const [loadingAds, setLoadingAds] = useState(true);
   const [adsError, setAdsError] = useState(null);
   const [brandFilter, setBrandFilter] = useState(null); // ADDED state for filtering by brand
+  const [sortOption, setSortOption] = useState("new");
 
   const { categoryId } = useParams();
   const getCategoryId = (cat) => cat._id;
@@ -52,6 +53,23 @@ const MobilesPage = () => {
   // Now further filter ads if brandFilter is set
   if (brandFilter) {
     filteredAds = filteredAds.filter(ad => ad.categorySpecific && ad.categorySpecific.brand === brandFilter);
+  }
+
+  // Sort logic
+  const parsePrice = price => {
+    if (typeof price === 'number') return price;
+    if (!price) return 0;
+    // Remove commas, '₹', 'Lakh', etc.
+    let p = price.replace(/[^\d.]/g, '');
+    if (/lakh/i.test(price)) p = parseFloat(p) * 100000;
+    return parseFloat(p) || 0;
+  };
+  if (sortOption === 'low') {
+    filteredAds = [...filteredAds].sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+  } else if (sortOption === 'high') {
+    filteredAds = [...filteredAds].sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+  } else if (sortOption === 'new') {
+    filteredAds = [...filteredAds].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
   const totalPages = Math.ceil(filteredAds.length / productsPerPage);
@@ -107,7 +125,7 @@ const MobilesPage = () => {
   return (
     <div className="text-sm">
       {/* Header */}
-     <header className="sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
+     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
        <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
          {/* Flex container for header content */}
          <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
@@ -291,9 +309,24 @@ const MobilesPage = () => {
     </h2>
     <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 text-[9px] sm:text-xs mt-1 text-gray-500">
       <span className="text-black sm:font-semibold">Sort By</span>
-      <span className="cursor-pointer hover:underline">Price - Low To High</span>
-      <span className="cursor-pointer hover:underline">Price - High To Low</span>
-      <span className="cursor-pointer hover:underline">Newly Added</span>
+      <span
+        className={`cursor-pointer hover:underline ${sortOption === 'low' ? 'text-orange-600 font-semibold underline' : ''}`}
+        onClick={() => { setSortOption('low'); setCurrentPage(1); }}
+      >
+        Price - Low To High
+      </span>
+      <span
+        className={`cursor-pointer hover:underline ${sortOption === 'high' ? 'text-orange-600 font-semibold underline' : ''}`}
+        onClick={() => { setSortOption('high'); setCurrentPage(1); }}
+      >
+        Price - High To Low
+      </span>
+      <span
+        className={`cursor-pointer hover:underline ${sortOption === 'new' ? 'text-orange-600 font-semibold underline' : ''}`}
+        onClick={() => { setSortOption('new'); setCurrentPage(1); }}
+      >
+        Newly Added
+      </span>
     </div>
   </div>
   <div className="flex gap-2 sm:gap-4 items-center mt-2 sm:mt-0 ml-0 sm:ml-4">
@@ -332,7 +365,7 @@ const MobilesPage = () => {
   {visibleAds.map((ad, idx) => (
     <div
       key={ad.id || ad._id || idx}
-      className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2.5 sm:p-2 md:p-3 transition-all duration-200 hover:shadow-lg hover:scale-102 cursor-pointer
+      className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2.5 sm:p-2 md:p-2.5 transition-all duration-200 hover:shadow-lg hover:scale-102 cursor-pointer
         ${viewMode === "list" ? "flex flex-row sm:flex-row gap-3 sm:gap-5 sm:items-center w-full md:w-150 lg:w-200" : "sm:w-47 md:w-full"}`}
       onClick={() => navigate(`/ad/${ad.id || ad._id}`)}>
       <img src={ad.images[0]} alt={ad.title}
@@ -348,26 +381,20 @@ const MobilesPage = () => {
           {ad.title}
         </div>
         <div className="flex text-gray-600 text-[10px] sm:text-xs mb-1 gap-1">
-          <FaMapMarkerAlt className="text-md" /> 
-        {ad.location && (ad.location.city || ad.location.address)}
-        </div>
-
-        <div className="flex items-center justify-between gap-2 sm:mt-1 flex-wrap">
+          <FaMapMarkerAlt className="text-orange-500 text-md" /> 
+        {ad.location.city}
         <span className={`${viewMode === "grid" ? "hidden" : ""} 
             ${viewMode === "list" ? "ml-auto text-[15px] sm:text-[22px] bg-white rounded-full shadow px-0.5 sm:px-1 cursor-pointer hover:text-orange-500" : ""}`}>
             𖹭
           </span>
-          <span className={`${viewMode === "list" ? "hidden" : ""} text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]`}>
-            {(() => {
+        <span className="ml-auto text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]">
+                      {(() => {
                         const d = new Date(ad.createdAt);
                         const day = String(d.getDate()).padStart(2, '0');
                         const month = String(d.getMonth() + 1).padStart(2, '0');
                         const year = d.getFullYear();
                         return `${day}/${month}/${year}`;
                       })()}
-          </span>
-          <span className="text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px] hover:underline">
-                       View Details
                     </span>
         </div>
       </div>

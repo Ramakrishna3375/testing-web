@@ -1,163 +1,277 @@
 import { useState, useEffect } from "react";
-import { getAllCategories } from "../../Services/api";
-import { useNavigate } from "react-router-dom";
+import { getAllCategories, getAllActiveAds } from "../../Services/api";
+import { useNavigate, useParams } from "react-router-dom";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
-
-const brands = [
-  {name:"Apple", path:"apple" },
-  {name:"OnePlus", path:"oneplus"},
-  {name:"Samsung", path:"samsung"},
-  {name:"Nothing", path:"nothing"},
-  {name:"Oppo", path:"oppo"},
-  {name:"Redmi", path:"redmi"},
-  {name:"Poco", path:"poco"},
-  {name:"Motorola", path:"motorola"},
-  {name:"Google Pixel", path:"google-pixel"},
-];
-
-// Generate 28 unique products
-const products = Array.from({ length: 28 }, (_, index) => ({
-  _id: index + 1,
-  images: ["/products/iphone13promax.avif"],
-  title: `iPhone 13 Pro Max, 256GB - #${index + 1}`,
-  price: `${90000 + index * 1000}`,
-  location: `Location ${index + 1}`,
-  time: "Today"
-}));
+import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
+import LocalMartIconBot from '../../assets/Website logos/LocalMartIconBot.png';
+import InstagramIcon from '../../assets/Website logos/instagram.png';
+import FacebookIcon from '../../assets/Website logos/facebook.jpg';
+import TwitterIcon from '../../assets/Website logos/twitter logo.jpg';
+import LinkedinIcon from '../../assets/Website logos/linkedin.png';
+import iPhone13ProMax from '../../assets/products/iphone13promax.avif';
 
 const MobilesPage = () => {
   const navigate = useNavigate();
+  // login detection
+  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+  const [viewMode, setViewMode] = useState("grid");
   const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [catError, setCatError] = useState(null);
+  const [ads, setAds] = useState([]);
+  const [loadingAds, setLoadingAds] = useState(true);
+  const [adsError, setAdsError] = useState(null);
+  const [brandFilter, setBrandFilter] = useState(null); // ADDED state for filtering by brand
+
+  const { categoryId } = useParams();
+  const getCategoryId = (cat) => cat._id;
+
+  // Extract unique brands from ads data
+  const getBrandsFromAds = (ads) => {
+    const brandsSet = new Set();
+    ads.forEach(ad => {
+      if (ad.categorySpecific && ad.categorySpecific.brand) {
+        brandsSet.add(ad.categorySpecific.brand);
+      }
+    });
+    return Array.from(brandsSet).sort();
+  };
+
+  // Filtering ads by brand name or categoryId (URL param)
+  const productsPerPage = 15;
+  let filteredAds = ads;
+  if (categoryId) {
+    filteredAds = filteredAds.filter(ad => ad.category && ad.category.id === categoryId);
+  }
+
+  // Only show brands in current category
+  const brands = getBrandsFromAds(filteredAds);
+
+  // Now further filter ads if brandFilter is set
+  if (brandFilter) {
+    filteredAds = filteredAds.filter(ad => ad.categorySpecific && ad.categorySpecific.brand === brandFilter);
+  }
+
+  const totalPages = Math.ceil(filteredAds.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const visibleAds = filteredAds.slice(startIndex, startIndex + productsPerPage);
 
   // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
-      const res = await getAllCategories();
-      if (res && res.data && Array.isArray(res.data.categories)) {
-        setCategories(res.data.categories);
-      } else if (res && Array.isArray(res.data)) {
-        setCategories(res.data);
+      setLoadingCategories(true);
+      setCatError(null);
+      try {
+        const res = await getAllCategories();
+        // Accept array or categories array or (legacy) { success, categories }
+        if (Array.isArray(res.data)) {
+          setCategories(res.data);
+        } else if (res && res.data && Array.isArray(res.data.categories)) {
+          setCategories(res.data.categories);
+        } else {
+          setCategories([]);
+          setCatError("Could not fetch categories");
+        }
+      } catch (err) {
+        setCatError("Could not fetch categories");
+        setCategories([]);
       }
+      setLoadingCategories(false);
     };
     fetchCategories();
   }, []);
 
-  const productsPerPage = 15;
-  const totalPages = Math.ceil(products.length / productsPerPage);
-  const startIndex = (currentPage - 1) * productsPerPage;
-  const visibleProducts = products.slice(startIndex, startIndex + productsPerPage);
+  useEffect(() => {
+    const fetchAds = async () => {
+      setLoadingAds(true);
+      setAdsError(null);
+      try {
+        const res = await getAllActiveAds();
+        if (res && res.data && Array.isArray(res.data.postAds)) {
+          setAds(res.data.postAds);
+        } else {
+          setAds([]);
+          setAdsError("Could not fetch ads");
+        }
+      } catch (err) {
+        setAds([]);
+        setAdsError("Could not fetch ads");
+      }
+      setLoadingAds(false);
+    };
+    fetchAds();
+  }, []);
 
   return (
     <div className="text-sm">
       {/* Header */}
-            <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-4 border-b border-gray-200">
-          <div className="max-w-6xl w-full mx-auto">
-            <div className="flex flex-col sm:flex-row gap-2 md:gap-6 items-stretch md:items-center justify-between">            
-              {/* Left side: controls */}
-                   <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full flex-1">
-                         <div className="flex items-center gap-2">
-                              <img src="/Website logos/LocalMartIcon.png" alt="Local Mart Logo" className="h-9" />
-                         <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
-                            <button onClick={() => navigate("/login")}
-                               className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
-                              <VscAccount className="text-sm sm:text-xl mr-1" />
-                              Login | Signup
-                            </button>
-                        </div>
-                    </div>
-                        
-                    <div className="flex flex-col sm:flex-row gap-2 flex-1">
-                    <div className="flex flex-row gap-1">
-                       {/* Location selector */}
-                   <div className="flex items-center bg-white rounded">
-                      <FaMapMarkerAlt className="text-lg" />
-                       <select className="w-[100px] md:w-[120px] bg-transparent text-xs font-semibold rounded px-1">
-                           <option>Hyderabad</option>
-                           <option>Visakhapatnam</option>
-                           <option>Vijayawada</option>
-                           <option>Chennai</option>
-                           <option>Bengaluru</option>
-                           <option>Mumbai</option>
-                          <option>Delhi</option>
-                          <option>Kolkata</option>
-                          <option>Pune</option>
-                          </select>
-                    </div>
-                        
-                    {/* Categories dropdown */}
-                      <div className="border border-gray-400 rounded-full flex items-center gap-2 px-2 py-1 md:px-5 md:py-2">
-                        <select className="w-full text-[10px] sm:text-xs md:w-32 text-black" defaultValue="" 
-                        onChange={(e) => { const categoryId = e.target.value; if (categoryId) navigate(`/ads/${categoryId}`); }}>
-                        <option value="">All Categories</option>
-                          {categories.map((cat) => (
-                            <option key={cat._id} value={cat._id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                        </div>
-                        </div>
-                        
-                    {/* Search Bar */}
-                  <div className="flex items-center border border-gray-400 rounded-full w-full sm:w-72 overflow-hidden">
-                  <input type="text" className="flex-1 px-2 py-1 sm:px-4 sm:py-2 sm:text-sm outline-none placeholder-gray-500" 
-                  placeholder="Search product" />
-                  <button className="bg-orange-500 text-white text-[12px] px-1 py-2 sm:px-3 sm:py-2 sm:text-sm font-medium hover:bg-orange-600">
-                  Search
-                  </button>
-                  </div>
-                </div>
-              </div>
-                        
-              {/* Right side: Login button */}
-                <div className="hidden sm:block justify-end mt-2 md:mt-0 sm:h-10">
-                  <button onClick={() => navigate("/login")}
-                  className="flex items-center sm:bg-orange-500 sm:text-white text-xs rounded-full sm:px-3 sm:py-2 hover:underline md:px-5 md:py-2 md:text-base font-semibold">
-                  <VscAccount className="text-sm sm:text-xl mr-1" />
-                    Login | Signup
-                  </button>
-                </div>
-                </div>
-                </div>
-          </header>
+     <header className="sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
+       <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
+         {/* Flex container for header content */}
+         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
+           {/* Left side: logo and mobile button */}
+           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
+             {/* Logo */}
+             <img
+               src={LocalMartIcon}
+               alt="Local Mart Logo"
+               className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2"
+             />
+             {/* Mobile login button */}
+             {!isLoggedIn && (
+               <div className="sm:hidden ml-auto mt-1">
+                 <button
+                   onClick={() => navigate("/login")}
+                   className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline"
+                 >
+                   <VscAccount className="text-sm sm:text-xl mr-1" />
+                   Login | Signup
+                 </button>
+               </div>
+             )}
+           </div>
+     
+           {/* Center: controls */}
+           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
+             {/* Location and categories */}
+             <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
+               {/* Location selector */}
+               <div className="flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border border-gray-300">
+                 <FaMapMarkerAlt className="text-lg text-orange-500" />
+                 <select className="w-[110px] sm:w-[130px] text-xs font-semibold bg-transparent focus:outline-none">
+                   <option>Hyderabad</option>
+                   <option>Visakhapatnam</option>
+                   <option>Vijayawada</option>
+                   <option>Chennai</option>
+                   <option>Bengaluru</option>
+                   <option>Mumbai</option>
+                   <option>Delhi</option>
+                   <option>Kolkata</option>
+                   <option>Pune</option>
+                 </select>
+               </div>
+               {/* Categories dropdown */}
+               <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">
+                 <select
+                   className="w-full text-xs md:text-sm bg-transparent focus:outline-none p-1"
+                   defaultValue=""
+                   onChange={(e) => {
+                     const categoryId = e.target.value;
+                     if (categoryId) navigate(`/ads/${categoryId}`);
+                   }}
+                 >
+                   <option value="">All Categories</option>
+                   {loadingCategories ? (
+                     <option disabled>Loading...</option>
+                   ) : catError ? (
+                     <option disabled>Error loading categories</option>
+                   ) : (
+                     categories.map((cat) => (
+                       <option key={cat._id} value={getCategoryId(cat)}>
+                         {cat.name}
+                       </option>
+                     ))
+                   )}
+                 </select>
+               </div>
+             </div>
+             {/* Search Bar */}
+             <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6">
+               <input
+                 type="text"
+                 className="flex-1 px-3 py-1 text-xs sm:text-sm md:text-base bg-white outline-none placeholder-gray-500 min-w-0"
+                 placeholder="Search product"
+               />
+               <button className="bg-orange-500 text-white text-xs sm:text-sm px-4 h-full rounded-l-none rounded-r-full hover:bg-orange-600 transition min-w-[70px]">
+                 Search
+               </button>
+             </div>
+           </div>
+     
+           {/* Right side: desktop login button */}
+           {!isLoggedIn && (
+             <div className="hidden sm:flex justify-end mt-2 w-full sm:w-auto md:mt-0 sm:h-10">
+               <button
+                 onClick={() => navigate("/login")}
+                 className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
+               >
+                 <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
+                 Login | Signup
+               </button>
+             </div>
+           )}
+     
+         </div>
+       </div>
+     </header>
 
-            {/* Mobile brands: horizontal scroll */}
-        <nav className="block md:hidden w-full overflow-x-auto mb-3 p-1">
-          <ul className="flex gap-2">
+            {/* Mobile brands: horizontal scroll - dynamic */}
+            <nav className="block md:hidden w-full overflow-x-auto mb-3 p-1">
+            <ul className="flex gap-2">
+            <li
+            key="all-brands"
+            className={`min-w-[72px] px-2 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 flex flex-col items-center cursor-pointer hover:bg-gray-100 ${!brandFilter ? "bg-orange-100 font-bold" : ""}`}
+            onClick={() => setBrandFilter(null)}
+            >
+            <span className="mb-0.5 truncate text-black">All Brands</span>
+            </li>
             {brands.map((brand) => (
-              <li key={brand.name} className="min-w-[72px] px-2 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 flex flex-col items-center cursor-pointer hover:bg-gray-100"
-                onClick={() => navigate(`${brand.path}`)}>
-                <span className="mb-0.5 truncate text-black">{brand.name}</span>
-              </li>
+            <li
+            key={brand}
+            className={`min-w-[72px] px-2 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 flex flex-col items-center cursor-pointer hover:bg-gray-100 ${brandFilter === brand ? "bg-orange-100 font-bold" : ""}`}
+            onClick={() => setBrandFilter(brand)}
+            >
+            <span className="mb-0.5 truncate text-black">{brand}</span>
+            </li>
             ))}
-          </ul>
-        </nav>
+            </ul>
+            </nav>
 
       <div className="flex max-w-7xl mx-auto mt-1 gap-3 items-start">
-        {/* Sidebar for desktop (lg) */}
+        {/* Sidebar for desktop (lg) -- dynamic brands */}
         <aside className="hidden lg:block sticky top-20 h-120 w-60 min-w-[180px] max-w-[260px] border border-gray-300 bg-white rounded-lg p-4 shadow overflow-y-auto">
-          <h3 className="text-lg font-semibold mb-1">Mobiles</h3>
+          <h3 className="text-lg font-semibold mb-1">Brands</h3>
           <ul className="list-none">
+            <li
+              key="all-brands-d"
+              className={`text-gray-700 hover:font-medium hover:text-black px-2 py-2 border border-gray-300 text-sm rounded-lg mb-1 cursor-pointer flex items-center justify-between ${!brandFilter ? "bg-orange-100 font-bold" : ""}`}
+              onClick={() => setBrandFilter(null)}
+            >
+              <span className="ml-2">All Brands</span>
+              <span className="font-bold">&gt;</span>
+            </li>
             {brands.map((brand) => (
-              <li key={brand.name} className="text-gray-500 px-2 py-2 border border-gray-300 text-sm rounded-lg mb-1 cursor-pointer flex items-center justify-between hover:font-medium hover:text-black"
-                onClick={() => navigate(`${brand.path}`)}>
-                <span className="ml-2">{brand.name}</span>
+              <li
+                key={brand}
+                className={`text-gray-500 px-2 py-2 border border-gray-300 text-sm rounded-lg mb-1 cursor-pointer flex items-center justify-between hover:font-medium hover:text-black ${brandFilter === brand ? "bg-orange-100 font-bold" : ""}`}
+                onClick={() => setBrandFilter(brand)}
+              >
+                <span className="ml-2">{brand}</span>
                 <span className="font-bold">&gt;</span>
               </li>
             ))}
           </ul>
         </aside>
-        {/* Sidebar for md (tablet) */}
-        <aside className="hidden md:block lg:hidden sticky top-20 h-[calc(100vh-6rem)] w-36 min-w-[90px] max-w-[130px] border border-gray-300 bg-white rounded-lg p-2 shadow overflow-y-auto mr-2">
+        {/* Sidebar for md (tablet) -- dynamic brands */}
+        <aside className="hidden md:block lg:hidden sticky top-20 h-120 w-36 min-w-[90px] max-w-[130px] border border-gray-300 bg-white rounded-lg p-2 shadow overflow-y-auto mr-2">
           <h3 className="text-md font-semibold mb-1 text-center">Brands</h3>
           <ul>
+            <li
+              key="all-brands-m"
+              className={`px-1 py-1 border border-gray-300 rounded-md mb-1 text-[13px] text-gray-700 cursor-pointer flex items-center gap-1 hover:font-medium hover:text-black ${!brandFilter ? "bg-orange-100 font-bold" : ""}`}
+              onClick={() => setBrandFilter(null)}
+            >
+              <span>All Brands</span>
+            </li>
             {brands.map((brand) => (
-              <li key={brand.name} className="px-1 py-1 border border-gray-300 rounded-md mb-1 text-[13px] text-gray-600 cursor-pointer flex items-center gap-1 hover:font-medium hover:text-black"
-                onClick={() => navigate(`${brand.path}`)}>
-                <span>{brand.name}</span>
+              <li
+                key={brand}
+                className={`px-1 py-1 border border-gray-300 rounded-md mb-1 text-[13px] text-gray-600 cursor-pointer flex items-center gap-1 hover:font-medium hover:text-black ${brandFilter === brand ? "bg-orange-100 font-bold" : ""}`}
+                onClick={() => setBrandFilter(brand)}
+              >
+                <span>{brand}</span>
               </li>
             ))}
           </ul>
@@ -168,10 +282,11 @@ const MobilesPage = () => {
           <div className="flex flex-row sm:flex-row items-start sm:items-center justify-between mb-2 border-b border-gray-400 p-2">
   <div className="w-full sm:w-auto">
     <h2 className="text-base font-semibold">
-      Mobiles{" "}
+      {filteredAds.length > 0
+      ? filteredAds[0].category?.name : "Category"}{" "}
       <span className="block sm:inline-flex text-gray-500 text-[9px] sm:text-xs mt-1 sm:mt-0">
-        (Showing {startIndex + 1}-
-        {Math.min(startIndex + productsPerPage, products.length)} of {products.length} products)
+        (Showing {filteredAds.length === 0 ? 0 : startIndex + 1}-
+        {Math.min(startIndex + productsPerPage, filteredAds.length)} of {filteredAds.length} products)
       </span>
     </h2>
     <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 text-[9px] sm:text-xs mt-1 text-gray-500">
@@ -186,8 +301,7 @@ const MobilesPage = () => {
     <button
       onClick={() => setViewMode("grid")}
       className={`p-1 text-2xl sm:text-3xl rounded ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"}`}
-      aria-label="Grid view"
-    >
+      aria-label="Grid view">
       ▦
     </button>
     <button
@@ -200,66 +314,70 @@ const MobilesPage = () => {
   </div>
 </div>
 
-          {/* Products View */}
-<div className={`ml-1 mr-1 sm:mr-2 md:ml-3 mt-4 
+          {/* Ads View section */}
+          {loadingAds ? (
+  <div className="flex justify-center items-center h-40">
+    <p className="text-blue-600 text-lg font-semibold">Loading ads...</p>
+  </div>
+) : adsError ? (
+  <div className="flex justify-center items-center h-40">
+    <p className="text-red-600 text-lg font-semibold">{adsError}</p>
+  </div>
+) : visibleAds.length > 0 ? (
+<div className={`p-2 sm:p-2 sm:mr-2 mt-2
   ${viewMode === "grid" 
-    ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4" 
+    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-4" 
     : "flex flex-col gap-2"} 
-  ${viewMode === "list" ? "p-3 sm:p-0 m-2 md:ml-3 gap-3" : ""}`}>
-  {visibleProducts.map((prod, idx) => (
+  ${viewMode === "list" ? "p-3 sm:p-0 m-2 md:ml-1 gap-3" : ""}`}>
+  {visibleAds.map((ad, idx) => (
     <div
-      key={idx}
-      className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2 md:p-3 transition-all duration-200 hover:shadow-lg hover:scale-102
-        ${viewMode === "list" ? "flex flex-row sm:flex-row gap-3 sm:gap-5 sm:items-center w-full md:w-150 lg:w-220" : ""}`}
-      onClick={() => navigate(`/ad/${prod._id}`)}>
-      <img
-        src={prod.images[0]}
-        alt={prod.title}
-        className={`rounded-lg 
-          ${viewMode === "grid" 
-            ? "w-full h-22 sm:h-28 md:h-32 lg:w-40 lg:h-23" 
+      key={ad.id || ad._id || idx}
+      className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2.5 sm:p-2 md:p-3 transition-all duration-200 hover:shadow-lg hover:scale-102 cursor-pointer
+        ${viewMode === "list" ? "flex flex-row sm:flex-row gap-3 sm:gap-5 sm:items-center w-full md:w-150 lg:w-200" : "sm:w-47 md:w-full"}`}
+      onClick={() => navigate(`/ad/${ad.id || ad._id}`)}>
+      <img src={ad.images[0]} alt={ad.title}
+        className={`rounded-lg ${viewMode === "grid" 
+            ? "w-full h-34 sm:h-30 md:h-32 lg:w-40 lg:h-30 object-cover" 
             : "w-35 sm:w-32 h-22"} `}
       />
       <div className={`${viewMode === "list" ? "flex flex-col justify-between flex-1 mt-1 sm:mt-0" : ""}`}>
-        <div className="flex flex-row font-bold text-base sm:text-lg">
-          ₹ {prod.price}
-          <span className={`ml-auto text-2xl hover:text-orange-500 
-            ${viewMode === "grid" ? "hidden" : ""} 
-            ${viewMode === "list" ? "hidden" : ""}`}>
-            𖹭
-          </span>
+        <div className="flex flex-row font-bold text-base sm:text-md">
+          ₹ {ad.price}
         </div>
-        <div className={`${viewMode === "grid" ? "text-gray-800 text-[10px] sm:text-sx sm:mb-1" : ""} ${viewMode === "list" ? "text-xs sm:text-lg font-medium" : ""}`}>
-          {prod.title}
+        <div className={`${viewMode === "grid" ? "text-gray-700 text-[10px] sm:text-xs sm:mb-1 line-clamp-1" : ""} ${viewMode === "list" ? "text-xs sm:text-lg font-medium line-clamp-1" : ""}`}>
+          {ad.title}
         </div>
-        <div className="text-gray-700 text-[10px] sm:text-xs mb-1">📍 {prod.location}</div>
+        <div className="flex text-gray-600 text-[10px] sm:text-xs mb-1 gap-1">
+          <FaMapMarkerAlt className="text-md" /> 
+        {ad.location && (ad.location.city || ad.location.address)}
+        </div>
 
         <div className="flex items-center justify-between gap-2 sm:mt-1 flex-wrap">
-          <div className={`flex gap-1 ${viewMode === "list" ? "gap-2 sm:gap-8" : ""}`}>
-            <button className={`text-white rounded-sm  bg-blue-500 cursor-pointer 
-              ${viewMode === "grid" ? "text-[9px] sm:text-xs px-2 py-1 sm:text-[10px]" : ""}
-              ${viewMode === "list" ? "text-[10px] sm:text-[12px] px-2 py-1 sm:px-9 sm:py-[2px]" : ""}`}>
-              📝 Chat
-            </button>
-            <button className={`text-white rounded-sm bg-blue-500 cursor-pointer 
-              ${viewMode === "grid" ? "text-[9px] sm:text-xs px-2 py-1 sm:text-[10px]" : ""}
-              ${viewMode === "list" ? "text-[10px] sm:text-[12px] px-2 py-1 sm:px-9 sm:py-[2px]" : ""}`}>
-              📞 Contact
-            </button>
-            <span className={`${viewMode === "grid" ? "hidden" : ""} 
-              ${viewMode === "list" ? "ml-auto text-[20px] bg-white rounded-full shadow px-1 cursor-pointer hover:text-orange-500" : ""}`}>
-              𖹭
-            </span>
-          </div>
-          <span className={`${viewMode === "list" ? "hidden" : ""} text-gray-600 text-[9px] sm:text-xs sm:text-[10px]`}>
-            {prod.time}
+        <span className={`${viewMode === "grid" ? "hidden" : ""} 
+            ${viewMode === "list" ? "ml-auto text-[15px] sm:text-[22px] bg-white rounded-full shadow px-0.5 sm:px-1 cursor-pointer hover:text-orange-500" : ""}`}>
+            𖹭
           </span>
+          <span className={`${viewMode === "list" ? "hidden" : ""} text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px]`}>
+            {(() => {
+                        const d = new Date(ad.createdAt);
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        return `${day}/${month}/${year}`;
+                      })()}
+          </span>
+          <span className="text-gray-600 text-[8px] sm:text-xs sm:text-[9.5px] hover:underline">
+                       View Details
+                    </span>
         </div>
       </div>
     </div>
   ))}
-</div>
-
+</div> ) : (
+  <div className="flex justify-center items-center h-full">
+    <p className="text-gray-500">No ads available</p>
+  </div>
+)}
 
           {/* Pagination */}
           <div className="flex justify-center mt-6 gap-4">
@@ -288,15 +406,15 @@ const MobilesPage = () => {
       <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
         <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
           <div>
-            <img src="/Website logos/LocalMartIconBot.png" alt="Local Mart Logo" className="h-9" />
+            <img src={LocalMartIconBot} alt="Local Mart Logo" className="h-9" />
             <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
               We gather and verify service provider details across various categories & display them on our website
             </div>
             <div className="flex gap-6 mt-3 sm:mt-8">
-              <img src="/Website logos/instagram.png" onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
-              <img src="/Website logos/facebook.jpg" onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
-              <img src="/Website logos/twitter logo.jpg" onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
-              <img src="/Website logos/linkedin.png" onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
+              <img src={InstagramIcon} onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
+              <img src={FacebookIcon} onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
+              <img src={TwitterIcon} onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
+              <img src={LinkedinIcon} onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
           </div>
           <div>
             <h4 className="font-semibold mb-2">Our Services</h4>

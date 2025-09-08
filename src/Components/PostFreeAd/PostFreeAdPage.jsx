@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllCategories, getAllSubCategories } from "../../Services/api";
 import { useNavigate } from "react-router-dom";
+import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 import { FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook, FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt,
   FaTabletAlt, FaHeadphones, FaLaptop, FaCamera, FaGamepad, FaBicycle, FaMotorcycle, FaTruck, FaHome, FaLandmark, FaStore,
   FaUserTie, FaChalkboardTeacher, FaDumbbell, FaGuitar, FaDog, FaCat, FaCrow, FaFish, FaTshirt as FaTshirt2, FaShoePrints,
@@ -202,7 +203,7 @@ export default function PostFreeAdPage() {
       <header className="sticky top-0 z-50 bg-white p-2 sm:p-4 border-b border-gray-200">
         <div className="flex flex-wrap items-center justify-between gap-4 max-w-6xl mx-auto">
           <div className="flex flex-row items-center gap-2">
-            <img src="/Website logos/LocalMartIcon.png" alt="Local Mart Logo" className="h-9" />
+            <img src={LocalMartIcon} alt="Local Mart Logo" className="h-9" />
             <div className="flex ml-2 px-2 text-xs sm:text-sm">
               <FaMapMarkerAlt className="text-sm sm:text-lg" />
               <select className="w-22 sm:w-30">
@@ -217,14 +218,14 @@ export default function PostFreeAdPage() {
                 <option>Pune</option>
               </select>
             </div>
-            <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
+          </div>
+          <div className="sm:hidden justify-end mt-2 md:mt-0 sm:h-10 ml-auto">
                       <button onClick={() => navigate("/login")}
                          className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
                         <VscAccount className="text-sm sm:text-xl mr-1" />
                         Login | Signup
                       </button>
                   </div>
-          </div>
           <div className="hidden sm:block justify-end mt-2 md:mt-0 sm:h-10">
             <button onClick={() => navigate("/login")}
             className="flex items-center sm:bg-orange-500 sm:text-white text-xs rounded-full sm:px-3 sm:py-2 hover:underline md:px-5 md:py-2 md:text-base font-semibold">
@@ -236,7 +237,7 @@ export default function PostFreeAdPage() {
       </header>
       {/* BODY */}
       {/* Mobile Categories Bar (visible on small screens only) */}
-<div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-3 scrollbar-hide">
+      <div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-1.5 scrollbar-hide">
         <div className="flex gap-2 min-w-max">
           {loadingCategories ? (
             <div className="py-8 text-center text-xl text-blue-600 font-semibold w-full">
@@ -244,13 +245,17 @@ export default function PostFreeAdPage() {
             </div>
           ) : categories.map((cat) => (
             <button
-              key={cat.name}
-              onClick={() => selectCategory(cat.name)}
-              className={`flex flex-col items-center justify-center cursor-pointer rounded-lg p-2 whitespace-nowrap
-                ${selectedCategory === cat.name ? "bg-green-500 text-white" : "bg-white text-gray-800 border border-gray-300 hover:bg-green-100"}`}
-            >
-              <span className="text-xl">{cat.icon || categoryIcons[cat.name]}</span>
-              <span className="text-xs">{cat.name}</span>
+               key={cat.name}
+               onClick={() => selectCategory(cat.name)}
+               className={`
+              flex flex-col items-center justify-center cursor-pointer rounded-md 
+              border border-gray-300 p-2 whitespace-normal text-center
+              min-w-[70px] max-w-[90px]
+              ${selectedCategory === cat.name ? "bg-green-500 text-white" : "bg-white text-gray-800 hover:bg-green-100"}
+              `}
+              >
+             <img className="h-5 w-5 mb-1" src={cat.iconUrl || categoryIcons[cat.name]} />
+             <span className="text-xs break-words">{cat.name}</span>
             </button>
           ))}
         </div>
@@ -273,7 +278,7 @@ export default function PostFreeAdPage() {
                 className={`flex flex-col items-center gap-2 border border-gray-300 p-4 rounded-md cursor-pointer transition-colors duration-200 md:flex-row md:items-center
                   ${selectedCategory === cat.name ? "bg-green-500 text-white border-green-600" : "hover:bg-green-100"}`}
               >
-                <span className="text-xl md:text-2xl">{cat.icon || categoryIcons[cat.name]}</span>
+                <img className="h-6 w-6" src={cat.iconUrl || categoryIcons[cat.name]} />
                 <span className="text-sm md:text-base">{cat.name}</span>
               </li>
             ))}
@@ -298,7 +303,7 @@ export default function PostFreeAdPage() {
                   <div key={sub._id} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-md p-2 sm:p-4 cursor-pointer hover:bg-blue-100 hover:shadow-lg transition-all duration-200 min-h-[120px] group"
                     onClick={() => navigate(`/post-free-ad/${encodeURIComponent(selectedCategory)}/${encodeURIComponent(sub.name)}`)}>
                     <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-blue-50 mb-1 sm:mb-2 group-hover:bg-blue-200 transition-all">
-                      <span className="text-2xl sm:text-4xl text-blue-600">{sub.icon || subCategoryIcons[sub.name] || <FaPuzzlePiece />}</span>
+                      <img className="text-blue-600 rounded-full" src={sub.icon || subCategoryIcons[sub.name] } />
                     </div>
                     <span className="font-semibold text-xs sm:text-base text-gray-800 text-center break-words leading-tight">{sub.name}</span>
                   </div>

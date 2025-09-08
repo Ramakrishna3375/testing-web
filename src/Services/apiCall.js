@@ -1,5 +1,4 @@
 import axios from "axios";
-import { BASE_URL } from "./helper";
 
 // Auto-fetch token and store in sessionStorage if not already present
 (async function fetchAndStoreToken() {

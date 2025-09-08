@@ -12,6 +12,7 @@ return(
       <Routes>
         {/* Default route */}
         <Route path="/" element={<Navigate to="/homepage" replace />} />
+        
         <Route path="/homepage" element={<HomePage />} />
         <Route path="/ads/:categoryId" element={<MobilesPage />} />
         <Route path="/ad/:id" element={<ProductDetailPage />} />

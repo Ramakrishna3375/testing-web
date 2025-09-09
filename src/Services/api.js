@@ -23,8 +23,10 @@ export const getBanners = async () => {
 
 //Post New Ad
 export const postNewAd = async (adData, token) => {
-  return await commonRequest("POST", `${BASE_URL}/api/post-ads`, adData, {
-    Authorization: token,
-    // Do NOT set 'Content-Type' here for FormData; let browser handle it
-  });
+  return await commonRequest("POST", `${BASE_URL}/api/post-ads`, adData, { Authorization: token });
+};
+
+//Get Chat History
+export const getChatHistory = async (userId, token) => {
+  return await commonRequest("GET", `${BASE_URL}/api/chat/History/${userId}`, null, { Authorization: token });
 };

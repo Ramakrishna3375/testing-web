@@ -9,22 +9,13 @@ import TwitterIcon from '../assets/Website logos/twitter logo.jpg';
 import LinkedinIcon from '../assets/Website logos/linkedin.png';
 import advertise1 from '../assets/Website logos/advertise1.jpg';
 import advertise2 from '../assets/Website logos/advertise2.jpg';
-import Banner1 from '../assets/Website logos/Banner1.png';
-import Banner2 from '../assets/Website logos/Banner2.png';
-import Botban from '../assets/Website logos/botban.jpg';
-import Bottomb3 from '../assets/Website logos/bottomb3.jpg';
-import Botban1 from '../assets/Website logos/botban1.jpg';
-// Product/ad images
-import CrosscutSpeaker from '../assets/products/Crosscut speaker.jpg';
-import Pixel7a from '../assets/products/pixel 7a.avif';
-import TitanCar from '../assets/products/Titan car.jpg';
-import ModernHouse from '../assets/products/Modern house.jpeg';
-import OfficeChair from '../assets/products/office chair.jpg';
 import {FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook,
   FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt
 } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 import { getAllCategories, getAllActiveAds, getBanners } from "../Services/api";
+import Header from './Header&Footer/Header';
+import Footer from "./Header&Footer/Footer";
 
 // Helper: map category names to icons from API
 const categoryIcons = {
@@ -43,147 +34,6 @@ const categoryIcons = {
 
 const adImages = [
   advertise1, advertise2
-];
-
- const ads = [
-  {
-    _id: 29,
-    images: [
-      CrosscutSpeaker,
-      Pixel7a,
-    ],
-    title: "CrossCut Speaker",
-    price: "28,000",
-    location: "Uppal, Hyderabad",
-    time: "Today",
-    category: "electronics-appliances"
-  },
-  {
-    _id: 30,
-    images: [
-      Pixel7a,
-    ],
-    title: "Pixel 7A",
-    price: "10,000",
-    location: "Karimnagar",
-    time: "Today",
-    category: "mobiles-accessories"
-  },
-  {
-    _id: 31,
-    images: [
-      TitanCar,
-    ],
-    title: "Titan Car",
-    price: "6.5 Lakh",
-    location: "Peddapalli",
-    time: "Today",
-    category: "cars"
-  },
-  {
-    _id: 32,
-    images: [
-      ModernHouse,
-    ],
-    title: "Modern House",
-    price: "50 Lakh",
-    location: "Nizamabad",
-    time: "Today",
-    category: "furniture"
-  },
-  {
-    _id: 33,
-    images: [
-      OfficeChair,
-    ],
-    title: "Office Chair",
-    price: "2,000",
-    location: "Ameerpet, Hyderabad",
-    time: "Today",
-    category: "furniture"
-  },
-  {
-    _id: 34,
-    images: [
-      OfficeChair,
-    ],
-    title: "Office Chair",
-    price: "2,000",
-    location: "Warangal",
-    time: "Today",
-    category: "furniture"
-  },
-  {
-    _id: 35,
-    images: [
-      CrosscutSpeaker,
-      Pixel7a,
-    ],
-    title: "CrossCut Speaker",
-    price: "28,000",
-    location: "Uppal, Hyderabad",
-    time: "Today",
-    category: "electronics-appliances"
-  },
-  {
-    _id: 36,
-    images: [
-      Pixel7a,
-    ],
-    title: "Pixel 7A",
-    price: "10,000",
-    location: "Karimnagar",
-    time: "Today",
-    category: "mobiles-accessories"
-  },
-  {
-    _id: 37,
-    images: [
-      TitanCar,
-    ],
-    title: "Titan Car",
-    price: "6.5 Lakh",
-    location: "Peddapalli",
-    time: "Today",
-    category: "cars"
-  },
-  {
-    _id: 38,
-    images: [
-      ModernHouse,
-    ],
-    title: "Modern House",
-    price: "50 Lakh",
-    location: "Nizamabad",
-    time: "Today",
-    category: "furniture"
-  },
-  {
-    _id: 39,
-    images: [
-      OfficeChair,
-    ],
-    title: "Office Chair",
-    price: "2,000",
-    location: "Ameerpet, Hyderabad",
-    time: "Today",
-    category: "furniture"
-  },
-  {
-    _id: 40,
-    images: [
-      OfficeChair,
-    ],
-    title: "Office Chair",
-    price: "2,000",
-    location: "Warangal",
-    time: "Today",
-    category: "furniture"
-  },
-];
-
-const banners = [
-  Banner1, Banner2, Botban, Bottomb3, Botban1
 ];
 
 const HomePage = () => {
@@ -297,105 +147,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen text-sm">
       {/* Header */}
-<header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
-       <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
-         {/* Flex container for header content */}
-         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
-           {/* Left side: logo and mobile button */}
-           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
-             {/* Logo */}
-             <img
-               src={LocalMartIcon}
-               alt="Local Mart Logo"
-               className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2"
-             />
-             {/* Mobile login button */}
-             {!isLoggedIn && (
-               <div className="sm:hidden ml-auto mt-1">
-                 <button
-                   onClick={() => navigate("/login")}
-                   className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline"
-                 >
-                   <VscAccount className="text-sm sm:text-xl mr-1" />
-                   Login | Signup
-                 </button>
-               </div>
-             )}
-           </div>
-     
-           {/* Center: controls */}
-           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
-             {/* Location and categories */}
-             <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
-               {/* Location selector */}
-               <div className="flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border border-gray-300">
-                 <FaMapMarkerAlt className="text-lg text-orange-500" />
-                 <select className="w-[110px] sm:w-[130px] text-xs font-semibold bg-transparent focus:outline-none">
-                   <option>Hyderabad</option>
-                   <option>Visakhapatnam</option>
-                   <option>Vijayawada</option>
-                   <option>Chennai</option>
-                   <option>Bengaluru</option>
-                   <option>Mumbai</option>
-                   <option>Delhi</option>
-                   <option>Kolkata</option>
-                   <option>Pune</option>
-                 </select>
-               </div>
-               {/* Categories dropdown */}
-               <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">
-                 <select
-                   className="w-full text-xs md:text-sm bg-transparent focus:outline-none p-1"
-                   defaultValue=""
-                   onChange={(e) => {
-                     const categoryId = e.target.value;
-                     if (categoryId) navigate(`/ads/${categoryId}`);
-                   }}
-                 >
-                   <option value="">All Categories</option>
-                   {loadingCategories ? (
-                     <option disabled>Loading...</option>
-                   ) : catError ? (
-                     <option disabled>Error loading categories</option>
-                   ) : (
-                     categories.map((cat) => (
-                       <option key={cat._id} value={getCategoryId(cat)} >
-                         {cat.name}
-                       </option>
-                     ))
-                   )}
-                 </select>
-               </div>
-             </div>
-             {/* Search Bar */}
-             <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6">
-               <input
-                 type="text"
-                 className="flex-1 px-3 py-1 text-xs sm:text-sm md:text-base bg-white outline-none placeholder-gray-500 min-w-0"
-                 placeholder="Search product"
-               />
-               <button className="bg-orange-500 text-white text-xs sm:text-sm px-4 h-full rounded-l-none rounded-r-full hover:bg-orange-600 transition min-w-[70px]">
-                 Search
-               </button>
-             </div>
-           </div>
-     
-           {/* Right side: desktop login button */}
-           {!isLoggedIn && (
-             <div className="hidden sm:flex justify-end mt-2 w-full sm:w-auto md:mt-0 sm:h-10">
-               <button
-                 onClick={() => navigate("/login")}
-                 className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
-               >
-                 <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
-                 Login | Signup
-               </button>
-             </div>
-           )}
-     
-         </div>
-       </div>
-     </header>
+       <Header />
 
       {/* Categories Top Bar (Mobile Only) */}
       <div className="sm:hidden top-14 bg-white z-10 p-1 pb-1 shadow">
@@ -482,10 +234,15 @@ const HomePage = () => {
           </div>
 
           {/* Banner Section */}
-          <div className="relative overflow-hidden rounded-lg shadow-md mb-4">
-            <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ transform: `translateX(-${current * 100}%)` }}>
+          {loadingBanners ? (
+            <div className="py-8 text-center text-xl text-blue-600 font-semibold">Loading banners . . .</div>
+          ) : bannerError ? (
+            <div className="py-8 text-center text-red-600 font-semibold">{bannerError}</div>
+          ) : (
+            <div className="relative overflow-hidden rounded-lg shadow-md mb-4">
+              <div
+                className="flex transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${current * 100}%)` }}>
               {banners.map((banner, index) => (
                 <div key={banner._id || index} className="w-full flex-shrink-0">
                   <img
@@ -495,8 +252,7 @@ const HomePage = () => {
                   />
                 </div>
               ))}
-
-            </div>
+            </div> 
             {/* Dots */}
             <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
               {banners.map((banner, index) => (
@@ -511,6 +267,7 @@ const HomePage = () => {
               ))}
             </div>
           </div>
+        )}
 
            {/* LocalMart Recommended */}
           <h2 className="text-lg sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
@@ -623,48 +380,7 @@ const HomePage = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
-          <div>
-            <img src={LocalMartIconBot} alt="Local Mart Logo" className="h-9" />
-            <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
-              We gather and verify service provider details across various categories & display them on our website
-            </div>
-            <div className="flex gap-6 mt-3 sm:mt-8">
-              <img src={InstagramIcon} onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
-              <img src={FacebookIcon} onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
-              <img src={TwitterIcon} onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
-              <img src={LinkedinIcon} onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-2">Our Services</h4>
-            <ul className="text-gray-900">
-              <li onClick={() => navigate("/business-2-business")} className="cursor-pointer mb-1 sm:mb-2">Business 2 Business</li>
-              <li onClick={() => navigate("/booking-services")} className="cursor-pointer mb-1 sm:mb-2">Booking Services</li>
-              <li onClick={() => navigate("/food-delivery")} className="cursor-pointer mb-1 sm:mb-2">Food Delivery</li>
-              <li onClick={() => navigate("/local-businesses")} className="cursor-pointer mb-1 sm:mb-2">Local Businesses</li>
-              <li onClick={() => navigate("/e-commerce")} className="cursor-pointer mb-1 sm:mb-2">E-Commerce</li>
-            </ul>
-          </div>
-          <div>
-            <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/advertise-here")} className="cursor-pointer mb-1 sm:mb-2">Advertise Here</li>
-              <li onClick={() => navigate("/buy-sell")} className="cursor-pointer mb-1 sm:mb-2">Buy & Sell</li>
-              <li onClick={() => navigate("/local-stores")} className="cursor-pointer mb-1 sm:mb-2">Local Stores</li>
-              <li onClick={() => navigate("/explore-brands")} className="cursor-pointer mb-1 sm:mb-2">Explore Brands</li>
-              <li onClick={() => navigate("/shopping")} className="cursor-pointer mb-1 sm:mb-2">Shopping</li>
-            </ul>
-          </div>
-          <div>
-            <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Terms & Conditions</li>
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Privacy Policy</li>
-              <li onClick={() => navigate("/cancellation-policy")} className="cursor-pointer mb-1 sm:mb-2">Cancellation Policy</li>
-              <li onClick={() => navigate("/local-mart")} className="cursor-pointer mb-1 sm:mb-2">Local Mart</li>
-            </ul>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

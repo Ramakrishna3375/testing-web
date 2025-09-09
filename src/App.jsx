@@ -1,10 +1,11 @@
 import { Route, Routes, Navigate } from "react-router-dom";
 import "./App.css";
 import HomePage from "./Components/HomePage.jsx";
-import MobilesPage from "./Components/Mobiles/AdsPage.jsx";
-import ProductDetailPage from "./Components/Mobiles/AdDetailsPage.jsx";
+import MobilesPage from "./Components/AdsViewPages/AdsPage.jsx";
+import ProductDetailPage from "./Components/AdsViewPages/AdDetailsPage.jsx";
 import PostFreeAdPage from "./Components/PostFreeAd/PostFreeAdPage.jsx";
 import PostAdForm from "./Components/PostFreeAd/PostAdForm.jsx";
+import Layout from './Components/ChatPage/Layout';
 
 function App(){
 return(
@@ -21,6 +22,9 @@ return(
           path="/post-free-ad/:category/:subcategory"
           element={<PostAdForm />}
         />
+        <Route path="/chat" element={<Layout />} />
+        <Route path="/inbox" element={<Layout />} />
+        <Route path="/chat/:userId" element={<Layout />} />
       </Routes>
     </>
   );

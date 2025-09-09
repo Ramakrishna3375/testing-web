@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getAllCategories, getAllActiveAds } from "../../Services/api";
+import Header from '../Header&Footer/Header';
 import { useNavigate, useParams } from "react-router-dom";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
@@ -125,105 +126,7 @@ const MobilesPage = () => {
   return (
     <div className="text-sm">
       {/* Header */}
-     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
-       <div className="max-w-6xl mx-auto w-full px-2 md:px-4"> {/* Added px-2 md:px-4 */}
-         {/* Flex container for header content */}
-         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
-           {/* Left side: logo and mobile button */}
-           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
-             {/* Logo */}
-             <img
-               src={LocalMartIcon}
-               alt="Local Mart Logo"
-               className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2"
-             />
-             {/* Mobile login button */}
-             {!isLoggedIn && (
-               <div className="sm:hidden ml-auto mt-1">
-                 <button
-                   onClick={() => navigate("/login")}
-                   className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline"
-                 >
-                   <VscAccount className="text-sm sm:text-xl mr-1" />
-                   Login | Signup
-                 </button>
-               </div>
-             )}
-           </div>
-     
-           {/* Center: controls */}
-           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
-             {/* Location and categories */}
-             <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
-               {/* Location selector */}
-               <div className="flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border border-gray-300">
-                 <FaMapMarkerAlt className="text-lg text-orange-500" />
-                 <select className="w-[110px] sm:w-[130px] text-xs font-semibold bg-transparent focus:outline-none">
-                   <option>Hyderabad</option>
-                   <option>Visakhapatnam</option>
-                   <option>Vijayawada</option>
-                   <option>Chennai</option>
-                   <option>Bengaluru</option>
-                   <option>Mumbai</option>
-                   <option>Delhi</option>
-                   <option>Kolkata</option>
-                   <option>Pune</option>
-                 </select>
-               </div>
-               {/* Categories dropdown */}
-               <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">
-                 <select
-                   className="w-full text-xs md:text-sm bg-transparent focus:outline-none p-1"
-                   defaultValue=""
-                   onChange={(e) => {
-                     const categoryId = e.target.value;
-                     if (categoryId) navigate(`/ads/${categoryId}`);
-                   }}
-                 >
-                   <option value="">All Categories</option>
-                   {loadingCategories ? (
-                     <option disabled>Loading...</option>
-                   ) : catError ? (
-                     <option disabled>Error loading categories</option>
-                   ) : (
-                     categories.map((cat) => (
-                       <option key={cat._id} value={getCategoryId(cat)}>
-                         {cat.name}
-                       </option>
-                     ))
-                   )}
-                 </select>
-               </div>
-             </div>
-             {/* Search Bar */}
-             <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6">
-               <input
-                 type="text"
-                 className="flex-1 px-3 py-1 text-xs sm:text-sm md:text-base bg-white outline-none placeholder-gray-500 min-w-0"
-                 placeholder="Search product"
-               />
-               <button className="bg-orange-500 text-white text-xs sm:text-sm px-4 h-full rounded-l-none rounded-r-full hover:bg-orange-600 transition min-w-[70px]">
-                 Search
-               </button>
-             </div>
-           </div>
-     
-           {/* Right side: desktop login button */}
-           {!isLoggedIn && (
-             <div className="hidden sm:flex justify-end mt-2 w-full sm:w-auto md:mt-0 sm:h-10">
-               <button
-                 onClick={() => navigate("/login")}
-                 className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
-               >
-                 <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
-                 Login | Signup
-               </button>
-             </div>
-           )}
-     
-         </div>
-       </div>
-     </header>
+      <Header />
 
             {/* Mobile brands: horizontal scroll - dynamic */}
             <nav className="block md:hidden w-full overflow-x-auto mb-3 p-1">

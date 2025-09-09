@@ -4,8 +4,10 @@ import axios from "axios";
 (async function fetchAndStoreToken() {
   if (!sessionStorage.getItem("token")) {
     try {
+      // Clear old token if present
+    sessionStorage.removeItem("token");
       const response = await axios.post("/api/users/login", {
-        username: "badmaash basha",
+        email: "khaderbasha2692@gmail.com",
         password: "Khader@Basha123"
       });
       const token = response?.data?.token;

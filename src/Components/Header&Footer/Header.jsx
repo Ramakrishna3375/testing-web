@@ -5,7 +5,7 @@ import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 
 import { FaMapMarkerAlt} from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
-import { getAllCategories } from "../../Services/api";
+import { getAllCategories, searchAdsByTitle } from "../../Services/api";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -13,6 +13,10 @@ const Header = () => {
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [catError, setCatError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState(null);
 
   const getCategoryId = (cat) => cat._id;
   
@@ -39,6 +43,41 @@ const Header = () => {
       };
       fetchCategories();
     }, []);
+
+    useEffect(() => {
+  if (!searchQuery.trim()) {
+    setSearchResults([]);
+    setIsSearching(false);
+    setSearchError(null);
+    return;
+  }
+
+  setIsSearching(true);
+  const delayDebounceFn = setTimeout(async () => {
+    try {
+      const res = await searchAdsByTitle(searchQuery.trim());
+      let adsArray = [];
+      if (res && res.data) {
+        if (Array.isArray(res.data.ads)) {
+          adsArray = res.data.ads;
+        } else if (res.data.postAds && Array.isArray(res.data.postAds)) {
+          adsArray = res.data.postAds;
+        } else if (res.data.postAd) {
+          adsArray = [res.data.postAd];  // single ad object wrapped in array
+        }
+      }
+      setSearchResults(adsArray);
+      setSearchError(null);
+    } catch (err) {
+      setSearchResults([]);
+      setSearchError('Could not fetch search results');
+    }
+    setIsSearching(false);
+  }, 400);
+
+  return () => clearTimeout(delayDebounceFn);
+}, [searchQuery]);
+
 
   return (
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
@@ -112,16 +151,61 @@ const Header = () => {
                    </div>
                  </div>
                  {/* Search Bar */}
-                 <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6">
-                   <input
-                     type="text"
-                     className="flex-1 px-3 py-1 text-xs sm:text-sm md:text-base bg-white outline-none placeholder-gray-500 min-w-0"
-                     placeholder="Search product"
-                   />
-                   <button className="bg-orange-500 text-white text-xs sm:text-sm px-4 h-full rounded-l-none rounded-r-full hover:bg-orange-600 transition min-w-[70px]">
-                     Search
-                   </button>
-                 </div>
+                 <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="flex-1 px-3 py-1 text-xs sm:text-sm md:text-base bg-white outline-none placeholder-gray-500 min-w-0"
+                placeholder="Search product"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    navigate(`/search?query=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="bg-orange-500 text-white text-xs sm:text-sm px-4 h-full rounded-l-none rounded-r-full hover:bg-orange-600 transition min-w-[70px]"
+                onClick={() => {
+                  if (searchQuery.trim()) {
+                    navigate(`/search?query=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
+              >
+                Search
+              </button>
+
+              {/* Search Results Dropdown */}
+              {searchQuery && (
+                <div className="absolute left-0 top-full w-full bg-white border z-50 rounded-b shadow max-h-60 overflow-y-auto">
+                  {isSearching ? (
+                    <div className="p-3 text-xs text-gray-500">Searching...</div>
+                  ) : searchError ? (
+                    <div className="p-3 text-xs text-red-500">{searchError}</div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="p-3 text-xs text-gray-500">No results.</div>
+                  ) : (
+                    searchResults.map((ad, idx) => (
+                      <div
+                        key={ad._id || idx}
+                        onClick={() => {
+                          navigate(`/ad/${ad._id || ad.id}`);
+                          setSearchQuery("");
+                          setSearchResults([]);
+                        }}
+                        className="p-3 cursor-pointer hover:bg-orange-100 border-b last:border-0 flex items-center gap-2"
+                      >
+                        <img src={ad.images?.[0] || "/no-image.png"} alt="" className="w-8 h-8 rounded object-cover border" />
+                        <span className="text-xs text-gray-800">{ad.title}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
                </div>
          
                {/* Right side: desktop login button */}

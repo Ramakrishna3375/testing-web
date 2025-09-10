@@ -288,7 +288,7 @@ const HomePage = () => {
                 onClick={() => navigate(`/ad/${ad.id}`)}
               >
                 <img
-                  src={ad.images[0]}
+                  src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"}
                   alt={ad.title}
                   className="w-full h-34 sm:h-35 object-cover rounded-xl"
                 />
@@ -342,7 +342,7 @@ const HomePage = () => {
                 onClick={() => navigate(`/ad/${ad.id}`)}
               >
                 <img
-                  src={ad.images[0]}
+                  src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"}
                   alt={ad.title}
                   className="w-full h-34 sm:h-35 object-cover rounded-xl"
                 />

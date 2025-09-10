@@ -6,6 +6,7 @@ import ProductDetailPage from "./Components/AdsViewPages/AdDetailsPage.jsx";
 import PostFreeAdPage from "./Components/PostFreeAd/PostFreeAdPage.jsx";
 import PostAdForm from "./Components/PostFreeAd/PostAdForm.jsx";
 import Layout from './Components/ChatPage/Layout';
+import SearchResultsPage from './Components/AdsViewPages/SearchResultsPage';
 
 function App(){
 return(
@@ -25,6 +26,7 @@ return(
         <Route path="/chat" element={<Layout />} />
         <Route path="/inbox" element={<Layout />} />
         <Route path="/chat/:userId" element={<Layout />} />
+        <Route path="/search" element={<SearchResultsPage />} />
       </Routes>
     </>
   );

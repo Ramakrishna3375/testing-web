@@ -26,6 +26,12 @@ export const postNewAd = async (adData, token) => {
   return await commonRequest("POST", `${BASE_URL}/api/post-ads`, adData, { Authorization: token });
 };
 
+//Search Ads by Title
+export const searchAdsByTitle = async (title) => {
+  const encodedTitle = encodeURIComponent(title);
+  return await commonRequest("GET", `${BASE_URL}/api/post-ads/${encodedTitle}`);
+};
+
 //Get Chat History
 export const getChatHistory = async (userId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chat/History/${userId}`, null, { Authorization: token });

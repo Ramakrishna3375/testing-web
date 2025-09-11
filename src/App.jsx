@@ -7,6 +7,8 @@ import PostFreeAdPage from "./Components/PostFreeAd/PostFreeAdPage.jsx";
 import PostAdForm from "./Components/PostFreeAd/PostAdForm.jsx";
 import Layout from './Components/ChatPage/Layout';
 import SearchResultsPage from './Components/AdsViewPages/SearchResultsPage';
+import UserLogin from "./Components/LoginPage/LoginPage.jsx";
+import CompleteRegistration from "./Components/LoginPage/RegisterPage.jsx";
 
 function App(){
 return(
@@ -14,7 +16,10 @@ return(
       <Routes>
         {/* Default route */}
         <Route path="/" element={<Navigate to="/homepage" replace />} />
-        
+
+        <Route path="/login" element={<UserLogin />} />
+        <Route path="/register" element={<CompleteRegistration />} />
+
         <Route path="/homepage" element={<HomePage />} />
         <Route path="/ads/:categoryId" element={<MobilesPage />} />
         <Route path="/ad/:id" element={<ProductDetailPage />} />

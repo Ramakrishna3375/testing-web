@@ -271,8 +271,8 @@ const MobilesPage = () => {
       className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2.5 sm:p-2 md:p-2.5 transition-all duration-200 hover:shadow-lg hover:scale-102 cursor-pointer
         ${viewMode === "list" ? "flex flex-row sm:flex-row gap-3 sm:gap-5 sm:items-center w-full md:w-150 lg:w-200" : "sm:w-47 md:w-full"}`}
       onClick={() => navigate(`/ad/${ad.id || ad._id}`)}>
-      <img src={ad.images[0]} alt={ad.title}
-        className={`rounded-lg ${viewMode === "grid" 
+      <img src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"} alt={ad.title}
+        className={`rounded-lg ${viewMode === "grid"
             ? "w-full h-34 sm:h-30 md:h-32 lg:w-40 lg:h-30 object-cover" 
             : "w-35 sm:w-32 h-22"} `}
       />

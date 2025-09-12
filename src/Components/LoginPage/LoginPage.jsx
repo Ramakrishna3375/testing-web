@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ModernHouse from '../../assets/products/Modern house.jpeg';
+import loginImage from '../../assets/Website logos/loginImage.jpg';
 import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 import Footer from "../Header&Footer/Footer";
 import { BsMegaphoneFill } from "react-icons/bs"; // For Advertise
 import { IoMdLogIn, IoIosArrowBack } from "react-icons/io"; // For Login and Back Arrow
 import { RxHamburgerMenu } from "react-icons/rx"; // For Hamburger Menu
 import { FaEnvelope, FaMobileAlt, FaLock, FaEye, FaEyeSlash } from "react-icons/fa"; // For input fields and password visibility
+import { userLogin } from "../../Services/api";
 
 const UserLogin = () => {
   const navigate = useNavigate();
-  const [emailLogin, setEmailLogin] = useState(false);
+  const [emailLogin, setEmailLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
@@ -18,6 +19,8 @@ const UserLogin = () => {
   const [error, setError] = useState('');
   const [recaptchaChecked, setRecaptchaChecked] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [triggerLogin, setTriggerLogin] = useState(false);
 
   // Marquee: continuous scroll using requestAnimationFrame
   const marqueeContainerRef = useRef(null);
@@ -55,6 +58,62 @@ const UserLogin = () => {
     animationFrameId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
+
+  // Perform login via API when triggered by validated submit
+  useEffect(() => {
+    const attemptLogin = async () => {
+      if (!triggerLogin) return;
+      try {
+        setIsLoading(true);
+        const resp = await userLogin(email, password);
+        const isSuccess = resp && resp.status >= 200 && resp.status < 300;
+        if (isSuccess) {
+          const data = resp?.data;
+          const token = data?.token || data?.accessToken || data?.jwt;
+          if (token) {
+            sessionStorage.setItem('token', token);
+          }
+          navigate('/homepage');
+        } else {
+          const errResp = resp?.response || null;
+          const errStatus = errResp?.status ?? resp?.status;
+          const errData = errResp?.data ?? resp?.data;
+          let message = errData?.message || errData?.error || 'Login failed. Please try again.';
+          if (errStatus === 422) {
+            const passwordError = Array.isArray(errData?.errors?.password) ? errData.errors.password[0] : undefined;
+            if (passwordError) {
+              message = passwordError;
+            }
+          }
+          if (errStatus === 400 || errStatus === 401) {
+            message = 'Invalid email or password.';
+          }
+          setError(message);
+          return;
+        }
+      } catch (err) {
+        const status = err?.response?.status;
+        const data = err?.response?.data;
+        let apiMessage = data?.message || err?.message || 'Something went wrong while logging in.';
+        if (status === 422) {
+          const passwordError = Array.isArray(data?.errors?.password) ? data.errors.password[0] : undefined;
+          if (passwordError) {
+            apiMessage = passwordError;
+          }
+        }
+        if (status === 400 || status === 401) {
+          apiMessage = 'Invalid email or password.';
+        }
+        setError(apiMessage);
+      } finally {
+        setIsLoading(false);
+        setTriggerLogin(false);
+      }
+    };
+
+    attemptLogin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerLogin]);
 
   return (
     <>
@@ -146,7 +205,7 @@ const UserLogin = () => {
             <div className="col-span-12 md:order-first md:col-span-6 left-login-page-image-section">
               <div className="h-full">
                 <img
-                  src={ModernHouse}
+                  src={loginImage}
                   className="h-full w-full object-cover max-h-[500px] md:max-h-[764px] sm:max-h-[400px] rounded-l-[20px] md:rounded-l-[20px] md:rounded-tr-none rounded-t-[20px]"
                   alt=""
                 />
@@ -162,7 +221,7 @@ const UserLogin = () => {
                   </p>
                 </div>
                 {/* Switchable Input Form */}
-                <form className="w-full flex flex-col gap-6" onSubmit={e => {
+                <form className="w-full flex flex-col gap-6" onSubmit={async e => {
                   e.preventDefault();
                   setError(''); // Clear previous errors
 
@@ -196,8 +255,13 @@ const UserLogin = () => {
                     return;
                   }
 
-                  // If validation passes, navigate to homepage
-                  navigate('/homepage');
+                  // Trigger login via useEffect to perform API call
+                  if (emailLogin) {
+                    setTriggerLogin(true);
+                  } else {
+                    // For now, just navigate on successful mobile validation
+                    navigate('/homepage');
+                  }
                 }}>
                   {/* Email or Mobile Field */}
                   <div className="flex items-center border border-gray-300 rounded-2xl px-5 py-4 bg-white text-black">
@@ -295,9 +359,10 @@ const UserLogin = () => {
                   {/* Login Button */}
                   <button
                     type="submit"
-                    className="w-full bg-orange-400 hover:bg-orange-500 rounded-xl text-white font-semibold text-[22px] py-3 mt-1 mb-1 transition-colors duration-200"
+                    disabled={isLoading}
+                    className={`w-full bg-orange-400 hover:bg-orange-500 rounded-xl text-white font-semibold text-[22px] py-3 mt-1 mb-1 transition-colors duration-200 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    Login
+                    {isLoading ? 'Logging in...' : 'Login'}
                   </button>
                 </form>
                 {/* OR Separator */}

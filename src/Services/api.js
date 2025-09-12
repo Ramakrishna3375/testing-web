@@ -36,3 +36,23 @@ export const searchAdsByTitle = async (title) => {
 export const getChatHistory = async (userId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chat/History/${userId}`, null, { Authorization: token });
 };
+
+//User Login
+export const userLogin = async (email, password) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/authenticate`, { email, password });
+};
+
+//Register OTP with Email
+export const registerOtpWithEmail = async (email) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/get-verification-otp`, { email });
+};
+
+//Verify OTP with Email
+export const verifyOtpWithEmail = async (email, otp) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/verify-account`, { email, otp });
+};
+
+//Register User Details
+export const registerUserDetails = async (userData) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/completeUserProfile`, userData);
+};

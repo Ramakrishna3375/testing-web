@@ -1,26 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
-import ModernHouse from '../../assets/products/Modern house.jpeg';
+import RegisterImage from '../../assets/Website logos/RegisterImage.jpg';
 import Footer from "../Header&Footer/Footer";
 import { BsMegaphoneFill } from "react-icons/bs";
 import { IoMdLogIn, IoIosArrowBack } from "react-icons/io";
 import { RxHamburgerMenu } from "react-icons/rx";
 import { FaEnvelope, FaMobileAlt, FaUser, FaCalendarAlt, FaLock, FaEye, FaEyeSlash } from "react-icons/fa"; // For input fields and new fields, and password visibility
+import { registerOtpWithEmail } from "../../Services/api";
+import { verifyOtpWithEmail } from "../../Services/api";
+import { registerUserDetails } from "../../Services/api";
 
 const CompleteRegistration = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [emailLogin, setEmailLogin] = useState(false);
+  const [emailLogin, setEmailLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [error, setError] = useState('');
   const [recaptchaChecked, setRecaptchaChecked] = useState(false);
   const [showOtpSection, setShowOtpSection] = useState(false); // New state to control OTP section visibility
   const [otp, setOtp] = useState(['', '', '', '', '', '']); // State for 6-digit OTP
-  const [otpTimer, setOtpTimer] = useState(0); // Timer for OTP countdown
+  const [otpTimer, setOtpTimer] = useState(0); // Timer for OTP countdown (seconds)
   const [showResendOtp, setShowResendOtp] = useState(false); // State to show/hide resend OTP link
   const [showRegistrationFields, setShowRegistrationFields] = useState(false); // New state for additional fields
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [triggerVerifyOtp, setTriggerVerifyOtp] = useState(false);
+  const [otpToVerify, setOtpToVerify] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [triggerRegister, setTriggerRegister] = useState(false);
+  const [userDetailsPayload, setUserDetailsPayload] = useState(null);
 
   // New state variables for additional registration fields
   const [firstName, setFirstName] = useState('');
@@ -29,6 +39,10 @@ const CompleteRegistration = () => {
   const [address, setAddress] = useState('');
   const [addressType, setAddressType] = useState('home');
   const [otherAddressType, setOtherAddressType] = useState('');
+  const [countryOptions, setCountryOptions] = useState([
+    { value: '678da88c9c4467c6aa4eeb86', label: 'India' }
+  ]);
+  const [selectedCountry, setSelectedCountry] = useState({ value: '678da88c9c4467c6aa4eeb86', label: 'India' });
   const [selectedState, setSelectedState] = useState(null);
   const [selectedCity, setSelectedCity] = useState(null);
   const [selectedPincode, setSelectedPincode] = useState('');
@@ -72,12 +86,32 @@ const CompleteRegistration = () => {
     { name: 'other' }
   ];
 
-  const handleResendOtp = () => {
-    setOtpTimer(60);
-    setOtp(['', '', '', '', '', '']);
-    setShowResendOtp(false);
-    setError(''); // Clear any previous OTP error
-    alert('New OTP sent!'); // Simulate sending new OTP
+  const handleResendOtp = async () => {
+    if (!email) {
+      setError('Please enter email address to resend OTP.');
+      return;
+    }
+    try {
+      setIsSendingOtp(true);
+      setError('');
+      const resp = await registerOtpWithEmail(email);
+      const ok = resp && resp.status >= 200 && resp.status < 300;
+      if (ok) {
+        setOtp(['', '', '', '', '', '']);
+        setShowResendOtp(false);
+        setOtpTimer(300); // 5 minutes
+      } else {
+        const errResp = resp?.response || null;
+        const errData = errResp?.data ?? resp?.data;
+        const message = errData?.message || errData?.error || 'Failed to resend OTP. Please try again.';
+        setError(message);
+      }
+    } catch (e) {
+      const message = e?.response?.data?.message || e?.message || 'Failed to resend OTP. Please try again.';
+      setError(message);
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   // OTP Timer useEffect
@@ -92,6 +126,93 @@ const CompleteRegistration = () => {
     }
     return () => clearInterval(timer);
   }, [otpTimer, showOtpSection]);
+
+  // Verify OTP via API when triggered
+  useEffect(() => {
+    const doVerify = async () => {
+      if (!triggerVerifyOtp) return;
+      try {
+        setIsVerifyingOtp(true);
+        setError('');
+        const resp = await verifyOtpWithEmail(email, otpToVerify);
+        const ok = resp && resp.status >= 200 && resp.status < 300;
+        if (ok) {
+          // Proceed to registration fields
+          setShowRegistrationFields(true);
+          setShowOtpSection(false);
+          setOtp(['', '', '', '', '', '']);
+          setOtpTimer(0);
+        } else {
+          const errResp = resp?.response || null;
+          const status = errResp?.status ?? resp?.status;
+          const data = errResp?.data ?? resp?.data;
+          let message = data?.message || data?.error || 'OTP verification failed. Please try again.';
+          if (status === 422) {
+            const otpError = Array.isArray(data?.errors?.otp) ? data.errors.otp[0] : undefined;
+            if (otpError) message = otpError;
+          }
+          setError(message);
+        }
+      } catch (e) {
+        const status = e?.response?.status;
+        const data = e?.response?.data;
+        let message = data?.message || e?.message || 'OTP verification failed. Please try again.';
+        if (status === 422) {
+          const otpError = Array.isArray(data?.errors?.otp) ? data.errors.otp[0] : undefined;
+          if (otpError) message = otpError;
+        }
+        setError(message);
+      } finally {
+        setIsVerifyingOtp(false);
+        setTriggerVerifyOtp(false);
+      }
+    };
+    doVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerVerifyOtp]);
+
+  // Register user details via API when triggered
+  useEffect(() => {
+    const doRegister = async () => {
+      if (!triggerRegister || !userDetailsPayload) return;
+      try {
+        setIsRegistering(true);
+        setError('');
+        const resp = await registerUserDetails(userDetailsPayload);
+        const ok = resp && resp.status >= 200 && resp.status < 300;
+        if (ok) {
+          // Success: navigate to login
+          navigate('/login');
+        } else {
+          const errResp = resp?.response || null;
+          const status = errResp?.status ?? resp?.status;
+          const data = errResp?.data ?? resp?.data;
+          let message = data?.message || data?.error || 'Failed to submit details. Please try again.';
+          if (status === 422 && data?.errors && typeof data.errors === 'object') {
+            const firstKey = Object.keys(data.errors)[0];
+            const firstMsg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : undefined;
+            if (firstMsg) message = firstMsg;
+          }
+          setError(message);
+        }
+      } catch (e) {
+        const status = e?.response?.status;
+        const data = e?.response?.data;
+        let message = data?.message || e?.message || 'Failed to submit details. Please try again.';
+        if (status === 422 && data?.errors && typeof data.errors === 'object') {
+          const firstKey = Object.keys(data.errors)[0];
+          const firstMsg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : undefined;
+          if (firstMsg) message = firstMsg;
+        }
+        setError(message);
+      } finally {
+        setIsRegistering(false);
+        setTriggerRegister(false);
+      }
+    };
+    doRegister();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerRegister]);
 
   // Marquee: continuous scroll using requestAnimationFrame
   const marqueeContainerRef = useRef(null);
@@ -215,7 +336,7 @@ const CompleteRegistration = () => {
               <div className="col-span-12 md:order-first md:col-span-5 left-register-page-image-section">
                 <div className="h-full">
                   <img
-                    src={ModernHouse} 
+                    src={RegisterImage}
                     className="h-full w-full object-cover max-h-[500px] md:max-h-[764px] sm:max-h-[400px] rounded-l-[20px] md:rounded-l-[20px] md:rounded-tr-none rounded-t-[20px]"
                     alt=""
                   />
@@ -231,7 +352,7 @@ const CompleteRegistration = () => {
                     </p>
                   </div>
                   {/* Registration Form */}
-                  <form className="w-full flex flex-col gap-6" onSubmit={e => {
+                  <form className="w-full flex flex-col gap-6" onSubmit={async e => {
                     e.preventDefault();
                     setError(''); // Clear previous errors
 
@@ -262,26 +383,63 @@ const CompleteRegistration = () => {
                         return;
                       }
 
-                      // If initial validation passes, show OTP section
-                      setShowOtpSection(true);
-                      setOtpTimer(60); // Start 60-second timer
-                      setShowResendOtp(false);
+                      // If initial validation passes
+                      if (emailLogin) {
+                        // Send OTP via API and show OTP section with 5 min validity
+                        try {
+                          setIsSendingOtp(true);
+                          const resp = await registerOtpWithEmail(email);
+                          const ok = resp && resp.status >= 200 && resp.status < 300;
+                          if (ok) {
+                            setShowOtpSection(true);
+                            setOtpTimer(300); // 5 minutes
+                            setShowResendOtp(false);
+                          } else {
+                            const errResp = resp?.response || null;
+                            const errData = errResp?.data ?? resp?.data;
+                            const message = errData?.message || errData?.error || 'Failed to send OTP. Please try again.';
+                            setError(message);
+                            return;
+                          }
+                        } catch (apiErr) {
+                          const message = apiErr?.response?.data?.message || apiErr?.message || 'Failed to send OTP. Please try again.';
+                          setError(message);
+                          return;
+                        } finally {
+                          setIsSendingOtp(false);
+                        }
+                      } else {
+                        // For mobile path, keep current flow (no email OTP API)
+                        setShowOtpSection(true);
+                        setOtpTimer(300);
+                        setShowResendOtp(false);
+                      }
                     } else if (showOtpSection && !showRegistrationFields) {
                       // Stage 2: Verify OTP
                       const enteredOtp = otp.join('');
-                      if (enteredOtp.length !== 6 || enteredOtp !== '123456') { // Dummy OTP validation
-                        setError('Invalid OTP. Please try again.');
+                      if (enteredOtp.length !== 6) {
+                        setError('Please enter the 6-digit OTP sent to your email.');
                         return;
                       }
-                      // If OTP is valid, show registration fields
-                      setShowRegistrationFields(true);
-                      setShowOtpSection(false);
-                      setOtp(['', '', '', '', '', '']); // Clear OTP input
-                      setOtpTimer(0); // Stop timer
+                      if (otpTimer <= 0) {
+                        setError('OTP expired. Please resend OTP and try again.');
+                        return;
+                      }
+                      if (!emailLogin) {
+                        // keep existing behavior for mobile path
+                        setShowRegistrationFields(true);
+                        setShowOtpSection(false);
+                        setOtp(['', '', '', '', '', '']);
+                        setOtpTimer(0);
+                        return;
+                      }
+                      // Trigger API verification for email flow
+                      setOtpToVerify(enteredOtp);
+                      setTriggerVerifyOtp(true);
                     } else if (showRegistrationFields) {
                       // Stage 3: Submit & Register
                       // Perform validation for new registration fields
-                      if (!firstName || !lastName || !newPassword || !birthDate || !address || !addressType || !selectedState || !selectedCity || !selectedPincode) {
+                      if (!firstName || !lastName || !newPassword || !birthDate || !address || !addressType || !selectedCountry || !selectedState || !selectedCity || !selectedPincode) {
                         setError('Please fill in all registration details, including your new password.');
                         return;
                       }
@@ -290,22 +448,28 @@ const CompleteRegistration = () => {
                         return;
                       }
 
-                      // Simulate registration and navigate to login
-                      console.log('Registration Data:', {
+                      // Build flat payload with exact field names expected by backend
+                      const normalizedAddressType = addressType === 'other' ? 'Other' : addressType.charAt(0).toUpperCase() + addressType.slice(1);
+                      // Build flat payload with exact field names expected by backend
+                      const payload = {
+                        email,
                         firstName,
                         lastName,
-                        email,
-                        mobile,
-                        newPassword, // Use newPassword here
-                        birthDate,
-                        address,
-                        addressType: addressType === 'other' ? otherAddressType : addressType,
-                        selectedState: selectedState?.label,
-                        selectedCity: selectedCity?.label,
-                        selectedPincode
-                      });
-                      alert('Registration Successful!');
-                      navigate('/login');
+                        mobileNumber: mobile,
+                        password: newPassword,
+                        dateOfBirth: birthDate,
+                        addressType: normalizedAddressType,
+                        customAddressType: addressType === 'other' ? (otherAddressType || null) : null,
+                        description: address,
+                        // If your selects provide IDs, prefer .value; otherwise send label as fallback
+                        countryId: selectedCountry?.value || selectedCountry?.label || '',
+                        stateId: selectedState?.value || selectedState?.label || '',
+                        cityId: selectedCity?.value || selectedCity?.label || '',
+                        pincode: selectedPincode
+                      };
+
+                      setUserDetailsPayload(payload);
+                      setTriggerRegister(true);
                     }
                   }}>
                     {/* Email or Mobile Field */}
@@ -479,7 +643,7 @@ const CompleteRegistration = () => {
                              onChange={e => setAddress(e.target.value)}
                            ></textarea>
                          </div>
- 
+
                         <div className="col-span-12 md:col-span-6 min-h-[52px]">
                           <p className='font-medium text-black mb-2'>Select Address type</p>
                           <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -505,6 +669,19 @@ const CompleteRegistration = () => {
                           </div>
                         </div>
 
+                        {/* Country */}
+                        <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
+                            <select
+                              className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
+                              value={selectedCountry?.value || ''}
+                              onChange={e => setSelectedCountry(countryOptions.find(option => option.value === e.target.value))}
+                            >
+                              <option value="" disabled>Country</option>
+                              {countryOptions.map(option => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          </div>
                         {/* State, City, Pincode */}
                         <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
@@ -534,6 +711,7 @@ const CompleteRegistration = () => {
                             <input
                               type="text"
                               placeholder="Pincode*"
+                              pattern="[0-9]{6}"
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none leading-[1.2]"
                               value={selectedPincode}
                               onChange={e => setSelectedPincode(e.target.value)}
@@ -573,10 +751,10 @@ const CompleteRegistration = () => {
                           ))}
                         </div>
                         <div className="flex justify-between items-center mt-2">
-                          <span className="text-gray-500">{otpTimer > 0 ? `${otpTimer} sec` : ''}</span>
+                          <span className="text-gray-500">{otpTimer > 0 ? `${Math.floor(otpTimer/60)}:${String(otpTimer%60).padStart(2,'0')}` : ''}</span>
                           {showResendOtp && (
-                            <button type="button" className="text-blue-500 hover:underline" onClick={handleResendOtp}>
-                              Resend OTP
+                            <button type="button" className={`text-blue-500 hover:underline ${isSendingOtp ? 'opacity-60 cursor-not-allowed' : ''}`} onClick={handleResendOtp} disabled={isSendingOtp}>
+                              {isSendingOtp ? 'Sending…' : 'Resend OTP'}
                             </button>
                           )}
                         </div>
@@ -618,10 +796,10 @@ const CompleteRegistration = () => {
                     {/* Register Button */}
                     <button
                       type="submit"
-                      disabled={(!showOtpSection && !showRegistrationFields && !recaptchaChecked)}
-                      className={`w-full bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-semibold text-[22px] py-3 mt-1 mb-1 transition-colors duration-200 ${showRegistrationFields ? '' : ''} ${((!showOtpSection && !showRegistrationFields && !recaptchaChecked)) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      disabled={(!showOtpSection && !showRegistrationFields && (!recaptchaChecked || isSendingOtp)) || (showOtpSection && isVerifyingOtp) || (showRegistrationFields && isRegistering)}
+                      className={`w-full bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-semibold text-[22px] py-3 mt-1 mb-1 transition-colors duration-200 ${showRegistrationFields ? '' : ''} ${((!showOtpSection && !showRegistrationFields && (!recaptchaChecked || isSendingOtp)) || (showOtpSection && isVerifyingOtp) || (showRegistrationFields && isRegistering)) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                      {showOtpSection ? "Verify OTP" : (showRegistrationFields ? "Submit & Register" : "Get OTP")}
+                      {showOtpSection ? (isVerifyingOtp ? "Verifying…" : "Verify OTP") : (showRegistrationFields ? (isRegistering ? "Submitting…" : "Submit & Register") : (isSendingOtp ? "Sending OTP…" : "Get OTP"))}
                     </button>
                   </form>
                   {/* OR Separator */}
@@ -666,7 +844,7 @@ const CompleteRegistration = () => {
                     </div>
                     )}
                     {/* Login Link */}
-                    <div className="mt-6 text-center">
+                    <div className="mt-3">
                       <button
                         type="button"
                         className="text-black"

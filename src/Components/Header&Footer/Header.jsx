@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom"; 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 // Website logos and banners
 import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
+import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 
 import { FaMapMarkerAlt} from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
@@ -17,7 +18,20 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
 
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+  
   const getCategoryId = (cat) => cat._id;
   
   useEffect(() => {
@@ -92,8 +106,8 @@ const Header = () => {
                    alt="Local Mart Logo"
                    className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2"
                  />
-                 {/* Mobile login button */}
-                 {!isLoggedIn && (
+                 {/* Mobile: show Login when logged out, avatar when logged in */}
+                 {!isLoggedIn ? (
                    <div className="sm:hidden ml-auto mt-1">
                      <button
                        onClick={() => navigate("/login")}
@@ -102,6 +116,45 @@ const Header = () => {
                        <VscAccount className="text-sm sm:text-xl mr-1" />
                        Login | Signup
                      </button>
+                   </div>
+                 ) : (
+                   <div className="sm:hidden ml-auto mt-1 relative" ref={profileMenuRef}>
+                     <button
+                       type="button"
+                       className="w-9 h-9 rounded-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center"
+                       onClick={() => setShowProfileMenu(prev => !prev)}
+                       aria-label="Open profile menu"
+                     >
+                       <img src="/vite.svg" alt="Profile" className="w-8 h-8 object-cover rounded-full" />
+                     </button>
+                     {showProfileMenu && (
+                       <div className="absolute right-0 top-11 bg-white border rounded shadow w-40 py-1 z-50">
+                         <button
+                           type="button"
+                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                           onClick={() => {
+                             setShowProfileMenu(false);
+                             navigate('/profile');
+                           }}
+                         >
+                           Profile
+                         </button>
+                         <button
+                           type="button"
+                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                           onClick={() => {
+                             try {
+                               sessionStorage.removeItem('user');
+                               sessionStorage.removeItem('token');
+                             } catch (e) {}
+                             setShowProfileMenu(false);
+                             navigate('/login');
+                           }}
+                         >
+                           Logout
+                         </button>
+                       </div>
+                     )}
                    </div>
                  )}
                </div>
@@ -208,9 +261,9 @@ const Header = () => {
 
                </div>
          
-               {/* Right side: desktop login button */}
-               {!isLoggedIn && (
-                 <div className="hidden sm:flex justify-end mt-2 w-full sm:w-auto md:mt-0 sm:h-10">
+               {/* Right side: desktop login/Profile area */}
+               <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" ref={profileMenuRef}>
+                 {!isLoggedIn && (
                    <button
                      onClick={() => navigate("/login")}
                      className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
@@ -218,8 +271,48 @@ const Header = () => {
                      <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
                      Login | Signup
                    </button>
-                 </div>
-               )}
+                 )}
+                 {isLoggedIn && (
+                 <button
+                   type="button"
+                   className="w-10 h-10 rounded-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center"
+                   onClick={() => setShowProfileMenu(prev => !prev)}
+                   aria-label="Open profile menu"
+                 >
+                   <img src={UserProfile} alt="Profile" className="w-9 h-9 object-cover rounded-full" />
+                 </button>
+                 )}
+                 {showProfileMenu && (
+                   <div className="absolute right-0 top-12 bg-white border rounded shadow w-44 py-1 z-50">
+                     <button
+                       type="button"
+                       className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                       onClick={() => {
+                         setShowProfileMenu(false);
+                         navigate('/profile');
+                       }}
+                     >
+                       Profile
+                     </button>
+                     {isLoggedIn && (
+                       <button
+                         type="button"
+                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                         onClick={() => {
+                           try {
+                             sessionStorage.removeItem('user');
+                             sessionStorage.removeItem('token');
+                           } catch (e) {}
+                           setShowProfileMenu(false);
+                           navigate('/login');
+                         }}
+                       >
+                         Logout
+                       </button>
+                     )}
+                   </div>
+                 )}
+               </div>
          
              </div>
            </div>

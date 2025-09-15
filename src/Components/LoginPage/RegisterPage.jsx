@@ -10,6 +10,8 @@ import { FaEnvelope, FaMobileAlt, FaUser, FaCalendarAlt, FaLock, FaEye, FaEyeSla
 import { registerOtpWithEmail } from "../../Services/api";
 import { verifyOtpWithEmail } from "../../Services/api";
 import { registerUserDetails } from "../../Services/api";
+import { getCitiesByStateId } from "../../Services/api";
+import { searchCitiesByName } from "../../Services/api";
 
 const CompleteRegistration = () => {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ const CompleteRegistration = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [triggerRegister, setTriggerRegister] = useState(false);
   const [userDetailsPayload, setUserDetailsPayload] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
 
   // New state variables for additional registration fields
   const [firstName, setFirstName] = useState('');
@@ -51,17 +54,12 @@ const CompleteRegistration = () => {
 
   // Dummy data for dropdowns (replace with API calls later)
   const [stateOptions, setStateOptions] = useState([
-    { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
+    { value: '67ea880c34693d5cc5891593', label: 'Andhra Pradesh' },
     { value: 'Arunachal Pradesh', label: 'Arunachal Pradesh' },
-    { value: 'Telangana', label: 'Telangana' },
+    { value: '67ea880c34693d5cc58915aa', label: 'Telangana' },
     { value: 'Amaravathi', label: 'Amaravathi' }
   ]);
-  const [cityOptions, setCityOptions] = useState([
-    { value: 'Kakinada', label: 'Kakinada' },
-    { value: 'Rajahmundry', label: 'Rajahmundry' },
-    { value: 'Vizag', label: 'Vizag' },
-    { value: 'Vijayawada', label: 'Vijayawada' }
-  ]);
+  const [cityOptions, setCityOptions] = useState([]);
   const [pincodeOptions, setPincodeOptions] = useState([
     { value: '533001', label: '533001' },
     { value: '533101', label: '533101' },
@@ -73,6 +71,55 @@ const CompleteRegistration = () => {
   const getStates = () => {};
   const getCities = (stateId) => {};
   const getPincodes = (cityId) => {};
+
+  // Populate cities when a state with a valid ID is selected
+  useEffect(() => {
+    const fetchCities = async () => {
+      const stateId = selectedState?.value;
+      // Expecting MongoDB-like ObjectId for state ids
+      const isValidId = typeof stateId === 'string' && /^[0-9a-fA-F]{24}$/.test(stateId);
+      if (!isValidId) {
+        setCityOptions([]);
+        return;
+      }
+      try {
+        const resp = await getCitiesByStateId(stateId);
+        const ok = resp && resp.status >= 200 && resp.status < 300;
+        const cities = ok ? resp?.data?.data || [] : [];
+        const options = cities.map(c => ({ value: c._id || c.id, label: c.name }));
+        setCityOptions(options);
+        // Reset selected city if it is not in the new list
+        if (selectedCity && !options.some(o => o.value === selectedCity.value)) {
+          setSelectedCity(null);
+        }
+      } catch (e) {
+        setCityOptions([]);
+      }
+    };
+    fetchCities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedState?.value]);
+
+  // Resolve city and state names from selected city id using API search
+  useEffect(() => {
+    const resolveCityAndState = async () => {
+      try {
+        if (!selectedCity || !selectedCity.value || !selectedCity.label) return;
+        const resp = await searchCitiesByName(selectedCity.label);
+        const ok = resp && resp.status >= 200 && resp.status < 300;
+        const cities = ok ? resp?.data?.data?.cities || [] : [];
+        const match = cities.find(c => c?.id === selectedCity.value);
+        if (match && match.state) {
+          // Auto-set state based on city selection
+          setSelectedState({ value: match.state.id, label: match.state.name });
+        }
+      } catch (e) {
+        // noop: keep current state selection if lookup fails
+      }
+    };
+    resolveCityAndState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCity?.value]);
 
   const handleAddressTypeChange = (type) => {
     setAddressType(type);
@@ -137,6 +184,8 @@ const CompleteRegistration = () => {
         const resp = await verifyOtpWithEmail(email, otpToVerify);
         const ok = resp && resp.status >= 200 && resp.status < 300;
         if (ok) {
+          const token = resp?.data?.data?.token || resp?.data?.token;
+          if (token) setAuthToken(token);
           // Proceed to registration fields
           setShowRegistrationFields(true);
           setShowOtpSection(false);
@@ -178,7 +227,7 @@ const CompleteRegistration = () => {
       try {
         setIsRegistering(true);
         setError('');
-        const resp = await registerUserDetails(userDetailsPayload);
+        const resp = await registerUserDetails(userDetailsPayload, authToken);
         const ok = resp && resp.status >= 200 && resp.status < 300;
         if (ok) {
           // Success: navigate to login
@@ -188,22 +237,30 @@ const CompleteRegistration = () => {
           const status = errResp?.status ?? resp?.status;
           const data = errResp?.data ?? resp?.data;
           let message = data?.message || data?.error || 'Failed to submit details. Please try again.';
+          if (status === 500 && typeof data?.error === 'string' && data.error.includes('duplicate key error') && data.error.includes('email')) {
+            message = 'This email is already registered. Please log in or use a different email.';
+          }
           if (status === 422 && data?.errors && typeof data.errors === 'object') {
             const firstKey = Object.keys(data.errors)[0];
             const firstMsg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : undefined;
             if (firstMsg) message = firstMsg;
           }
+          try { console.error('completeUserProfile error (non-OK):', { status, data }); } catch (_) {}
           setError(message);
         }
       } catch (e) {
         const status = e?.response?.status;
         const data = e?.response?.data;
         let message = data?.message || e?.message || 'Failed to submit details. Please try again.';
+        if (status === 500 && typeof data?.error === 'string' && data.error.includes('duplicate key error') && data.error.includes('email')) {
+          message = 'This email is already registered. Please log in or use a different email.';
+        }
         if (status === 422 && data?.errors && typeof data.errors === 'object') {
           const firstKey = Object.keys(data.errors)[0];
           const firstMsg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : undefined;
           if (firstMsg) message = firstMsg;
         }
+        try { console.error('completeUserProfile error (caught):', { status, data }); } catch (_) {}
         setError(message);
       } finally {
         setIsRegistering(false);
@@ -337,7 +394,7 @@ const CompleteRegistration = () => {
                 <div className="h-full">
                   <img
                     src={RegisterImage}
-                    className="h-full w-full object-cover max-h-[500px] md:max-h-[764px] sm:max-h-[400px] rounded-l-[20px] md:rounded-l-[20px] md:rounded-tr-none rounded-t-[20px]"
+                    className="h-full w-full object-cover max-h-[500px] md:max-h-[800px] sm:max-h-[400px] rounded-l-[20px] md:rounded-l-[20px] md:rounded-tr-none rounded-t-[20px]"
                     alt=""
                   />
                 </div>
@@ -447,6 +504,7 @@ const CompleteRegistration = () => {
                         setError('Please specify the other address type.');
                         return;
                       }
+                      // Pincode: basic presence already checked; backend will validate format
 
                       // Build flat payload with exact field names expected by backend
                       const normalizedAddressType = addressType === 'other' ? 'Other' : addressType.charAt(0).toUpperCase() + addressType.slice(1);
@@ -468,6 +526,8 @@ const CompleteRegistration = () => {
                         pincode: selectedPincode
                       };
 
+                      // Debug: log payload before submit
+                      try { console.log('completeUserProfile payload =>', payload); } catch (_) {}
                       setUserDetailsPayload(payload);
                       setTriggerRegister(true);
                     }
@@ -669,20 +729,19 @@ const CompleteRegistration = () => {
                           </div>
                         </div>
 
-                        {/* Country */}
+                        {/* State, City, Pincode */}
                         <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
-                              value={selectedCountry?.value || ''}
-                              onChange={e => setSelectedCountry(countryOptions.find(option => option.value === e.target.value))}
+                              value={selectedCity?.value || ''}
+                              onChange={e => setSelectedCity(cityOptions.find(option => option.value === e.target.value))}
                             >
-                              <option value="" disabled>Country</option>
-                              {countryOptions.map(option => (
+                              <option value="" disabled>City</option>
+                              {cityOptions.map(option => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </select>
                           </div>
-                        {/* State, City, Pincode */}
                         <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
@@ -695,14 +754,15 @@ const CompleteRegistration = () => {
                               ))}
                             </select>
                           </div>
+                          {/* Country */}
                         <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
-                              value={selectedCity?.value || ''}
-                              onChange={e => setSelectedCity(cityOptions.find(option => option.value === e.target.value))}
+                              value={selectedCountry?.value || ''}
+                              onChange={e => setSelectedCountry(countryOptions.find(option => option.value === e.target.value))}
                             >
-                              <option value="" disabled>City</option>
-                              {cityOptions.map(option => (
+                              <option value="" disabled>Country</option>
+                              {countryOptions.map(option => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </select>
@@ -797,7 +857,8 @@ const CompleteRegistration = () => {
                     <button
                       type="submit"
                       disabled={(!showOtpSection && !showRegistrationFields && (!recaptchaChecked || isSendingOtp)) || (showOtpSection && isVerifyingOtp) || (showRegistrationFields && isRegistering)}
-                      className={`w-full bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-semibold text-[22px] py-3 mt-1 mb-1 transition-colors duration-200 ${showRegistrationFields ? '' : ''} ${((!showOtpSection && !showRegistrationFields && (!recaptchaChecked || isSendingOtp)) || (showOtpSection && isVerifyingOtp) || (showRegistrationFields && isRegistering)) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-semibold text-[22px] py-3 mt-1 mb-1 transition-colors duration-200 ${showRegistrationFields ? '' : ''} 
+                      ${((!showOtpSection && !showRegistrationFields && (!recaptchaChecked || isSendingOtp)) || (showOtpSection && isVerifyingOtp) || (showRegistrationFields && isRegistering)) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {showOtpSection ? (isVerifyingOtp ? "Verifying…" : "Verify OTP") : (showRegistrationFields ? (isRegistering ? "Submitting…" : "Submit & Register") : (isSendingOtp ? "Sending OTP…" : "Get OTP"))}
                     </button>

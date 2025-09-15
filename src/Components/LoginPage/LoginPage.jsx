@@ -69,9 +69,10 @@ const UserLogin = () => {
         const isSuccess = resp && resp.status >= 200 && resp.status < 300;
         if (isSuccess) {
           const data = resp?.data;
-          const token = data?.token || data?.accessToken || data?.jwt;
+          const token = data?.data?.token || data?.token || data?.accessToken || data?.jwt;
           if (token) {
             sessionStorage.setItem('token', token);
+            sessionStorage.setItem('user', JSON.stringify({ email }));
           }
           navigate('/homepage');
         } else {

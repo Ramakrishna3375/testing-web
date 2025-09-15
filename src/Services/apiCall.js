@@ -1,46 +1,33 @@
 import axios from "axios";
 
-// Auto-fetch token and store in sessionStorage if not already present
-(async function fetchAndStoreToken() {
-  if (!sessionStorage.getItem("token")) {
-    try {
-      // Clear old token if present
-    sessionStorage.removeItem("token");
-      const response = await axios.post("/api/users/login", {
-        email: "khaderbasha2692@gmail.com",
-        password: "Khader@Basha123"
-      });
-      const token = response?.data?.token;
-      if (token) {
-        sessionStorage.setItem("token", token);
-        console.log("Token stored in sessionStorage.");
-      } else {
-        console.warn("Token not received in response.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch token:", error);
-    }
-  }
-})();
-
 export const commonRequest = async (methods, url, body, header) => {
   const authToken = sessionStorage.getItem("token");
-  let headers = header ? header : {};
-  if (body instanceof FormData) {
-    headers.Authorization = authToken ? `Bearer ${authToken}` : undefined;
-    // Do NOT set Content-Type for FormData
-  } else {
-    headers["Content-Type"] = "application/json";
-    headers.Authorization = authToken ? `Bearer ${authToken}` : undefined;
+  // Base headers: if caller provided headers, clone; else default to JSON for non-FormData
+  const headers = header ? { ...header } : { "Content-Type": body instanceof FormData ? undefined : "application/json" };
+  // If body is FormData, let the browser set Content-Type
+  if (body instanceof FormData && headers["Content-Type"]) delete headers["Content-Type"];
+  // If caller did NOT pass Authorization, attach from sessionStorage
+  if (!headers.Authorization && authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
   }
+  // If caller DID pass Authorization without Bearer, normalize it
+  if (headers.Authorization && typeof headers.Authorization === 'string' && !headers.Authorization.toLowerCase().startsWith('bearer ')) {
+    headers.Authorization = `Bearer ${headers.Authorization}`;
+  }
+  // Remove undefined headers to avoid sending "Authorization: undefined"
+  Object.keys(headers).forEach((k) => headers[k] === undefined && delete headers[k]);
+
   let config = {
     method: methods,
     url,
     headers,
     data: body,
   };
-console.log("Token from sessionStorage:", authToken);
   return axios(config)
-    .then((data) => data)
-    .catch((error) => error);
+    .then((data) => {
+      return data;
+    })
+    .catch((error) => {
+      return error;
+    });
 };

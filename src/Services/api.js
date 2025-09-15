@@ -26,6 +26,7 @@ export const postNewAd = async (adData, token) => {
   return await commonRequest("POST", `${BASE_URL}/api/post-ads`, adData, { Authorization: token });
 };
 
+
 //Search Ads by Title
 export const searchAdsByTitle = async (title) => {
   const encodedTitle = encodeURIComponent(title);
@@ -53,6 +54,52 @@ export const verifyOtpWithEmail = async (email, otp) => {
 };
 
 //Register User Details
-export const registerUserDetails = async (userData) => {
-  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/completeUserProfile`, userData);
+export const registerUserDetails = async (userData, token) => {
+  const headers = token
+    ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+    : { "Content-Type": "application/json" };
+  return await commonRequest(
+    "POST",
+    `https://stage-api.localmart.app:8443/auth/completeUserProfile`,
+    userData,
+    headers
+  );
+};
+
+//Search Cities by Name
+export const searchCitiesByName = async (cityName) => {
+  const encodedCity = encodeURIComponent(cityName);
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/locations/cities?searchKey=${encodedCity}`
+  );
+};
+
+//Get Cities by State Id
+export const getCitiesByStateId = async (stateId) => {
+  const encodedStateId = encodeURIComponent(stateId);
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/locations/states/${encodedStateId}/cities`
+  );
+};
+
+// Get authenticated user details (requires Bearer token)
+export const getUserDetails = async (token) => {
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/auth/user-details`,
+    null,
+    { Authorization: `Bearer ${token}` }
+  );
+};
+
+// Update authenticated user details
+export const updateUserDetails = async (payload, token) => {
+  return await commonRequest(
+    "PUT",
+    `https://stage-api.localmart.app:8443/auth/update-details`,
+    payload,
+    { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+  );
 };

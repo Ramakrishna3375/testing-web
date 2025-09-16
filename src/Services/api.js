@@ -55,23 +55,11 @@ export const verifyOtpWithEmail = async (email, otp) => {
 
 //Register User Details
 export const registerUserDetails = async (userData, token) => {
-  const headers = token
-    ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
-    : { "Content-Type": "application/json" };
   return await commonRequest(
     "POST",
     `https://stage-api.localmart.app:8443/auth/completeUserProfile`,
     userData,
-    headers
-  );
-};
-
-//Search Cities by Name
-export const searchCitiesByName = async (cityName) => {
-  const encodedCity = encodeURIComponent(cityName);
-  return await commonRequest(
-    "GET",
-    `https://stage-api.localmart.app:8443/locations/cities?searchKey=${encodedCity}`
+    token ? { Authorization: token } : undefined
   );
 };
 
@@ -90,7 +78,7 @@ export const getUserDetails = async (token) => {
     "GET",
     `https://stage-api.localmart.app:8443/auth/user-details`,
     null,
-    { Authorization: `Bearer ${token}` }
+    token ? { Authorization: token } : undefined
   );
 };
 
@@ -100,6 +88,6 @@ export const updateUserDetails = async (payload, token) => {
     "PUT",
     `https://stage-api.localmart.app:8443/auth/update-details`,
     payload,
-    { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+    token ? { Authorization: token } : undefined
   );
 };

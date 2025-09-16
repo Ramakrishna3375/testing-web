@@ -15,11 +15,12 @@ const ProfilePage = () => {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [cityOptions, setCityOptions] = useState([]);
+  const [success, setSuccess] = useState(null);
   // Dummy data for dropdowns (replace with API calls later)
   const [stateOptions, setStateOptions] = useState([
     { value: '67ea880c34693d5cc5891593', label: 'Andhra Pradesh' },
     { value: '67ea880c34693d5cc58915aa', label: 'Telangana' }
-  ]);
+  ].sort((a, b) => (a.label || '').localeCompare(b.label || '')));
 
   const toYYYYMMDD = (d) => {
     if (!d || typeof d !== 'string') return '';
@@ -66,7 +67,9 @@ const ProfilePage = () => {
               const citiesResp = await getCitiesByStateId(stateId);
               const okCities = citiesResp && citiesResp.status >= 200 && citiesResp.status < 300;
               const cities = okCities ? (citiesResp?.data?.data || []) : [];
-              const options = cities.map(c => ({ value: c._id || c.id, label: c.name }));
+              const options = cities
+                .map(c => ({ value: c._id || c.id, label: c.name }))
+                .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
               setCityOptions(options);
             } else {
               setCityOptions([]);
@@ -98,7 +101,9 @@ const ProfilePage = () => {
         const resp = await getCitiesByStateId(stateId);
         const ok = resp && resp.status >= 200 && resp.status < 300;
         const cities = ok ? (resp?.data?.data || []) : [];
-        const options = cities.map(c => ({ value: c._id || c.id, label: c.name }));
+        const options = cities
+          .map(c => ({ value: c._id || c.id, label: c.name }))
+          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
         setCityOptions(options);
         // if current cityId not in options, clear it
         if (form.cityId && !options.some(o => o.value === form.cityId)) {
@@ -118,6 +123,7 @@ const ProfilePage = () => {
     try {
       setSaving(true);
       setError(null);
+      setSuccess(null);
       const token = sessionStorage.getItem('token');
       const payload = {
         firstName: form.firstName,
@@ -132,6 +138,7 @@ const ProfilePage = () => {
       const ok = resp && resp.status >= 200 && resp.status < 300;
       if (ok) {
         setIsEditing(false);
+        setSuccess('Profile updated successfully.');
         // reload details
         const refreshed = await getUserDetails(token);
         const u = refreshed?.data?.data || refreshed?.data;
@@ -178,11 +185,18 @@ const ProfilePage = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-black">My Profile</h1>
+          {success ? (
+                <div className="col-span-12">
+                  <div className="mb-2 rounded-md bg-green-50 border border-green-200 text-green-700 px-4 py-2 text-xs">
+                    {success}
+                  </div>
+                </div>
+              ) : null}
           <div className="flex items-center gap-2">
             {!isEditing ? (
               <button
                 className="text-sm bg-orange-500 text-white px-4 py-2 rounded-full hover:bg-orange-600"
-                onClick={() => setIsEditing(true)}
+                onClick={() => { setIsEditing(true); setError(null); setSuccess(null); }}
               >
                 Edit
               </button>
@@ -190,7 +204,7 @@ const ProfilePage = () => {
               <>
                 <button
                   className="text-sm bg-gray-200 text-black px-4 py-2 rounded-full hover:bg-gray-300"
-                  onClick={() => { setIsEditing(false); setError(null); }}
+                  onClick={() => { setIsEditing(false); setError(null); setSuccess(null); }}
                   disabled={saving}
                 >
                   Cancel
@@ -215,13 +229,14 @@ const ProfilePage = () => {
 
         <div className="bg-white rounded-2xl shadow p-5 sm:p-8">
           {loading ? (
-            <div className="text-gray-600">Loading profile…</div>
+            <div className="text-gray-600">Loading . . .</div>
           ) : error ? (
             <div className="text-red-500">{error}</div>
           ) : !user ? (
             <div className="text-gray-600">No user data.</div>
           ) : (
             <div className="grid grid-cols-12 gap-6">
+              
               {/* Left summary */}
               <div className="col-span-12 md:col-span-4 flex flex-col items-center text-center">
                 <div className="w-28 h-28 rounded-full bg-gray-100 border overflow-hidden mb-3">
@@ -267,9 +282,6 @@ const ProfilePage = () => {
                       <label className="text-sm text-gray-600">Last Name
                         <input name="lastName" value={form.lastName} onChange={onChange} className="mt-1 w-full border rounded px-3 py-2 text-sm" />
                       </label>
-                      <label className="text-sm text-gray-600">Mobile
-                        <input name="mobileNumber" value={form.mobileNumber} onChange={onChange} className="mt-1 w-full border rounded px-3 py-2 text-sm" />
-                      </label>
                       <label className="text-sm text-gray-600">Date of Birth
                         <input type="date" name="dateOfBirth" value={form.dateOfBirth} onChange={onChange} className="mt-1 w-full border rounded px-3 py-2 text-sm" />
                       </label>
@@ -304,7 +316,6 @@ const ProfilePage = () => {
                           ))}
                         </select>
                       </label>
-                      <div className="text-xs text-gray-500">Country/State/City are shown from your profile and may require a separate flow to change.</div>
                     </div>
                   </div>
                 )}
@@ -323,7 +334,7 @@ const ProfilePage = () => {
                             {addr.description}
                           </div>
                           <div className="text-sm text-gray-600 mt-2">
-                            {[addr.city, addr.state, addr.country].filter(Boolean).join(', ')} {addr.pincode ? `- ${addr.pincode}` : ''}
+                            {[addr.city, addr.state, addr.country].filter(Boolean).join(', ')}
                           </div>
                         </div>
                       ))}

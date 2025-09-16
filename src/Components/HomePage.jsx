@@ -1,18 +1,10 @@
 import { useNavigate, useLocation } from "react-router-dom"; 
 import { useState, useEffect } from "react";
-// Website logos and banners
-import LocalMartIcon from '../assets/Website logos/LocalMartIcon.png';
-import LocalMartIconBot from '../assets/Website logos/LocalMartIconBot.png';
-import InstagramIcon from '../assets/Website logos/instagram.png';
-import FacebookIcon from '../assets/Website logos/facebook.jpg';
-import TwitterIcon from '../assets/Website logos/twitter logo.jpg';
-import LinkedinIcon from '../assets/Website logos/linkedin.png';
 import advertise1 from '../assets/Website logos/advertise1.jpg';
 import advertise2 from '../assets/Website logos/advertise2.jpg';
 import {FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook,
   FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt
 } from "react-icons/fa";
-import { VscAccount } from "react-icons/vsc";
 import { getAllCategories, getAllActiveAds, getBanners } from "../Services/api";
 import Header from './Header&Footer/Header';
 import Footer from "./Header&Footer/Footer";
@@ -235,7 +227,7 @@ const HomePage = () => {
 
           {/* Banner Section */}
           {loadingBanners ? (
-            <div className="py-8 text-center text-xl text-blue-600 font-semibold">Loading banners . . .</div>
+            <div className="py-8 text-center text-xl text-blue-600 font-semibold">Loading . . .</div>
           ) : bannerError ? (
             <div className="py-8 text-center text-red-600 font-semibold">{bannerError}</div>
           ) : (
@@ -273,7 +265,7 @@ const HomePage = () => {
           <h2 className="text-lg sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
         {loadingAds ? (
           <div className="py-8 text-center text-xl text-blue-600 font-semibold">
-            Loading ads . . .
+            Loading . . .
           </div>
         ) : adsError ? (
           <div className="py-8 text-center text-red-600 font-semibold">
@@ -327,7 +319,7 @@ const HomePage = () => {
          <h2 className="text-lg sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
         {loadingAds ? (
           <div className="py-8 text-center text-xl text-blue-600 font-semibold">
-            Loading ads . . .
+            Loading . . .
           </div>
         ) : adsError ? (
           <div className="py-8 text-center text-red-600 font-semibold">

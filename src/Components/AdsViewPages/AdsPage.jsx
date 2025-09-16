@@ -4,19 +4,10 @@ import Header from "../Header&Footer/Header";
 import Footer from "../Header&Footer/Footer";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaMapMarkerAlt } from "react-icons/fa";
-import { VscAccount } from "react-icons/vsc";
-import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
-import LocalMartIconBot from '../../assets/Website logos/LocalMartIconBot.png';
-import InstagramIcon from '../../assets/Website logos/instagram.png';
-import FacebookIcon from '../../assets/Website logos/facebook.jpg';
-import TwitterIcon from '../../assets/Website logos/twitter logo.jpg';
-import LinkedinIcon from '../../assets/Website logos/linkedin.png';
-import iPhone13ProMax from '../../assets/products/iphone13promax.avif';
 
 const MobilesPage = () => {
   const navigate = useNavigate();
   // login detection
-  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState("grid");
   const [categories, setCategories] = useState([]);
@@ -29,7 +20,6 @@ const MobilesPage = () => {
   const [sortOption, setSortOption] = useState("new");
 
   const { categoryId } = useParams();
-  const getCategoryId = (cat) => cat._id;
 
   // Extract unique brands from ads data
   const getBrandsFromAds = (ads) => {

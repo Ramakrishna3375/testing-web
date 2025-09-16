@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { searchAdsByTitle } from "../../Services/api";
 import Header from '../Header&Footer/Header';
+import Footer from "../Header&Footer/Footer";
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -61,7 +62,7 @@ const SearchResultsPage = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 p-2 sm:p-0 sm:gap-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 p-2 sm:p-0 sm:gap-3 gap-3">
             {(showAll ? ads : ads.slice(0, 10)).map((ad) => (
               <div
                 key={ad.id || ad._id}
@@ -98,6 +99,7 @@ const SearchResultsPage = () => {
           </div>
         </>
       )}
+      <Footer />
     </div>
   );
 };

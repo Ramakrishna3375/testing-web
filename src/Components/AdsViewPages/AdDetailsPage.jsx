@@ -3,18 +3,7 @@ import { getAllCategories, getAllActiveAds } from "../../Services/api";
 import Header from "../Header&Footer/Header";
 import Footer from "../Header&Footer/Footer";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaMapMarkerAlt } from "react-icons/fa";
-import { VscAccount } from "react-icons/vsc";
 import { IoIosShareAlt } from "react-icons/io";
-import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
-import LocalMartIconBot from '../../assets/Website logos/LocalMartIconBot.png';
-import InstagramIcon from '../../assets/Website logos/instagram.png';
-import FacebookIcon from '../../assets/Website logos/facebook.jpg';
-import TwitterIcon from '../../assets/Website logos/twitter logo.jpg';
-import LinkedinIcon from '../../assets/Website logos/linkedin.png';
-import iPhone13ProMax from '../../assets/products/iphone13promax.avif';
-
-// Dynamically fetched categories
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -26,10 +15,7 @@ const ProductDetailPage = () => {
   const [loadingAd, setLoadingAd] = useState(true);
   const [ad, setAd] = useState(null);
   const [adError, setAdError] = useState(null);
-  // Simple login detection: change per your app's logic if needed
-  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
-
-  const getCategoryId = (cat) => cat._id;
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -79,7 +65,42 @@ const ProductDetailPage = () => {
     fetchAd();
   }, [id]);
 
-  const adImages = ad && ad.images && ad.images.length > 0 ? ad.images : "";
+  const adImages = Array.isArray(ad?.images) && ad.images.length > 0 ? ad.images : [];
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+      if (e.key === 'ArrowLeft') setCurrentImgIndex(prev => (prev === 0 ? (adImages.length - 1) : prev - 1));
+      if (e.key === 'ArrowRight') setCurrentImgIndex(prev => (prev === adImages.length - 1 ? 0 : prev + 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isLightboxOpen, adImages.length]);
+
+  // Handle browser back button while lightbox is open
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onPopState = () => {
+      // Close the lightbox when navigating back
+      setIsLightboxOpen(false);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [isLightboxOpen]);
+
+  const openLightbox = () => {
+    // Push a new history state so Back closes the lightbox
+    try { window.history.pushState({ lightbox: true }, ''); } catch (_) {}
+    setIsLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setIsLightboxOpen(false);
+    // Pop the lightbox state if present to keep history consistent
+    try { window.history.back(); } catch (_) {}
+  };
 
   const handlePrev = () => {
     setCurrentImgIndex((prev) =>
@@ -146,11 +167,14 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
             >
               ←
             </button>
-            <img
-              src={adImages[currentImgIndex]}
-              alt={`Ad image ${currentImgIndex + 1}`}
-              className="border border-gray-200 rounded-xl sm:rounded-2xl shadow-lg w-full h-full object-contain bg-white select-none"
-            />
+            {adImages.length > 0 && (
+              <img
+                onClick={openLightbox}
+                src={adImages[currentImgIndex]}
+                alt={`Ad image ${currentImgIndex + 1}`}
+                className="border border-gray-200 rounded-xl sm:rounded-2xl shadow-lg w-full h-full object-contain bg-white select-none cursor-zoom-in"
+              />
+            )}
             <button
               onClick={handleNext}
               className="absolute right-0 top-1/2 -translate-y-1/2 bg-gray-200 text-black px-2 sm:px-3 py-2 rounded-r-lg hover:bg-gray-300 z-10"
@@ -204,6 +228,47 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
           </p>
         </div>
       </div>
+
+      {/* Lightbox / Image Preview */}
+      {isLightboxOpen && adImages.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-2 sm:p-4"
+          onClick={closeLightbox}
+        >
+          <button
+            aria-label="Close preview"
+            className="absolute top-3 right-3 md:top-6 md:right-6 text-white/80 hover:text-white text-2xl md:text-3xl"
+            onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
+          >
+            ×
+          </button>
+
+          {adImages.length > 1 && (
+            <button
+              className="absolute left-2 sm:left-4 text-white bg-white/10 hover:bg-white/20 backdrop-blur px-3 sm:px-4 py-2 sm:py-3 rounded-full text-lg sm:text-2xl"
+              onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(prev => prev === 0 ? adImages.length - 1 : prev - 1); }}
+            >
+              ←
+            </button>
+          )}
+
+          <img
+            src={adImages[currentImgIndex]}
+            alt={`Preview ${currentImgIndex + 1}`}
+            className="max-h-[85vh] max-w-[95vw] md:max-h-[90vh] md:max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {adImages.length > 1 && (
+            <button
+              className="absolute right-2 sm:right-4 text-white bg-white/10 hover:bg-white/20 backdrop-blur px-3 sm:px-4 py-2 sm:py-3 rounded-full text-lg sm:text-2xl"
+              onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(prev => prev === adImages.length - 1 ? 0 : prev + 1); }}
+            >
+              →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Footer */}
       <Footer />

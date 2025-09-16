@@ -11,7 +11,6 @@ import { registerOtpWithEmail } from "../../Services/api";
 import { verifyOtpWithEmail } from "../../Services/api";
 import { registerUserDetails } from "../../Services/api";
 import { getCitiesByStateId } from "../../Services/api";
-import { searchCitiesByName } from "../../Services/api";
 
 const CompleteRegistration = () => {
   const navigate = useNavigate();
@@ -20,6 +19,7 @@ const CompleteRegistration = () => {
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [recaptchaChecked, setRecaptchaChecked] = useState(false);
   const [showOtpSection, setShowOtpSection] = useState(false); // New state to control OTP section visibility
   const [otp, setOtp] = useState(['', '', '', '', '', '']); // State for 6-digit OTP
@@ -55,22 +55,9 @@ const CompleteRegistration = () => {
   // Dummy data for dropdowns (replace with API calls later)
   const [stateOptions, setStateOptions] = useState([
     { value: '67ea880c34693d5cc5891593', label: 'Andhra Pradesh' },
-    { value: 'Arunachal Pradesh', label: 'Arunachal Pradesh' },
-    { value: '67ea880c34693d5cc58915aa', label: 'Telangana' },
-    { value: 'Amaravathi', label: 'Amaravathi' }
+    { value: '67ea880c34693d5cc58915aa', label: 'Telangana' }
   ]);
   const [cityOptions, setCityOptions] = useState([]);
-  const [pincodeOptions, setPincodeOptions] = useState([
-    { value: '533001', label: '533001' },
-    { value: '533101', label: '533101' },
-    { value: '530003', label: '530003' },
-    { value: '520002', label: '520002' }
-  ]);
-
-  // Dummy functions for location data (replace with actual API calls)
-  const getStates = () => {};
-  const getCities = (stateId) => {};
-  const getPincodes = (cityId) => {};
 
   // Populate cities when a state with a valid ID is selected
   useEffect(() => {
@@ -100,27 +87,6 @@ const CompleteRegistration = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedState?.value]);
 
-  // Resolve city and state names from selected city id using API search
-  useEffect(() => {
-    const resolveCityAndState = async () => {
-      try {
-        if (!selectedCity || !selectedCity.value || !selectedCity.label) return;
-        const resp = await searchCitiesByName(selectedCity.label);
-        const ok = resp && resp.status >= 200 && resp.status < 300;
-        const cities = ok ? resp?.data?.data?.cities || [] : [];
-        const match = cities.find(c => c?.id === selectedCity.value);
-        if (match && match.state) {
-          // Auto-set state based on city selection
-          setSelectedState({ value: match.state.id, label: match.state.name });
-        }
-      } catch (e) {
-        // noop: keep current state selection if lookup fails
-      }
-    };
-    resolveCityAndState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCity?.value]);
-
   const handleAddressTypeChange = (type) => {
     setAddressType(type);
     setOtherAddressType(''); // Clear other address type if a predefined one is selected
@@ -134,6 +100,7 @@ const CompleteRegistration = () => {
   ];
 
   const handleResendOtp = async () => {
+    setSuccess('');
     if (!email) {
       setError('Please enter email address to resend OTP.');
       return;
@@ -181,6 +148,7 @@ const CompleteRegistration = () => {
       try {
         setIsVerifyingOtp(true);
         setError('');
+        setSuccess('');
         const resp = await verifyOtpWithEmail(email, otpToVerify);
         const ok = resp && resp.status >= 200 && resp.status < 300;
         if (ok) {
@@ -227,11 +195,13 @@ const CompleteRegistration = () => {
       try {
         setIsRegistering(true);
         setError('');
+        setSuccess('');
         const resp = await registerUserDetails(userDetailsPayload, authToken);
         const ok = resp && resp.status >= 200 && resp.status < 300;
         if (ok) {
-          // Success: navigate to login
-          navigate('/login');
+          // Success: show message then navigate
+          setSuccess('Registration successful. Redirecting to login...');
+          setTimeout(() => navigate('/login'), 1500);
         } else {
           const errResp = resp?.response || null;
           const status = errResp?.status ?? resp?.status;
@@ -730,19 +700,20 @@ const CompleteRegistration = () => {
                         </div>
 
                         {/* State, City, Pincode */}
+                        {/* Country */}
                         <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
-                              value={selectedCity?.value || ''}
-                              onChange={e => setSelectedCity(cityOptions.find(option => option.value === e.target.value))}
+                              value={selectedCountry?.value || ''}
+                              onChange={e => setSelectedCountry(countryOptions.find(option => option.value === e.target.value))}
                             >
-                              <option value="" disabled>City</option>
-                              {cityOptions.map(option => (
+                              <option value="" disabled>Country</option>
+                              {countryOptions.map(option => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </select>
                           </div>
-                        <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
+                          <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
                               value={selectedState?.value || ''}
@@ -754,15 +725,14 @@ const CompleteRegistration = () => {
                               ))}
                             </select>
                           </div>
-                          {/* Country */}
                         <div className="col-span-12 md:col-span-4 flex items-center bg-white text-black text-xs md:text-sm font-medium focus:outline-none">
                             <select
                               className="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white text-black text-xs md:text-sm font-medium focus:outline-none"
-                              value={selectedCountry?.value || ''}
-                              onChange={e => setSelectedCountry(countryOptions.find(option => option.value === e.target.value))}
+                              value={selectedCity?.value || ''}
+                              onChange={e => setSelectedCity(cityOptions.find(option => option.value === e.target.value))}
                             >
-                              <option value="" disabled>Country</option>
-                              {countryOptions.map(option => (
+                              <option value="" disabled>City</option>
+                              {cityOptions.map(option => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </select>
@@ -821,8 +791,9 @@ const CompleteRegistration = () => {
                       </div>
                     )}
 
-                    {/* Error Message */}
+                    {/* Messages */}
                     {error && <p className="text-red-500 text-center font-medium">{error}</p>}
+                    {success && <p className="text-green-600 text-center font-medium">{success}</p>}
 
                     {/* reCAPTCHA Placeholder */}
                     {(!showOtpSection && !showRegistrationFields) && (

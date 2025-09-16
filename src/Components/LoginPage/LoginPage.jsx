@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import loginImage from '../../assets/Website logos/loginImage.jpg';
 import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';

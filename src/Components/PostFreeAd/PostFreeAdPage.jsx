@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { getAllCategories, getAllSubCategories } from "../../Services/api";
 import { useNavigate } from "react-router-dom";
-import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 import { FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook, FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt,
   FaTabletAlt, FaHeadphones, FaLaptop, FaCamera, FaGamepad, FaBicycle, FaMotorcycle, FaTruck, FaHome, FaLandmark, FaStore,
   FaUserTie, FaChalkboardTeacher, FaDumbbell, FaGuitar, FaDog, FaCat, FaCrow, FaFish, FaTshirt as FaTshirt2, FaShoePrints,
@@ -10,8 +9,8 @@ import { FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook, FaPaw
 } from "react-icons/fa";
 import { MdOutlineHomeRepairService } from "react-icons/md";
 import { GrRestroomWomen } from "react-icons/gr";
-import { VscAccount } from "react-icons/vsc";
 import Header from '../Header&Footer/Header';
+import Footer from "../Header&Footer/Footer";
 
 const categoryIcons = {
   "Mobiles": <FaMobileAlt />, 
@@ -298,6 +297,7 @@ export default function PostFreeAdPage() {
           )}
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

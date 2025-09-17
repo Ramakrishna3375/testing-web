@@ -11,6 +11,8 @@ import { registerOtpWithEmail } from "../../Services/api";
 import { verifyOtpWithEmail } from "../../Services/api";
 import { registerUserDetails } from "../../Services/api";
 import { getCitiesByStateId } from "../../Services/api";
+import { getAllCountries } from "../../Services/api";
+import { getStatesByCountryId } from "../../Services/api";
 
 const CompleteRegistration = () => {
   const navigate = useNavigate();
@@ -42,22 +44,65 @@ const CompleteRegistration = () => {
   const [address, setAddress] = useState('');
   const [addressType, setAddressType] = useState('home');
   const [otherAddressType, setOtherAddressType] = useState('');
-  const [countryOptions, setCountryOptions] = useState([
-    { value: '678da88c9c4467c6aa4eeb86', label: 'India' }
-  ]);
-  const [selectedCountry, setSelectedCountry] = useState({ value: '678da88c9c4467c6aa4eeb86', label: 'India' });
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
   const [selectedCity, setSelectedCity] = useState(null);
   const [selectedPincode, setSelectedPincode] = useState('');
   const [newPassword, setNewPassword] = useState(''); // New state for password in registration options
   const [showNewPassword, setShowNewPassword] = useState(false); // New state for password visibility
 
-  // Dummy data for dropdowns (replace with API calls later)
-  const [stateOptions, setStateOptions] = useState([
-    { value: '67ea880c34693d5cc5891593', label: 'Andhra Pradesh' },
-    { value: '67ea880c34693d5cc58915aa', label: 'Telangana' }
-  ]);
+ 
+  const [stateOptions, setStateOptions] = useState([]);
   const [cityOptions, setCityOptions] = useState([]);
+
+  // Populate countries on mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const resp = await getAllCountries();
+        const list = (resp?.data?.data || resp?.data || [])
+          .map(c => ({ value: c._id || c.id, label: c.name }))
+          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+        setCountryOptions(list);
+        const india = list.find(c => /india/i.test(c.label || ''));
+        setSelectedCountry(india || list[0] || null);
+      } catch (_) {
+        setCountryOptions([]);
+        setSelectedCountry(null);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  // Populate states when a country with a valid ID is selected
+  useEffect(() => {
+    const fetchStates = async () => {
+      const countryId = selectedCountry?.value;
+      const isValidId = typeof countryId === 'string' && /^[0-9a-fA-F]{24}$/.test(countryId);
+      if (!isValidId) { setStateOptions([]); setSelectedState(null); setCityOptions([]); setSelectedCity(null); return; }
+      try {
+        const resp = await getStatesByCountryId(countryId);
+        const ok = resp && resp.status >= 200 && resp.status < 300;
+        const states = ok ? (resp?.data?.data || resp?.data || []) : [];
+        const options = states
+          .map(s => ({ value: s._id || s.id, label: s.name }))
+          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+        setStateOptions(options);
+        if (selectedState && !options.some(o => o.value === selectedState.value)) setSelectedState(null);
+        // Reset cities on country change
+        setCityOptions([]);
+        setSelectedCity(null);
+      } catch (_) {
+        setStateOptions([]);
+        setSelectedState(null);
+        setCityOptions([]);
+        setSelectedCity(null);
+      }
+    };
+    fetchStates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCountry?.value]);
 
   // Populate cities when a state with a valid ID is selected
   useEffect(() => {
@@ -73,7 +118,9 @@ const CompleteRegistration = () => {
         const resp = await getCitiesByStateId(stateId);
         const ok = resp && resp.status >= 200 && resp.status < 300;
         const cities = ok ? resp?.data?.data || [] : [];
-        const options = cities.map(c => ({ value: c._id || c.id, label: c.name }));
+        const options = cities
+          .map(c => ({ value: c._id || c.id, label: c.name }))
+          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
         setCityOptions(options);
         // Reset selected city if it is not in the new list
         if (selectedCity && !options.some(o => o.value === selectedCity.value)) {
@@ -197,20 +244,22 @@ const CompleteRegistration = () => {
         setError('');
         setSuccess('');
         const resp = await registerUserDetails(userDetailsPayload, authToken);
-        const ok = resp && resp.status >= 200 && resp.status < 300;
+        const status = resp?.status ?? resp?.response?.status;
+        const data = resp?.data ?? resp?.response?.data;
+        const ok = (status >= 200 && status < 300) && (data?.success === true);
         if (ok) {
           // Success: show message then navigate
           setSuccess('Registration successful. Redirecting to login...');
           setTimeout(() => navigate('/login'), 1500);
         } else {
-          const errResp = resp?.response || null;
-          const status = errResp?.status ?? resp?.status;
-          const data = errResp?.data ?? resp?.data;
           let message = data?.message || data?.error || 'Failed to submit details. Please try again.';
-          if (status === 500 && typeof data?.error === 'string' && data.error.includes('duplicate key error') && data.error.includes('email')) {
+          // Duplicate email detection across common API patterns
+          const duplicateMsg = typeof message === 'string' && /duplicate|already\s*(registered|exists?)/i.test(message);
+          const duplicateKeyErr = typeof data?.error === 'string' && data.error.includes('duplicate key error') && /email/i.test(data.error);
+          const emailFieldErr = data?.errors && (Array.isArray(data.errors.email) ? data.errors.email[0] : data.errors.email);
+          if (status === 409 || duplicateMsg || duplicateKeyErr || emailFieldErr) {
             message = 'This email is already registered. Please log in or use a different email.';
-          }
-          if (status === 422 && data?.errors && typeof data.errors === 'object') {
+          } else if (status === 422 && data?.errors && typeof data.errors === 'object') {
             const firstKey = Object.keys(data.errors)[0];
             const firstMsg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : undefined;
             if (firstMsg) message = firstMsg;
@@ -222,10 +271,12 @@ const CompleteRegistration = () => {
         const status = e?.response?.status;
         const data = e?.response?.data;
         let message = data?.message || e?.message || 'Failed to submit details. Please try again.';
-        if (status === 500 && typeof data?.error === 'string' && data.error.includes('duplicate key error') && data.error.includes('email')) {
+        const duplicateMsg = typeof message === 'string' && /duplicate|already\s*(registered|exists?)/i.test(message);
+        const duplicateKeyErr = typeof data?.error === 'string' && data.error.includes('duplicate key error') && /email/i.test(data.error);
+        const emailFieldErr = data?.errors && (Array.isArray(data.errors.email) ? data.errors.email[0] : data.errors.email);
+        if (status === 409 || duplicateMsg || duplicateKeyErr || emailFieldErr) {
           message = 'This email is already registered. Please log in or use a different email.';
-        }
-        if (status === 422 && data?.errors && typeof data.errors === 'object') {
+        } else if (status === 422 && data?.errors && typeof data.errors === 'object') {
           const firstKey = Object.keys(data.errors)[0];
           const firstMsg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : undefined;
           if (firstMsg) message = firstMsg;
@@ -423,13 +474,21 @@ const CompleteRegistration = () => {
                             setShowResendOtp(false);
                           } else {
                             const errResp = resp?.response || null;
+                            const status = errResp?.status ?? resp?.status;
                             const errData = errResp?.data ?? resp?.data;
-                            const message = errData?.message || errData?.error || 'Failed to send OTP. Please try again.';
+                            let message = errData?.message || errData?.error || 'Failed to send OTP. Please try again.';
+                            if (status === 409 || (typeof message === 'string' && /already\s*(registered|exists?)/i.test(message))) {
+                              message = 'This email is already registered. Please log in or use a different email.';
+                            }
                             setError(message);
                             return;
                           }
                         } catch (apiErr) {
-                          const message = apiErr?.response?.data?.message || apiErr?.message || 'Failed to send OTP. Please try again.';
+                          const status = apiErr?.response?.status;
+                          let message = apiErr?.response?.data?.message || apiErr?.message || 'Failed to send OTP. Please try again.';
+                          if (status === 409 || (typeof message === 'string' && /already\s*(registered|exists?)/i.test(message))) {
+                            message = 'This email is already registered. Please log in or use a different email.';
+                          }
                           setError(message);
                           return;
                         } finally {

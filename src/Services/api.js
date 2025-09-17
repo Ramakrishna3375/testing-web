@@ -63,6 +63,20 @@ export const registerUserDetails = async (userData, token) => {
   );
 };
 
+//Get All Countries
+export const getAllCountries = async () => {
+  return await commonRequest("GET", `https://stage-api.localmart.app:8443/locations/countries`);
+};
+
+// Get states by country id
+export const getStatesByCountryId = async (countryId) => {
+  const encoded = encodeURIComponent(countryId);
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/locations/countries/${encoded}/states`
+  );
+};
+
 //Get Cities by State Id
 export const getCitiesByStateId = async (stateId) => {
   const encodedStateId = encodeURIComponent(stateId);
@@ -91,3 +105,16 @@ export const updateUserDetails = async (payload, token) => {
     token ? { Authorization: token } : undefined
   );
 };
+
+
+// Upload profile picture (FormData field name: 'file')
+export const uploadProfilePicture = async (formData, token) => {
+  return await commonRequest(
+    "POST",
+    `https://stage-api.localmart.app:8443/auth/upload-profile-picture`,
+    formData,
+    token ? { Authorization: token } : undefined
+  );
+};
+
+

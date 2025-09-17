@@ -6,7 +6,7 @@ import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 
 import { FaMapMarkerAlt} from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
-import { getAllCategories, searchAdsByTitle } from "../../Services/api";
+import { getAllCategories, searchAdsByTitle, getUserDetails } from "../../Services/api";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -20,17 +20,53 @@ const Header = () => {
   const [searchError, setSearchError] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
+  const mobileProfileButtonRef = useRef(null);
+  const desktopProfileButtonRef = useRef(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const onDocClick = (e) => {
-      if (!profileMenuRef.current) return;
-      if (!profileMenuRef.current.contains(e.target)) {
+      // Check if all refs are initialized before proceeding
+      if (!profileMenuRef.current || !mobileProfileButtonRef.current || !desktopProfileButtonRef.current) {
+        return;
+      }
+
+      const clickedOutsideMenu = !profileMenuRef.current.contains(e.target);
+      const clickedOutsideMobileButton = !mobileProfileButtonRef.current.contains(e.target);
+      const clickedOutsideDesktopButton = !desktopProfileButtonRef.current.contains(e.target);
+
+      // Close menu if click is outside the menu content AND outside BOTH mobile and desktop buttons
+      if (clickedOutsideMenu && clickedOutsideMobileButton && clickedOutsideDesktopButton) {
         setShowProfileMenu(false);
       }
     };
-    document.addEventListener('mousedown', onDocClick);
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', onDocClick);
+    }
     return () => document.removeEventListener('mousedown', onDocClick);
-  }, []);
+  }, [showProfileMenu]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const fetchUser = async () => {
+        try {
+          const token = sessionStorage.getItem('token');
+          if (token) {
+            const resp = await getUserDetails(token);
+            const u = resp?.data?.data || resp?.data;
+            if (u) {
+              setUser(u);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch user details in header:", e);
+        }
+      };
+      fetchUser();
+    } else {
+      setUser(null);
+    }
+  }, [isLoggedIn]);
   
   const getCategoryId = (cat) => cat._id;
   
@@ -118,20 +154,25 @@ const Header = () => {
                      </button>
                    </div>
                  ) : (
-                   <div className="sm:hidden ml-auto mt-1 relative" ref={profileMenuRef}>
+                   <div className="sm:hidden ml-auto mt-1 relative" >
                      <button
                        type="button"
+                       ref={mobileProfileButtonRef} // Attach the new ref here
                        className="w-9 h-9 rounded-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center"
                        onClick={() => setShowProfileMenu(prev => !prev)}
                        aria-label="Open profile menu"
                      >
-                       <img src="/vite.svg" alt="Profile" className="w-8 h-8 object-cover rounded-full" />
+                       <img src={user?.profilePicture || UserProfile} alt="Profile" className="w-8 h-8 object-cover rounded-full" />
                      </button>
                      {showProfileMenu && (
-                       <div className="absolute right-0 top-11 bg-white border rounded shadow w-40 py-1 z-50">
+                       <div
+                         className="absolute right-0 top-11 bg-white border rounded shadow w-40 py-1 z-50"
+                         ref={profileMenuRef} // Attach profileMenuRef here
+                       >
                          <button
                            type="button"
                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                           onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
                            onClick={() => {
                              setShowProfileMenu(false);
                              navigate('/profile');
@@ -142,6 +183,7 @@ const Header = () => {
                          <button
                            type="button"
                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                           onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
                            onClick={() => {
                              try {
                                sessionStorage.removeItem('user');
@@ -262,7 +304,7 @@ const Header = () => {
                </div>
          
                {/* Right side: desktop login/Profile area */}
-               <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" ref={profileMenuRef}>
+               <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" >
                  {!isLoggedIn && (
                    <button
                      onClick={() => navigate("/login")}
@@ -275,19 +317,22 @@ const Header = () => {
                  {isLoggedIn && (
                  <button
                    type="button"
+                   ref={desktopProfileButtonRef} // Attach the new ref here
                    className="w-10 h-10 rounded-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center"
                    onClick={() => setShowProfileMenu(prev => !prev)}
                    aria-label="Open profile menu"
                  >
-                   <img src={UserProfile} alt="Profile" className="w-9 h-9 object-cover rounded-full" />
+                   <img src={user?.profilePicture || UserProfile} alt="Profile" className="w-9 h-9 object-cover rounded-full" />
                  </button>
                  )}
                  {showProfileMenu && (
-                   <div className="absolute right-0 top-12 bg-white border rounded shadow w-44 py-1 z-50">
+                   <div className="absolute right-0 top-12 bg-white border rounded shadow w-44 py-1 z-50" ref={profileMenuRef}>
                      <button
                        type="button"
                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                       onClick={() => {
+                       onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
+                       onClick={(e) => {
+                         // e.stopPropagation(); // Removed as onMouseDown handles it
                          setShowProfileMenu(false);
                          navigate('/profile');
                        }}
@@ -298,7 +343,9 @@ const Header = () => {
                        <button
                          type="button"
                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                         onClick={() => {
+                         onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
+                         onClick={(e) => {
+                           // e.stopPropagation(); // Removed as onMouseDown handles it
                            try {
                              sessionStorage.removeItem('user');
                              sessionStorage.removeItem('token');

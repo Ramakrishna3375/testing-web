@@ -2,21 +2,35 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
 
-const ChatInterface = () => {
+const ChatInterface = ({ userInfo, productInfo, onClose }) => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [showUserInfo, setShowUserInfo] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
 
-  // Get product info from URL params or props (you can modify this based on your routing)
-  const productInfo = {
+  // Default user and product info
+  const defaultUserInfo = userInfo || {
     name: `User ${userId}`,
-    product: 'Product Chat'
+    email: 'user@example.com',
+    phone: '+1234567890',
+    location: 'City, State',
+    joinDate: 'January 2024',
+    rating: 4.5,
+    totalAds: 12,
+    avatar: null
+  };
+
+  const defaultProductInfo = productInfo || {
+    name: 'Product Chat',
+    category: 'General',
+    price: 'Contact for price',
+    location: 'City, State'
   };
 
   useEffect(() => {
@@ -41,7 +55,6 @@ const ChatInterface = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
         
-        // Add audio message to chat
         const audioMessage = {
           id: Date.now(),
           type: 'audio',
@@ -51,8 +64,6 @@ const ChatInterface = () => {
         };
         
         setMessages(prev => [...prev, audioMessage]);
-        
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -60,7 +71,6 @@ const ChatInterface = () => {
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Start timer
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
@@ -98,132 +108,248 @@ const ChatInterface = () => {
     }
   };
 
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      // Navigate back to product or homepage
+      navigate(-1); // Go back to previous page
+    }
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  return (
-    <div className="flex-1 flex flex-col bg-white h-full">
-      {/* Header */}
-      <div className="bg-blue-600 p-4 flex justify-between items-center text-white flex-shrink-0 relative z-20">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/inbox')} className="text-white hover:text-gray-200 mr-2">←</button>
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-            <span className="text-gray-600 text-sm">👤</span>
-          </div>
-          <div>
-            <span className="font-semibold text-sm">{productInfo.name}</span>
-            <p className="text-xs text-gray-200">{productInfo.product}</p>
-          </div>
+  // User Info Modal Component
+  const UserInfoModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">User Information</h3>
+          <button 
+            onClick={() => setShowUserInfo(false)}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ✖
+          </button>
         </div>
-        <div className="flex gap-4">
-          <span className="cursor-pointer">ℹ</span>
-          <span className="cursor-pointer">⋮</span>
-          <span className="cursor-pointer" onClick={() => navigate('/inbox')}>✖</span>
-        </div>
-      </div>
-      
-      {/* Messages */}
-      <div className="flex-1 relative overflow-hidden bg-gray-50">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url(${chatBG})`,
-          backgroundSize: '200px 200px',
-          backgroundRepeat: 'repeat',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-          opacity: '0.1'
-        }} />
-        <div className="relative z-10 h-full overflow-y-auto">
-          <div className="p-4 min-h-full">
-            {messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-gray-500">
-                  <div className="text-6xl mb-4">💬</div>
-                  <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
-                  <p className="text-sm">Send a message to begin chatting about this product.</p>
-                </div>
+        
+        <div className="space-y-4">
+          {/* Avatar */}
+          <div className="flex justify-center">
+            <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center">
+              {defaultUserInfo.avatar ? (
+                <img src={defaultUserInfo.avatar} alt="User" className="w-20 h-20 rounded-full object-cover" />
+              ) : (
+                <span className="text-2xl text-gray-600">👤</span>
+              )}
+            </div>
+          </div>
+
+          {/* User Details */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-600">Name</label>
+              <p className="text-gray-800">{defaultUserInfo.name}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-600">Email</label>
+              <p className="text-gray-800">{defaultUserInfo.email}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-600">Phone</label>
+              <p className="text-gray-800">{defaultUserInfo.phone}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-600">Location</label>
+              <p className="text-gray-800">{defaultUserInfo.location}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-600">Member Since</label>
+              <p className="text-gray-800">{defaultUserInfo.joinDate}</p>
+            </div>
+            
+            <div className="flex justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-600">Rating</label>
+                <p className="text-gray-800">⭐ {defaultUserInfo.rating}/5</p>
               </div>
-            ) : (
-              <>
-                <div className="text-center text-gray-500 text-xs mb-4">Today</div>
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="flex mb-4 items-end gap-2 justify-end"
-                  >
-                    <div className="max-w-[70%] p-3 rounded-2xl shadow-sm text-sm bg-blue-100 rounded-br-sm text-gray-800">
-                      {msg.type === 'text' ? (
-                        <p className="mb-1">{msg.content}</p>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <audio controls className="max-w-full">
-                            <source src={msg.content} type="audio/wav" />
-                            Your browser does not support audio playback.
-                          </audio>
-                        </div>
-                      )}
-                      <span className="text-xs text-gray-500">{msg.timestamp}</span>
-                    </div>
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0"></div>
-                  </div>
-                ))}
-              </>
-            )}
+              <div>
+                <label className="text-sm font-medium text-gray-600">Total Ads</label>
+                <p className="text-gray-800">{defaultUserInfo.totalAds}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Info */}
+          <div className="border-t pt-4">
+            <h4 className="font-medium mb-2">About this conversation</h4>
+            <div className="space-y-2 text-sm">
+              <p><span className="font-medium">Product:</span> {defaultProductInfo.name}</p>
+              <p><span className="font-medium">Category:</span> {defaultProductInfo.category}</p>
+              <p><span className="font-medium">Price:</span> {defaultProductInfo.price}</p>
+              <p><span className="font-medium">Location:</span> {defaultProductInfo.location}</p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4">
+            <button className="flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors">
+              View Profile
+            </button>
+            <button className="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors">
+              Call
+            </button>
           </div>
         </div>
-      </div>
-      
-      {/* Recording indicator */}
-      {isRecording && (
-        <div className="bg-red-100 border-t border-red-200 p-2 text-center">
-          <div className="flex items-center justify-center gap-2 text-red-600">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium">Recording... {formatTime(recordingTime)}</span>
-          </div>
-        </div>
-      )}
-      
-      {/* Input */}
-      <div className="bg-gray-200 p-4 flex items-center gap-3 flex-shrink-0 relative z-20">
-        <button 
-          className="p-2 text-gray-600 hover:text-gray-800 transition-colors"
-          title="Attach file"
-        >
-          📎
-        </button>
-        <input
-          type="text"
-          value={message}
-          onChange={e => setMessage(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-          placeholder="Type a message..."
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none bg-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          autoComplete="off"
-          disabled={isRecording}
-        />
-        <button
-          onClick={isRecording ? stopRecording : startRecording}
-          className={`p-2 rounded-full transition-colors ${
-            isRecording 
-              ? 'bg-red-500 text-white hover:bg-red-600' 
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-          title={isRecording ? 'Stop recording' : 'Record voice message'}
-        >
-          {isRecording ? '⏹' : '🎤'}
-        </button>
-        <button
-          onClick={handleSendMessage}
-          disabled={!message.trim() || isRecording}
-          className="p-2 text-blue-600 hover:text-blue-800 disabled:text-gray-400 transition-colors"
-          title="Send message"
-        >
-          ➤
-        </button>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      <div className="flex-1 flex flex-col bg-white h-full">
+        {/* Header */}
+        <div className="bg-blue-600 p-4 flex justify-between items-center text-white flex-shrink-0 relative z-20">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/inbox')} className="text-white hover:text-gray-200 mr-2">←</button>
+            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+              <span className="text-gray-600 text-sm">👤</span>
+            </div>
+            <div>
+              <span className="font-semibold text-sm">{defaultUserInfo.name}</span>
+              <p className="text-xs text-gray-200">{defaultProductInfo.name}</p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <button 
+              className="cursor-pointer hover:text-gray-300 transition-colors"
+              onClick={() => setShowUserInfo(true)}
+              title="User Information"
+            >
+              ℹ
+            </button>
+            <span className="cursor-pointer hover:text-gray-300 transition-colors">⋮</span>
+            <button 
+              className="cursor-pointer hover:text-gray-300 transition-colors" 
+              onClick={handleClose}
+              title="Close Chat"
+            >
+              ✖
+            </button>
+          </div>
+        </div>
+        
+        {/* Messages */}
+        <div className="flex-1 relative overflow-hidden bg-gray-50">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url(${chatBG})`,
+            backgroundSize: '200px 200px',
+            backgroundRepeat: 'repeat',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            opacity: '0.1'
+          }} />
+          <div className="relative z-10 h-full overflow-y-auto">
+            <div className="p-4 min-h-full">
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-gray-500">
+                    <div className="text-6xl mb-4">💬</div>
+                    <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
+                    <p className="text-sm">Send a message to begin chatting about this product.</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center text-gray-500 text-xs mb-4">Today</div>
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className="flex mb-4 items-end gap-2 justify-end"
+                    >
+                      <div className="max-w-[70%] p-3 rounded-2xl shadow-sm text-sm bg-blue-100 rounded-br-sm text-gray-800">
+                        {msg.type === 'text' ? (
+                          <p className="mb-1">{msg.content}</p>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <audio controls className="max-w-full">
+                              <source src={msg.content} type="audio/wav" />
+                              Your browser does not support audio playback.
+                            </audio>
+                          </div>
+                        )}
+                        <span className="text-xs text-gray-500">{msg.timestamp}</span>
+                      </div>
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Recording indicator */}
+        {isRecording && (
+          <div className="bg-red-100 border-t border-red-200 p-2 text-center">
+            <div className="flex items-center justify-center gap-2 text-red-600">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium">Recording... {formatTime(recordingTime)}</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Input */}
+        <div className="bg-gray-200 p-4 flex items-center gap-3 flex-shrink-0 relative z-20">
+          <button 
+            className="p-2 text-gray-600 hover:text-gray-800 transition-colors"
+            title="Attach file"
+          >
+            📎
+          </button>
+          <input
+            type="text"
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Type a message..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none bg-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            autoComplete="off"
+            disabled={isRecording}
+          />
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`p-2 rounded-full transition-colors ${
+              isRecording 
+                ? 'bg-red-500 text-white hover:bg-red-600' 
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+            title={isRecording ? 'Stop recording' : 'Record voice message'}
+          >
+            {isRecording ? '⏹' : '🎤'}
+          </button>
+          <button
+            onClick={handleSendMessage}
+            disabled={!message.trim() || isRecording}
+            className="p-2 text-blue-600 hover:text-blue-800 disabled:text-gray-400 transition-colors"
+            title="Send message"
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+
+      {/* User Info Modal */}
+      {showUserInfo && <UserInfoModal />}
+    </>
   );
 };
 

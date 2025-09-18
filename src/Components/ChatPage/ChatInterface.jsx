@@ -1,46 +1,107 @@
-import { useState } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
-
-const users = {
-  1: { name: 'John Smith', product: 'iPhone 12 pro max' },
-  2: { name: 'Sarah Johnson', product: 'Samsung Galaxy S21' },
-  3: { name: 'Mike Wilson', product: 'MacBook Pro 2021' },
-  4: { name: 'Emma Davis', product: 'iPad Air 4th Gen' },
-  5: { name: 'David Brown', product: 'Sony WH-1000XM4' },
-  6: { name: 'Lisa Anderson', product: 'Nintendo Switch' },
-  7: { name: 'Tom Martinez', product: 'GoPro Hero 9' },
-  8: { name: 'Anna Taylor', product: 'DJI Mini 2 Drone' }
-};
-
-const mockMessages = [
-  { from: 'other', text: (product) => `Hi, I'm interested in your ${product}. Is it still available?`, time: '04:40' },
-  { from: 'me', text: () => "Yes, it's still available! What would you like to know about it?", time: '04:42' },
-  { from: 'other', text: () => "What's the condition and can you ship to my location?", time: '04:45' },
-  { from: 'me', text: () => "It's in excellent condition, barely used. Yes, I can ship anywhere in India.", time: '04:47' },
-  { from: 'other', text: () => "Great! What's the best price you can offer?", time: '04:50' },
-  { from: 'me', text: () => "I can offer it for ₹45,000. It's a great deal considering the condition.", time: '04:52' },
-  { from: 'other', text: (product) => `Can you send me some more photos of the ${product}?`, time: '04:55' },
-  { from: 'me', text: () => "Sure! I'll send you detailed photos in the next message.", time: '04:57' },
-  { from: 'other', text: () => "Perfect! Also, does it come with the original box and accessories?", time: '05:00' },
-  { from: 'me', text: () => "Yes, it comes with the original box, charger, and all accessories. Everything is included.", time: '05:02' },
-  { from: 'other', text: () => "That sounds perfect! When can we meet to complete the transaction?", time: '05:05' },
-  { from: 'me', text: () => "I'm available tomorrow afternoon. We can meet at a public place for safety.", time: '05:07' },
-  { from: 'other', text: () => "Great! Let's meet at the mall near the metro station at 3 PM.", time: '05:10' },
-  { from: 'me', text: () => "Perfect! I'll be there at 3 PM. Looking forward to meeting you!", time: '05:12' }
-];
 
 const ChatInterface = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
-  const userData = users[userId] || { name: 'User', product: 'Product' };
+  const [messages, setMessages] = useState([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
+
+  // Get product info from URL params or props (you can modify this based on your routing)
+  const productInfo = {
+    name: `User ${userId}`,
+    product: 'Product Chat'
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Add audio message to chat
+        const audioMessage = {
+          id: Date.now(),
+          type: 'audio',
+          content: audioUrl,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: 'me'
+        };
+        
+        setMessages(prev => [...prev, audioMessage]);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setRecordingTime(0);
+      
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+  };
 
   const handleSendMessage = () => {
     if (message.trim()) {
-      console.log('Sending message:', message);
+      const newMessage = {
+        id: Date.now(),
+        type: 'text',
+        content: message,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'me'
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
       setMessage('');
     }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -53,14 +114,14 @@ const ChatInterface = () => {
             <span className="text-gray-600 text-sm">👤</span>
           </div>
           <div>
-            <span className="font-semibold text-sm">{userData.name}</span>
-            <p className="text-xs text-gray-200">{userData.product}</p>
+            <span className="font-semibold text-sm">{productInfo.name}</span>
+            <p className="text-xs text-gray-200">{productInfo.product}</p>
           </div>
         </div>
         <div className="flex gap-4">
-          <span className="cursor-pointer">ℹ️</span>
+          <span className="cursor-pointer">ℹ</span>
           <span className="cursor-pointer">⋮</span>
-          <span className="cursor-pointer">✖</span>
+          <span className="cursor-pointer" onClick={() => navigate('/inbox')}>✖</span>
         </div>
       </div>
       
@@ -76,34 +137,62 @@ const ChatInterface = () => {
         }} />
         <div className="relative z-10 h-full overflow-y-auto">
           <div className="p-4 min-h-full">
-            <div className="text-center text-gray-500 text-xs mb-4">Today</div>
-            {mockMessages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex mb-4 items-end gap-2 ${msg.from === 'me' ? 'justify-end' : 'justify-start'}`}
-              >
-                {msg.from === 'other' && (
-                  <div className="w-8 h-8 bg-pink-400 rounded-full flex-shrink-0"></div>
-                )}
-                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${msg.from === 'me'
-                  ? 'bg-blue-100 rounded-br-sm text-gray-800'
-                  : 'bg-pink-100 rounded-bl-sm text-gray-800'
-                  }`}>
-                  <p className="mb-1">{typeof msg.text === 'function' ? msg.text(userData.product) : msg.text}</p>
-                  <span className="text-xs text-gray-500">{msg.time}</span>
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-gray-500">
+                  <div className="text-6xl mb-4">💬</div>
+                  <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
+                  <p className="text-sm">Send a message to begin chatting about this product.</p>
                 </div>
-                {msg.from === 'me' && (
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0"></div>
-                )}
               </div>
-            ))}
+            ) : (
+              <>
+                <div className="text-center text-gray-500 text-xs mb-4">Today</div>
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="flex mb-4 items-end gap-2 justify-end"
+                  >
+                    <div className="max-w-[70%] p-3 rounded-2xl shadow-sm text-sm bg-blue-100 rounded-br-sm text-gray-800">
+                      {msg.type === 'text' ? (
+                        <p className="mb-1">{msg.content}</p>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <audio controls className="max-w-full">
+                            <source src={msg.content} type="audio/wav" />
+                            Your browser does not support audio playback.
+                          </audio>
+                        </div>
+                      )}
+                      <span className="text-xs text-gray-500">{msg.timestamp}</span>
+                    </div>
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0"></div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       </div>
       
+      {/* Recording indicator */}
+      {isRecording && (
+        <div className="bg-red-100 border-t border-red-200 p-2 text-center">
+          <div className="flex items-center justify-center gap-2 text-red-600">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium">Recording... {formatTime(recordingTime)}</span>
+          </div>
+        </div>
+      )}
+      
       {/* Input */}
       <div className="bg-gray-200 p-4 flex items-center gap-3 flex-shrink-0 relative z-20">
-        <img src="/icons/placeholder.png" alt="Location" className="h-4 w-4 cursor-pointer" />
+        <button 
+          className="p-2 text-gray-600 hover:text-gray-800 transition-colors"
+          title="Attach file"
+        >
+          📎
+        </button>
         <input
           type="text"
           value={message}
@@ -112,8 +201,27 @@ const ChatInterface = () => {
           placeholder="Type a message..."
           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none bg-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           autoComplete="off"
+          disabled={isRecording}
         />
-        <span className="text-xl text-gray-600 cursor-pointer">😊</span>
+        <button
+          onClick={isRecording ? stopRecording : startRecording}
+          className={`p-2 rounded-full transition-colors ${
+            isRecording 
+              ? 'bg-red-500 text-white hover:bg-red-600' 
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+          title={isRecording ? 'Stop recording' : 'Record voice message'}
+        >
+          {isRecording ? '⏹' : '🎤'}
+        </button>
+        <button
+          onClick={handleSendMessage}
+          disabled={!message.trim() || isRecording}
+          className="p-2 text-blue-600 hover:text-blue-800 disabled:text-gray-400 transition-colors"
+          title="Send message"
+        >
+          ➤
+        </button>
       </div>
     </div>
   );

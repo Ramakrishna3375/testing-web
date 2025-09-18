@@ -27,7 +27,7 @@ const mockMessages = [
   { from: 'other', text: () => "That sounds perfect! When can we meet to complete the transaction?", time: '05:05' },
   { from: 'me', text: () => "I'm available tomorrow afternoon. We can meet at a public place for safety.", time: '05:07' },
   { from: 'other', text: () => "Great! Let's meet at the mall near the metro station at 3 PM.", time: '05:10' },
-  { from: 'me', text: () => "Perfect! I'll be there at 3 PM. Looking forward to meeting you!", time: '05:12' }
+  { from: 'me', text: () => "Perfect! I'll be there at 3 PM. Looking forward to meeting you", time: '05:12' }
 ];
 
 const ChatInterface = () => {

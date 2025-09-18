@@ -230,110 +230,156 @@ const Header = () => {
   return (
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
       <div className="max-w-6xl mx-auto w-full px-2 md:px-4 relative">
-        {/* Mobile/Tablet Notification Bell - Top Right */}
-        {isLoggedIn && (
-          <div className="absolute top-2 right-2 z-10 lg:hidden notification-container">
-            <button
-              onClick={toggleNotifications}
-              className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors duration-200 focus:outline-none bg-white rounded-full shadow-sm border"
-              aria-label="Notifications"
-            >
-              <FaBell className="text-lg" />
-              {unreadCount > 0 && (
-                <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </button>
-            {showNotifications && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
-                <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
-                  </div>
-                  <div className="flex gap-1">
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={() => {
-                          const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
-                          if (unreadIds.length) {
-                            setNotifications(prev => prev.map(n => unreadIds.includes(n._id) ? { ...n, read: true } : n));
-                            setUnreadCount(0);
-                            setCountChanged(true); setTimeout(() => setCountChanged(false), 1000);
-                            handleMarkAsRead(unreadIds, true);
-                          }
-                        }}
-                        className="text-xs text-orange-500 hover:text-orange-600 font-medium px-2 py-1 rounded hover:bg-orange-50 transition-colors active:bg-orange-100 active:scale-95"
-                      >Mark All Read</button>
-                    )}
-                  </div>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {loadingNotifications ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">Loading notifications...</div>
-                  ) : notifications.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">No notifications yet</div>
-                  ) : (
-                    notifications.map(notification => (
-                      <div
-                        key={notification._id}
-                        className={`p-3 border-b border-gray-100 transition-colors duration-200 ${
-                          markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'
-                        } ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
-                        onClick={() => {
-                          if (markingAsRead.has(notification._id)) return;
-                          if (!notification.read) {
-                            setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, read: true } : n));
-                            setUnreadCount(prev => { const c = Math.max(0, prev - 1); setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); return c; });
-                            handleMarkAsRead([notification._id], true);
-                          }
-                          if (notification.entityId) {
-                            if (['ad_pending_approval', 'ad_approved', 'ad_rejected', 'ad_inquiry', 'ad_availability_request'].includes(notification.type)) {
-                              navigate(`/ad/${notification.entityId}`); setShowNotifications(false);
-                            } else if (['message', 'chat'].includes(notification.type)) {
-                              navigate(`/chat/${notification.entityId}`); setShowNotifications(false);
-                            }
-                          }
-                        }}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="text-sm font-medium text-gray-800 pr-2">{notification.title}</h4>
-                          {markingAsRead.has(notification._id)
-                            ? <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1 animate-pulse"></div>
-                            : !notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
-                          }
-                        </div>
-                        <p className="text-xs text-gray-600 mb-2">{notification.message}</p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(notification.timestamp).toLocaleDateString()} {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-                {notifications.length > 0 && (
-                  <div className="p-3 border-t border-gray-200 bg-gray-50">
-                    <button onClick={() => setShowNotifications(false)} className="w-full text-center text-sm text-orange-500 hover:text-orange-600 font-medium">
-                      Close
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Mobile/Tablet: Bell placed left of profile icon */}
         
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
           {/* Logo and mobile login */}
           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
             <img src={LocalMartIcon} alt="Local Mart Logo" className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2" />
-            {!isLoggedIn && (
-              <div className="sm:hidden ml-auto mt-1">
-                <button onClick={() => navigate("/login")} className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline">
-                  <VscAccount className="text-sm sm:text-xl mr-1" /> Login | Signup
-                </button>
-              </div>
-            )}
+            {/* Mobile: show Login when logged out, avatar when logged in */}
+            {!isLoggedIn ? (
+                   <div className="sm:hidden ml-auto mt-1">
+                     <button
+                       onClick={() => navigate("/login")}
+                       className="flex items-center bg-orange-500 text-white text-xs rounded-sm p-1.5 hover:underline"
+                     >
+                       <VscAccount className="text-sm sm:text-xl mr-1" />
+                       Login | Signup
+                     </button>
+                   </div>
+                ) : (
+                  <div className="sm:hidden ml-auto mt-1 relative flex items-center gap-2 notification-container" >
+                    <button
+                      onClick={toggleNotifications}
+                      className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
+                      aria-label="Notifications"
+                    >
+                      <FaBell className="text-xl" />
+                      {unreadCount > 0 && (
+                        <span className={`absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      ref={mobileProfileButtonRef} // Attach the new ref here
+                      className="w-9 h-9 rounded-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center"
+                      onClick={() => setShowProfileMenu(prev => !prev)}
+                      aria-label="Open profile menu"
+                    >
+                      <img src={user?.profilePicture || UserProfile} alt="Profile" className="w-8 h-8 object-cover rounded-full" />
+                    </button>
+                    {showNotifications && (
+                      <div className="absolute right-0 top-11 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
+                        <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+                          </div>
+                          <div className="flex gap-1">
+                            {unreadCount > 0 && (
+                              <button
+                                onClick={() => {
+                                  const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
+                                  if (unreadIds.length) {
+                                    setNotifications(prev => prev.map(n => unreadIds.includes(n._id) ? { ...n, read: true } : n));
+                                    setUnreadCount(0);
+                                    setCountChanged(true); setTimeout(() => setCountChanged(false), 1000);
+                                    handleMarkAsRead(unreadIds, true);
+                                  }
+                                }}
+                                className="text-xs text-orange-500 hover:text-orange-600 font-medium px-2 py-1 rounded hover:bg-orange-50 transition-colors active:bg-orange-100 active:scale-95"
+                              >Mark All Read</button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {loadingNotifications ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">Loading notifications...</div>
+                          ) : notifications.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">No notifications yet</div>
+                          ) : (
+                            notifications.map(notification => (
+                              <div
+                                key={notification._id}
+                                className={`p-3 border-b border-gray-100 transition-colors duration-200 ${
+                                  markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'
+                                } ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                                onClick={() => {
+                                  if (markingAsRead.has(notification._id)) return;
+                                  if (!notification.read) {
+                                    setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, read: true } : n));
+                                    setUnreadCount(prev => { const c = Math.max(0, prev - 1); setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); return c; });
+                                    handleMarkAsRead([notification._id], true);
+                                  }
+                                  if (notification.entityId) {
+                                    if (['ad_pending_approval', 'ad_approved', 'ad_rejected', 'ad_inquiry', 'ad_availability_request'].includes(notification.type)) {
+                                      navigate(`/ad/${notification.entityId}`); setShowNotifications(false);
+                                    } else if (['message', 'chat'].includes(notification.type)) {
+                                      navigate(`/chat/${notification.entityId}`); setShowNotifications(false);
+                                    }
+                                  }
+                                }}
+                              >
+                                <div className="flex justify-between items-start mb-1">
+                                  <h4 className="text-sm font-medium text-gray-800 pr-2">{notification.title}</h4>
+                                  {markingAsRead.has(notification._id)
+                                    ? <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1 animate-pulse"></div>
+                                    : !notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                                  }
+                                </div>
+                                <p className="text-xs text-gray-600 mb-2">{notification.message}</p>
+                                <p className="text-xs text-gray-400">
+                                  {new Date(notification.timestamp).toLocaleDateString()} {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {notifications.length > 0 && (
+                          <div className="p-3 border-t border-gray-200 bg-gray-50">
+                            <button onClick={() => setShowNotifications(false)} className="w-full text-center text-sm text-orange-500 hover:text-orange-600 font-medium">
+                              Close
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {showProfileMenu && (
+                      <div
+                        className="absolute right-0 top-11 bg-white border rounded shadow w-40 py-1 z-50"
+                        ref={profileMenuRef} // Attach profileMenuRef here
+                      >
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                          onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            navigate('/profile');
+                          }}
+                        >
+                          Profile
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                          onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
+                          onClick={() => {
+                            try {
+                              sessionStorage.removeItem('user');
+                              sessionStorage.removeItem('token');
+                            } catch (e) {}
+                            setShowProfileMenu(false);
+                            navigate('/login');
+                          }}
+                        >
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
           </div>
           {/* Center controls */}
           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
@@ -412,17 +458,29 @@ const Header = () => {
                 </div>
               )}
             </div>
-            {/* Desktop Notification Bell */}
+          </div>
+          {/* Right side: desktop login/Profile area */}
+          <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" >
+            {!isLoggedIn && (
+              <button
+                onClick={() => navigate("/login")}
+                className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
+              >
+                <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
+                Login | Signup
+              </button>
+            )}
+            {/* Desktop: Bell placed left of profile icon */}
             {isLoggedIn && (
-              <div className="relative ml-2 md:ml-4 notification-container hidden lg:block">
+              <div className="hidden sm:flex items-center gap-2 relative notification-container">
                 <button
                   onClick={toggleNotifications}
-                  className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors duration-200 focus:outline-none"
+                  className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
                   aria-label="Notifications"
                 >
-                  <FaBell className="text-lg md:text-xl" />
+                  <FaBell className="text-xl" />
                   {unreadCount > 0 && (
-                    <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
+                    <span className={`absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -503,18 +561,6 @@ const Header = () => {
                   </div>
                 )}
               </div>
-            )}
-          </div>
-          {/* Right side: desktop login/Profile area */}
-          <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" >
-            {!isLoggedIn && (
-              <button
-                onClick={() => navigate("/login")}
-                className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
-              >
-                <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
-                Login | Signup
-              </button>
             )}
             {isLoggedIn && (
             <button

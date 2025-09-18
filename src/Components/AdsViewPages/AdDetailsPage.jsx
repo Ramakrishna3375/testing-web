@@ -1,19 +1,9 @@
 import { useState, useEffect } from "react";
 import { getAllCategories, getAllActiveAds } from "../../Services/api";
-import Header from '../Header&Footer/Header';
+import Header from "../Header&Footer/Header";
+import Footer from "../Header&Footer/Footer";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaMapMarkerAlt } from "react-icons/fa";
-import { VscAccount } from "react-icons/vsc";
 import { IoIosShareAlt } from "react-icons/io";
-import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
-import LocalMartIconBot from '../../assets/Website logos/LocalMartIconBot.png';
-import InstagramIcon from '../../assets/Website logos/instagram.png';
-import FacebookIcon from '../../assets/Website logos/facebook.jpg';
-import TwitterIcon from '../../assets/Website logos/twitter logo.jpg';
-import LinkedinIcon from '../../assets/Website logos/linkedin.png';
-import iPhone13ProMax from '../../assets/products/iphone13promax.avif';
-
-// Dynamically fetched categories
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -25,10 +15,7 @@ const ProductDetailPage = () => {
   const [loadingAd, setLoadingAd] = useState(true);
   const [ad, setAd] = useState(null);
   const [adError, setAdError] = useState(null);
-  // Simple login detection: change per your app's logic if needed
-  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
-
-  const getCategoryId = (cat) => cat._id;
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -78,7 +65,42 @@ const ProductDetailPage = () => {
     fetchAd();
   }, [id]);
 
-  const adImages = ad && ad.images && ad.images.length > 0 ? ad.images : "";
+  const adImages = Array.isArray(ad?.images) && ad.images.length > 0 ? ad.images : [];
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+      if (e.key === 'ArrowLeft') setCurrentImgIndex(prev => (prev === 0 ? (adImages.length - 1) : prev - 1));
+      if (e.key === 'ArrowRight') setCurrentImgIndex(prev => (prev === adImages.length - 1 ? 0 : prev + 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isLightboxOpen, adImages.length]);
+
+  // Handle browser back button while lightbox is open
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onPopState = () => {
+      // Close the lightbox when navigating back
+      setIsLightboxOpen(false);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [isLightboxOpen]);
+
+  const openLightbox = () => {
+    // Push a new history state so Back closes the lightbox
+    try { window.history.pushState({ lightbox: true }, ''); } catch (_) {}
+    setIsLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setIsLightboxOpen(false);
+    // Pop the lightbox state if present to keep history consistent
+    try { window.history.back(); } catch (_) {}
+  };
 
   const handlePrev = () => {
     setCurrentImgIndex((prev) =>
@@ -145,11 +167,14 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
             >
               ←
             </button>
-            <img
-              src={adImages[currentImgIndex]}
-              alt={`Ad image ${currentImgIndex + 1}`}
-              className="border border-gray-200 rounded-xl sm:rounded-2xl shadow-lg w-full h-full object-contain bg-white select-none"
-            />
+            {adImages.length > 0 && (
+              <img
+                onClick={openLightbox}
+                src={adImages[currentImgIndex]}
+                alt={`Ad image ${currentImgIndex + 1}`}
+                className="border border-gray-200 rounded-xl sm:rounded-2xl shadow-lg w-full h-full object-contain bg-white select-none cursor-zoom-in"
+              />
+            )}
             <button
               onClick={handleNext}
               className="absolute right-0 top-1/2 -translate-y-1/2 bg-gray-200 text-black px-2 sm:px-3 py-2 rounded-r-lg hover:bg-gray-300 z-10"
@@ -204,49 +229,49 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
-          <div>
-            <img src={LocalMartIconBot} alt="Local Mart Logo" className="h-9" />
-            <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
-              We gather and verify service provider details across various categories & display them on our website
-            </div>
-            <div className="flex gap-6 mt-3 sm:mt-8">
-              <img src={InstagramIcon} onClick={() => window.open("https://www.instagram.com/localmart", "_blank")} alt="Instagram" className="cursor-pointer h-6" />
-              <img src={FacebookIcon} onClick={() => window.open("https://www.facebook.com/localmart", "_blank")} alt="Facebook" className="cursor-pointer h-6" />
-              <img src={TwitterIcon} onClick={() => window.open("https://www.twitter.com/localmart", "_blank")} alt="Twitter" className="cursor-pointer h-6" />
-              <img src={LinkedinIcon} onClick={() => window.open("https://www.linkedin.com/company/localmart", "_blank")} alt="LinkedIn" className="cursor-pointer h-6" />            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-2">Our Services</h4>
-            <ul className="text-gray-900">
-              <li onClick={() => navigate("/business-2-business")} className="cursor-pointer mb-1 sm:mb-2">Business 2 Business</li>
-              <li onClick={() => navigate("/booking-services")} className="cursor-pointer mb-1 sm:mb-2">Booking Services</li>
-              <li onClick={() => navigate("/food-delivery")} className="cursor-pointer mb-1 sm:mb-2">Food Delivery</li>
-              <li onClick={() => navigate("/local-businesses")} className="cursor-pointer mb-1 sm:mb-2">Local Businesses</li>
-              <li onClick={() => navigate("/e-commerce")} className="cursor-pointer mb-1 sm:mb-2">E-Commerce</li>
-            </ul>
-          </div>
-          <div>
-            <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/advertise-here")} className="cursor-pointer mb-1 sm:mb-2">Advertise Here</li>
-              <li onClick={() => navigate("/buy-sell")} className="cursor-pointer mb-1 sm:mb-2">Buy & Sell</li>
-              <li onClick={() => navigate("/local-stores")} className="cursor-pointer mb-1 sm:mb-2">Local Stores</li>
-              <li onClick={() => navigate("/explore-brands")} className="cursor-pointer mb-1 sm:mb-2">Explore Brands</li>
-              <li onClick={() => navigate("/shopping")} className="cursor-pointer mb-1 sm:mb-2">Shopping</li>
-            </ul>
-          </div>
-          <div>
-            <ul className="text-gray-900"><br />
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Terms & Conditions</li>
-              <li onClick={() => navigate("/privacy-policy")} className="cursor-pointer mb-1 sm:mb-2">Privacy Policy</li>
-              <li onClick={() => navigate("/cancellation-policy")} className="cursor-pointer mb-1 sm:mb-2">Cancellation Policy</li>
-              <li onClick={() => navigate("/local-mart")} className="cursor-pointer mb-1 sm:mb-2">Local Mart</li>
-            </ul>
-          </div>
+      {/* Lightbox / Image Preview */}
+      {isLightboxOpen && adImages.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-2 sm:p-4"
+          onClick={closeLightbox}
+        >
+          <button
+            aria-label="Close preview"
+            className="absolute top-3 right-3 md:top-6 md:right-6 text-white/80 hover:text-white text-2xl md:text-3xl"
+            onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
+          >
+            ×
+          </button>
+
+          {adImages.length > 1 && (
+            <button
+              className="absolute left-2 sm:left-4 text-white bg-white/10 hover:bg-white/20 backdrop-blur px-3 sm:px-4 py-2 sm:py-3 rounded-full text-lg sm:text-2xl"
+              onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(prev => prev === 0 ? adImages.length - 1 : prev - 1); }}
+            >
+              ←
+            </button>
+          )}
+
+          <img
+            src={adImages[currentImgIndex]}
+            alt={`Preview ${currentImgIndex + 1}`}
+            className="max-h-[85vh] max-w-[95vw] md:max-h-[90vh] md:max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {adImages.length > 1 && (
+            <button
+              className="absolute right-2 sm:right-4 text-white bg-white/10 hover:bg-white/20 backdrop-blur px-3 sm:px-4 py-2 sm:py-3 rounded-full text-lg sm:text-2xl"
+              onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(prev => prev === adImages.length - 1 ? 0 : prev + 1); }}
+            >
+              →
+            </button>
+          )}
         </div>
-      </footer>
+      )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

@@ -1,18 +1,28 @@
 import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {postNewAd, getAllCategories, getAllSubCategories} from "../../Services/api";
 
 export default function PostAdForm() {
+  const navigate = useNavigate();
   const { category, subcategory } = useParams();
   const { register, handleSubmit, formState: { errors }, watch, reset } = useForm();
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [images, setImages] = useState([]);
   const [imageError, setImageError] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Fetch categories and subcategories on component mount
+  // Check auth on mount
   useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    setIsAuthenticated(!!token);
+  }, []);
+
+  // Fetch categories and subcategories only when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
     async function fetchData() {
       const catRes = await getAllCategories();
       setCategories(catRes?.data?.categories || []);
@@ -20,7 +30,7 @@ export default function PostAdForm() {
       setSubcategories(subRes?.data?.subcategories || []);
     }
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
 
   // Watch for subSubCategory selection
   const watchedTvSubType = watch("tvSubType");
@@ -294,6 +304,22 @@ formData.append("subcategory", subcategoryId);
     }
   }
 };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow mt-10 text-center">
+        <h2 className="text-xl font-bold mb-2">Login required</h2>
+        <p className="text-gray-600 mb-4">Please log in to post an ad.</p>
+        <button
+          type="button"
+          className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded font-semibold"
+          onClick={() => navigate('/login')}
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow">

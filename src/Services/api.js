@@ -26,6 +26,7 @@ export const postNewAd = async (adData, token) => {
   return await commonRequest("POST", `${BASE_URL}/api/post-ads`, adData, { Authorization: token });
 };
 
+
 //Search Ads by Title
 export const searchAdsByTitle = async (title) => {
   const encodedTitle = encodeURIComponent(title);
@@ -36,3 +37,84 @@ export const searchAdsByTitle = async (title) => {
 export const getChatHistory = async (userId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chat/History/${userId}`, null, { Authorization: token });
 };
+
+//User Login
+export const userLogin = async (email, password) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/authenticate`, { email, password });
+};
+
+//Register OTP with Email
+export const registerOtpWithEmail = async (email) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/get-verification-otp`, { email });
+};
+
+//Verify OTP with Email
+export const verifyOtpWithEmail = async (email, otp) => {
+  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/verify-account`, { email, otp });
+};
+
+//Register User Details
+export const registerUserDetails = async (userData, token) => {
+  return await commonRequest(
+    "POST",
+    `https://stage-api.localmart.app:8443/auth/completeUserProfile`,
+    userData,
+    token ? { Authorization: token } : undefined
+  );
+};
+
+//Get All Countries
+export const getAllCountries = async () => {
+  return await commonRequest("GET", `https://stage-api.localmart.app:8443/locations/countries`);
+};
+
+// Get states by country id
+export const getStatesByCountryId = async (countryId) => {
+  const encoded = encodeURIComponent(countryId);
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/locations/countries/${encoded}/states`
+  );
+};
+
+//Get Cities by State Id
+export const getCitiesByStateId = async (stateId) => {
+  const encodedStateId = encodeURIComponent(stateId);
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/locations/states/${encodedStateId}/cities`
+  );
+};
+
+// Get authenticated user details (requires Bearer token)
+export const getUserDetails = async (token) => {
+  return await commonRequest(
+    "GET",
+    `https://stage-api.localmart.app:8443/auth/user-details`,
+    null,
+    token ? { Authorization: token } : undefined
+  );
+};
+
+// Update authenticated user details
+export const updateUserDetails = async (payload, token) => {
+  return await commonRequest(
+    "PUT",
+    `https://stage-api.localmart.app:8443/auth/update-details`,
+    payload,
+    token ? { Authorization: token } : undefined
+  );
+};
+
+
+// Upload profile picture (FormData field name: 'file')
+export const uploadProfilePicture = async (formData, token) => {
+  return await commonRequest(
+    "POST",
+    `https://stage-api.localmart.app:8443/auth/upload-profile-picture`,
+    formData,
+    token ? { Authorization: token } : undefined
+  );
+};
+
+

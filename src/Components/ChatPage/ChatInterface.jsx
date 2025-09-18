@@ -14,23 +14,23 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
 
-  // Default user and product info
-  const defaultUserInfo = userInfo || {
+  // Default info - will be replaced with real data from props or API
+  const currentUserInfo = userInfo || {
     name: `User ${userId}`,
     email: 'user@example.com',
-    phone: '+1234567890',
-    location: 'City, State',
-    joinDate: 'January 2024',
-    rating: 4.5,
-    totalAds: 12,
+    phone: 'Not provided',
+    location: 'Not specified',
+    joinDate: 'Recently',
+    rating: 0,
+    totalAds: 0,
     avatar: null
   };
 
-  const defaultProductInfo = productInfo || {
+  const currentProductInfo = productInfo || {
     name: 'Product Chat',
     category: 'General',
     price: 'Contact for price',
-    location: 'City, State'
+    location: 'Not specified'
   };
 
   useEffect(() => {
@@ -112,8 +112,8 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
     if (onClose) {
       onClose();
     } else {
-      // Navigate back to product or homepage
-      navigate(-1); // Go back to previous page
+      // Navigate back to the product page or previous page
+      navigate(-1);
     }
   };
 
@@ -141,8 +141,8 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
           {/* Avatar */}
           <div className="flex justify-center">
             <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center">
-              {defaultUserInfo.avatar ? (
-                <img src={defaultUserInfo.avatar} alt="User" className="w-20 h-20 rounded-full object-cover" />
+              {currentUserInfo.avatar ? (
+                <img src={currentUserInfo.avatar} alt="User" className="w-20 h-20 rounded-full object-cover" />
               ) : (
                 <span className="text-2xl text-gray-600">👤</span>
               )}
@@ -153,37 +153,39 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium text-gray-600">Name</label>
-              <p className="text-gray-800">{defaultUserInfo.name}</p>
+              <p className="text-gray-800">{currentUserInfo.name}</p>
             </div>
             
             <div>
               <label className="text-sm font-medium text-gray-600">Email</label>
-              <p className="text-gray-800">{defaultUserInfo.email}</p>
+              <p className="text-gray-800">{currentUserInfo.email}</p>
             </div>
             
             <div>
               <label className="text-sm font-medium text-gray-600">Phone</label>
-              <p className="text-gray-800">{defaultUserInfo.phone}</p>
+              <p className="text-gray-800">{currentUserInfo.phone}</p>
             </div>
             
             <div>
               <label className="text-sm font-medium text-gray-600">Location</label>
-              <p className="text-gray-800">{defaultUserInfo.location}</p>
+              <p className="text-gray-800">{currentUserInfo.location}</p>
             </div>
             
             <div>
               <label className="text-sm font-medium text-gray-600">Member Since</label>
-              <p className="text-gray-800">{defaultUserInfo.joinDate}</p>
+              <p className="text-gray-800">{currentUserInfo.joinDate}</p>
             </div>
             
             <div className="flex justify-between">
               <div>
                 <label className="text-sm font-medium text-gray-600">Rating</label>
-                <p className="text-gray-800">⭐ {defaultUserInfo.rating}/5</p>
+                <p className="text-gray-800">
+                  {currentUserInfo.rating > 0 ? `⭐ ${currentUserInfo.rating}/5` : 'No ratings yet'}
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600">Total Ads</label>
-                <p className="text-gray-800">{defaultUserInfo.totalAds}</p>
+                <p className="text-gray-800">{currentUserInfo.totalAds}</p>
               </div>
             </div>
           </div>
@@ -192,19 +194,35 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
           <div className="border-t pt-4">
             <h4 className="font-medium mb-2">About this conversation</h4>
             <div className="space-y-2 text-sm">
-              <p><span className="font-medium">Product:</span> {defaultProductInfo.name}</p>
-              <p><span className="font-medium">Category:</span> {defaultProductInfo.category}</p>
-              <p><span className="font-medium">Price:</span> {defaultProductInfo.price}</p>
-              <p><span className="font-medium">Location:</span> {defaultProductInfo.location}</p>
+              <p><span className="font-medium">Product:</span> {currentProductInfo.name}</p>
+              <p><span className="font-medium">Category:</span> {currentProductInfo.category}</p>
+              <p><span className="font-medium">Price:</span> {currentProductInfo.price}</p>
+              <p><span className="font-medium">Location:</span> {currentProductInfo.location}</p>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4">
-            <button className="flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors">
+            <button 
+              className="flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+              onClick={() => {
+                // Navigate to user profile or handle view profile action
+                console.log('View profile clicked');
+              }}
+            >
               View Profile
             </button>
-            <button className="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors">
+            <button 
+              className="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors"
+              onClick={() => {
+                // Handle call action
+                if (currentUserInfo.phone && currentUserInfo.phone !== 'Not provided') {
+                  window.location.href = `tel:${currentUserInfo.phone}`;
+                } else {
+                  alert('Phone number not available');
+                }
+              }}
+            >
               Call
             </button>
           </div>
@@ -224,8 +242,8 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
               <span className="text-gray-600 text-sm">👤</span>
             </div>
             <div>
-              <span className="font-semibold text-sm">{defaultUserInfo.name}</span>
-              <p className="text-xs text-gray-200">{defaultProductInfo.name}</p>
+              <span className="font-semibold text-sm">{currentUserInfo.name}</span>
+              <p className="text-xs text-gray-200">{currentProductInfo.name}</p>
             </div>
           </div>
           <div className="flex gap-4">
@@ -264,7 +282,12 @@ const ChatInterface = ({ userInfo, productInfo, onClose }) => {
                   <div className="text-center text-gray-500">
                     <div className="text-6xl mb-4">💬</div>
                     <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
-                    <p className="text-sm">Send a message to begin chatting about this product.</p>
+                    <p className="text-sm mb-4">Send a message to begin chatting about this product.</p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-sm mx-auto">
+                      <p className="text-xs text-blue-700">
+                        This is a real-time chat. Messages will appear here when you or the other person sends them.
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : (

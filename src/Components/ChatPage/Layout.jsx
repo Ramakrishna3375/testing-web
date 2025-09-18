@@ -10,60 +10,32 @@ const Layout = () => {
   const isInboxPage = location.pathname === '/inbox' || location.pathname === '/';
   const isChatPage = location.pathname.startsWith('/chat/');
   
-  // Sample messages data - replace with real data from your API
-  const [messages] = useState([
-    {
-      id: 1,
-      senderName: 'John Smith',
-      productName: 'iPhone 12 Pro Max',
-      lastMessage: 'Hi, is this still available?',
-      timestamp: '2 min ago',
-      isRead: false,
-      isImportant: true
-    },
-    {
-      id: 2,
-      senderName: 'Sarah Johnson',
-      productName: 'Samsung Galaxy S21',
-      lastMessage: 'What\'s the best price?',
-      timestamp: '5 min ago',
-      isRead: true,
-      isImportant: false
-    },
-    {
-      id: 3,
-      senderName: 'Mike Wilson',
-      productName: 'MacBook Pro 2021',
-      lastMessage: 'Can you ship to Delhi?',
-      timestamp: '10 min ago',
-      isRead: false,
-      isImportant: false
-    }
-  ]);
-
+  // Real messages will come from API/database - empty by default
+  const [messages] = useState([]);
   const [currentFilter, setCurrentFilter] = useState('all');
 
   const handleFilterChange = (filter) => {
     setCurrentFilter(filter);
   };
 
-  // Sample user and product info for chat
+  // User and product info will come from the actual chat context/API
+  // These will be passed from the product page or retrieved from the chat data
   const userInfo = {
-    name: 'John Smith',
-    email: 'john.smith@email.com',
-    phone: '+1 (555) 123-4567',
-    location: 'New York, NY',
-    joinDate: 'January 2024',
-    rating: 4.8,
-    totalAds: 25,
+    name: 'Chat User',
+    email: 'user@example.com',
+    phone: '+1 (000) 000-0000',
+    location: 'Location',
+    joinDate: 'Recently',
+    rating: 0,
+    totalAds: 0,
     avatar: null
   };
 
   const productInfo = {
-    name: 'iPhone 12 Pro Max',
-    category: 'Electronics',
-    price: '$899',
-    location: 'New York, NY'
+    name: 'Product',
+    category: 'Category',
+    price: 'Price on request',
+    location: 'Location'
   };
 
   return (
@@ -94,18 +66,16 @@ const Layout = () => {
                 <div className="text-6xl mb-6">💬</div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome to LocalMart Chat</h2>
                 <p className="text-gray-600 mb-2">Connect with buyers and sellers instantly</p>
-                <p className="text-sm text-gray-500 mb-6">Select a conversation from the inbox to start chatting, or start a new conversation from a product page.</p>
+                <p className="text-sm text-gray-500 mb-6">Start a conversation from a product page to begin chatting.</p>
                 
-                {/* Filter Status */}
+                {/* Instructions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                  <p className="text-sm text-blue-800">
-                    Currently showing: <span className="font-semibold capitalize">{currentFilter}</span> messages
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {currentFilter === 'unread' && 'Showing only unread conversations'}
-                    {currentFilter === 'important' && 'Showing only starred/important conversations'}
-                    {currentFilter === 'all' && 'Showing all conversations'}
-                  </p>
+                  <h3 className="font-semibold text-blue-800 mb-2">How to start chatting:</h3>
+                  <ol className="text-sm text-blue-700 text-left space-y-1">
+                    <li>1. Browse products on LocalMart</li>
+                    <li>2. Click "Chat with Seller" on any product</li>
+                    <li>3. Your conversation will appear here</li>
+                  </ol>
                 </div>
               </div>
             </div>

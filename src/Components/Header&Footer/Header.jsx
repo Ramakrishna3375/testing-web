@@ -471,32 +471,15 @@ const Header = () => {
               </button>
             )}
             {/* Desktop: Bell placed left of profile icon */}
-          </div>
-          {/* Right side: desktop login/Profile area */}
-          <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" >
-            {!isLoggedIn && (
-              <button
-                onClick={() => navigate("/login")}
-                className="flex items-center bg-orange-500 text-white rounded-full px-4 py-2 text-xs md:text-sm lg:text-base font-semibold hover:underline min-h-[40px]"
-              >
-                <VscAccount className="text-xs sm:text-sm md:text-lg mr-2" />
-                Login | Signup
-              </button>
-            )}
-            {/* Desktop: Bell placed left of profile icon */}
             {isLoggedIn && (
-              <div className="hidden sm:flex items-center gap-2 relative notification-container">
               <div className="hidden sm:flex items-center gap-2 relative notification-container">
                 <button
                   onClick={toggleNotifications}
                   className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
-                  className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
                   aria-label="Notifications"
                 >
                   <FaBell className="text-xl" />
-                  <FaBell className="text-xl" />
                   {unreadCount > 0 && (
-                    <span className={`absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
                     <span className={`absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
@@ -632,4 +615,3 @@ const Header = () => {
 };
  
 export default Header;
- 

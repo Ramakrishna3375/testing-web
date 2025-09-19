@@ -82,8 +82,13 @@ const Header = () => {
       setCatError(null);
       try {
         const res = await getAllCategories();
-        if (Array.isArray(res.data)) setCategories(res.data);
-        else if (Array.isArray(res?.data?.categories)) setCategories(res.data.categories);
+        const sortOldFirst = (arr) => [...arr].sort((a, b) => {
+          const aTime = Date.parse(a?.createdAt || 0) || 0;
+          const bTime = Date.parse(b?.createdAt || 0) || 0;
+          return aTime - bTime; // older first
+        });
+        if (Array.isArray(res.data)) setCategories(sortOldFirst(res.data));
+        else if (Array.isArray(res?.data?.categories)) setCategories(sortOldFirst(res.data.categories));
         else throw new Error();
       } catch {
         setCategories([]);

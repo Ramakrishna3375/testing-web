@@ -145,10 +145,17 @@ export default function PostFreeAdPage() {
     const fetchCategories = async () => {
       setLoadingCategories(true);
       const res = await getAllCategories();
+      const sortOldFirst = (arr) => {
+        return [...arr].sort((a, b) => {
+          const aTime = Date.parse(a?.createdAt || 0) || 0;
+          const bTime = Date.parse(b?.createdAt || 0) || 0;
+          return aTime - bTime; // older first
+        });
+      };
       if (res && res.data && Array.isArray(res.data.categories)) {
-        setCategories(res.data.categories);
+        setCategories(sortOldFirst(res.data.categories));
       } else if (res && Array.isArray(res.data)) {
-        setCategories(res.data);
+        setCategories(sortOldFirst(res.data));
       }
       setLoadingCategories(false);
     };

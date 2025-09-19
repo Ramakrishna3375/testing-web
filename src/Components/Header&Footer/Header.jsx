@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 // Website logos and banners
 import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 import UserProfile from '../../assets/Website logos/UserProfile.jpg';
-
+ 
 import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails } from "../../Services/api";
 import socketService from "../../Services/socketService";
-
+ 
 const Header = () => {
   const navigate = useNavigate();
   const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
@@ -30,18 +30,18 @@ const Header = () => {
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
   const [user, setUser] = useState(null);
-
+ 
   useEffect(() => {
     const onDocClick = (e) => {
       // Check if all refs are initialized before proceeding
       if (!profileMenuRef.current || !mobileProfileButtonRef.current || !desktopProfileButtonRef.current) {
         return;
       }
-
+ 
       const clickedOutsideMenu = !profileMenuRef.current.contains(e.target);
       const clickedOutsideMobileButton = !mobileProfileButtonRef.current.contains(e.target);
       const clickedOutsideDesktopButton = !desktopProfileButtonRef.current.contains(e.target);
-
+ 
       // Close menu if click is outside the menu content AND outside BOTH mobile and desktop buttons
       if (clickedOutsideMenu && clickedOutsideMobileButton && clickedOutsideDesktopButton) {
         setShowProfileMenu(false);
@@ -52,7 +52,7 @@ const Header = () => {
     }
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showProfileMenu]);
-
+ 
   useEffect(() => {
     if (isLoggedIn) {
       const fetchUser = async () => {
@@ -74,7 +74,7 @@ const Header = () => {
       setUser(null);
     }
   }, [isLoggedIn]);
-
+ 
   // Fetch categories
   useEffect(() => {
     (async () => {
@@ -97,7 +97,7 @@ const Header = () => {
       setLoadingCategories(false);
     })();
   }, []);
-
+ 
   // Debounced search
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -124,7 +124,7 @@ const Header = () => {
     }, 400);
     return () => clearTimeout(delay);
   }, [searchQuery]);
-
+ 
   // Fetch notifications
   const fetchNotifications = async () => {
     if (!isLoggedIn) {
@@ -144,11 +144,11 @@ const Header = () => {
     } catch {}
     setLoadingNotifications(false);
   };
-
+ 
   // Notifications effect
   useEffect(() => { isLoggedIn ? fetchNotifications() : (setNotifications([]), setUnreadCount(0)); }, [isLoggedIn]);
   useEffect(() => { if (isLoggedIn) fetchNotifications(); }, []); // eslint-disable-line
-
+ 
   // Socket setup
   useEffect(() => {
     if (isLoggedIn) {
@@ -177,7 +177,7 @@ const Header = () => {
     }
     return () => { socketService.removeAllListeners(); socketService.disconnect(); };
   }, [isLoggedIn]);
-
+ 
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
     const token = sessionStorage.getItem('token');
@@ -218,25 +218,25 @@ const Header = () => {
       }
     }
   };
-
+ 
   // Notification dropdown toggle
   const toggleNotifications = () => setShowNotifications(v => !v);
-
+ 
   // Close notifications dropdown on outside click
   useEffect(() => {
     const handleClick = e => { if (showNotifications && !e.target.closest('.notification-container')) setShowNotifications(false); };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showNotifications]);
-
+ 
   // Cleanup on unmount
   useEffect(() => () => { socketService.removeAllListeners(); socketService.disconnect(); }, []);
-
+ 
   return (
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
       <div className="max-w-6xl mx-auto w-full px-2 md:px-4 relative">
         {/* Mobile/Tablet: Bell placed left of profile icon */}
-        
+       
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
           {/* Logo and mobile login */}
           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
@@ -618,5 +618,5 @@ const Header = () => {
     </header>
   );
 };
-
+ 
 export default Header;

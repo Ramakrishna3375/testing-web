@@ -13,6 +13,7 @@ export default function PostAdForm() {
   const [images, setImages] = useState([]);
   const [imageError, setImageError] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Check auth on mount
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function PostAdForm() {
 
   const onSubmit = async (data) => {
   const token = sessionStorage.getItem("token");
+  setIsLoading(true); // Set loading to true
   try {
     const formData = new FormData();
 
@@ -283,6 +285,7 @@ formData.append("subcategory", subcategoryId);
       alert("Ad sent for admin verification!");
       reset(); 
       setImages([]);
+      navigate('/post-free-ad'); // Redirect to post-free-ad page
     } else if (res?.response?.data?.message) {
       alert(res.response.data.message);
       console.error("Backend error message:", res.response.data.message);
@@ -302,6 +305,8 @@ formData.append("subcategory", subcategoryId);
     } else {
       alert("Failed to post ad");
     }
+  } finally {
+    setIsLoading(false); // Set loading to false regardless of success or failure
   }
 };
 
@@ -1363,7 +1368,9 @@ formData.append("subcategory", subcategoryId);
   )}
 </div>
         <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700"
-          disabled={images.length === 0}> Post Ad </button>
+          disabled={images.length === 0 || isLoading}> 
+          {isLoading ? "Posting Ad..." : "Post Ad"}
+         </button>
       </form>
     </div>
   );

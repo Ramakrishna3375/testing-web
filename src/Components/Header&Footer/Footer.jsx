@@ -11,7 +11,8 @@ const Footer = () => {
     <footer className="bg-white mt-5 p-4 pt-8 pb-4 border-t border-gray-200">
             <div className="max-w-6xl mx-auto flex flex-wrap justify-between items-start gap-2 sm:gap-8">
               <div>
-                <img src={LocalMartIconBot} alt="Local Mart Logo" className="h-9" />
+                <img src={LocalMartIconBot} alt="Local Mart Logo" className="h-9 cursor-pointer" 
+                onClick={() => navigate("/homepage")} />
                 <div className="text-gray-800 max-w-xs font-semibold mt-1 sm:mt-3">
                   We gather and verify service provider details across various categories & display them on our website
                 </div>

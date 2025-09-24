@@ -285,7 +285,7 @@ const HomePage = () => {
               <div
                 key={ad.id || ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2.5 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
-                onClick={() => navigate(`/ad/${ad.id}`)}
+                onClick={() => navigate(`/ad/${ad.id || ad._id}`, { state: { from: "homepage", categoryName: ad.category?.name, categoryPath: `/ads/${ad.category?.id || ad.category?._id}` } })}
               >
                 <img
                   src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"}
@@ -339,7 +339,7 @@ const HomePage = () => {
               <div
                 key={ad.id || ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
-                onClick={() => navigate(`/ad/${ad.id}`)}
+                onClick={() => navigate(`/ad/${ad.id || ad._id}`, { state: { from: "homepage", categoryName: ad.category?.name, categoryPath: `/ads/${ad.category?.id || ad.category?._id}` } })}
               >
                 <img
                   src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"}

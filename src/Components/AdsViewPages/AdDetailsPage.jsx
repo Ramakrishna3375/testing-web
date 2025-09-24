@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { getAllCategories, getAllActiveAds } from "../../Services/api";
 import Header from "../Header&Footer/Header";
 import Footer from "../Header&Footer/Footer";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { IoIosShareAlt } from "react-icons/io";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); // Added useLocation hook
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -16,6 +17,25 @@ const ProductDetailPage = () => {
   const [ad, setAd] = useState(null);
   const [adError, setAdError] = useState(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: ad.title,
+          text: `Check out this ad on LocalMart: ${ad.title} - ₹${ad.price}`,
+          url: window.location.href,
+        });
+        console.log("Ad shared successfully");
+      } catch (error) {
+        console.error("Error sharing ad:", error);
+      }
+    } else {
+      // Fallback for browsers that do not support Web Share API
+      alert("Web Share API is not supported in this browser.");
+    }
+  };
 
   // Fetch categories on mount
   useEffect(() => {
@@ -41,7 +61,7 @@ const ProductDetailPage = () => {
     fetchCategories();
   }, []);
 
-  // Fetch ad by id
+  // Fetch ad by id and set history stack
   useEffect(() => {
     const fetchAd = async () => {
       setLoadingAd(true);
@@ -52,6 +72,27 @@ const ProductDetailPage = () => {
           const found = res.data.postAds.find(item => (item.id || item._id) === id);
           setAd(found || null);
           if (!found) setAdError("Ad not found");
+
+          // Update history stack based on navigation state
+          if (location.state && location.state.from) {
+            const { from, categoryName, categoryPath } = location.state;
+            let newHistoryStack = [{ name: "Home", path: "/homepage" }];
+
+            if (from === "homepage") {
+              newHistoryStack.push({ name: "Category", path: categoryPath });
+            } else if (from === "category") {
+                newHistoryStack.push({ name: "Category", path: categoryPath });
+            }
+            newHistoryStack.push({ name: categoryName });
+            setHistoryStack(newHistoryStack);
+          } else {
+            // Default breadcrumb if no specific history state is passed
+            setHistoryStack([
+                { name: "Home", path: "/homepage" },
+                { name: "Category", path: `/ads/${found?.category?.id || found?.category?._id}` }, // Assuming category id is available
+                { name: found?.category?.name }
+            ]);
+          }
         } else {
           setAd(null);
           setAdError("Could not fetch ads");
@@ -63,7 +104,7 @@ const ProductDetailPage = () => {
       setLoadingAd(false);
     };
     fetchAd();
-  }, [id]);
+  }, [id, location.state]); // Added location.state as a dependency
 
   const adImages = Array.isArray(ad?.images) && ad.images.length > 0 ? ad.images : [];
 
@@ -141,19 +182,28 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
     <Header />
 
       {/* Breadcrumb */}
-<div className="flex flex-row sm:flex-row items-start sm:items-center text-sm sm:text-xl font-semibold max-w-6xl mx-auto py-3 px-4 sm:px-0">
-  <div className="flex flex-wrap gap-1 sm:gap-2 ml-2 sm:ml-9">
-    Home &gt; Categories &gt;
-    <span className="text-orange-400 ml-1">{ad.category && ad.category.name}</span>
-  </div>
+      <div className="flex flex-row sm:flex-row items-start sm:items-center text-sm sm:text-xl font-semibold max-w-6xl mx-auto py-3 px-4 sm:px-0">
+        <div className="flex flex-wrap gap-1 sm:gap-2 ml-2 sm:ml-9">
+          {historyStack.map((item, index) => (
+            <span key={item.name} className="flex items-center">
+              {index > 0 && <span className="mx-1 sm:mx-2">&gt;</span>}
+              <span
+                className={`${index === historyStack.length - 1 ? "text-orange-400" : "text-gray-600 cursor-pointer hover:text-blue-500"}`}
+                onClick={() => navigate(item.path)}
+              >
+                {item.name}
+              </span>
+            </span>
+          ))}
+        </div>
 
-  <div className="flex items-center sm:mt-0 ml-auto sm:ml-auto gap-4">
-    <span className="text-xl sm:text-3xl cursor-pointer hover:text-blue-500" aria-label="Share">
-      <IoIosShareAlt />
-    </span>
-    <span className="text-2xl sm:text-4xl cursor-pointer sm:mr-4 hover:text-orange-600" aria-label="Favorite">𖹭</span>
-  </div>
-</div>
+        <div className="flex items-center sm:mt-0 ml-auto sm:ml-auto gap-4">
+          <span className="text-xl sm:text-3xl cursor-pointer hover:text-blue-500" aria-label="Share" onClick={handleShare}>
+            <IoIosShareAlt />
+          </span>
+          <span className="text-2xl sm:text-4xl cursor-pointer sm:mr-4 hover:text-orange-600" aria-label="Favorite">𖹭</span>
+        </div>
+      </div>
 
       {/* Product Section */}
       <div className="max-w-7xl px-2 md:px-6 lg:px-8 pb-5 sm:pb-10 mx-auto">

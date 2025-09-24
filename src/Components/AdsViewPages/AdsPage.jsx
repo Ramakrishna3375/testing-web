@@ -16,7 +16,7 @@ const MobilesPage = () => {
   const [ads, setAds] = useState([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [adsError, setAdsError] = useState(null);
-  const [brandFilter, setBrandFilter] = useState(null); // ADDED state for filtering by brand
+  const [brandFilter, setBrandFilter] = useState(null);
   const [sortOption, setSortOption] = useState("new");
 
   const { categoryId } = useParams();
@@ -113,6 +113,8 @@ const MobilesPage = () => {
     };
     fetchAds();
   }, []);
+
+  const currentCategory = categories.find(cat => (cat.id || cat._id) === categoryId);
 
   return (
     <div className="text-sm">
@@ -261,7 +263,7 @@ const MobilesPage = () => {
       key={ad.id || ad._id || idx}
       className={`border border-gray-400 bg-white rounded-sm sm:rounded-xl shadow-md p-2.5 sm:p-2 md:p-2.5 transition-all duration-200 hover:shadow-lg hover:scale-102 cursor-pointer
         ${viewMode === "list" ? "flex flex-row sm:flex-row gap-3 sm:gap-5 sm:items-center w-full md:w-150 lg:w-200" : "sm:w-47 md:w-full"}`}
-      onClick={() => navigate(`/ad/${ad.id || ad._id}`)}>
+      onClick={() => navigate(`/ad/${ad.id || ad._id}`, { state: { from: "category", categoryName: currentCategory?.name, categoryPath: `/ads/${categoryId}` } })}>
       <img src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"} alt={ad.title}
         className={`rounded-lg ${viewMode === "grid"
             ? "w-full h-34 sm:h-30 md:h-32 lg:w-40 lg:h-30 object-cover" 

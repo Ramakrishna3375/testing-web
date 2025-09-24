@@ -240,7 +240,8 @@ const Header = () => {
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
           {/* Logo and mobile login */}
           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
-            <img src={LocalMartIcon} alt="Local Mart Logo" className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2" />
+            <img src={LocalMartIcon} alt="Local Mart Logo" className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2 cursor-pointer" 
+            onClick={() => navigate("/homepage")} />
             {/* Mobile: show Login when logged out, avatar when logged in */}
             {!isLoggedIn ? (
                    <div className="sm:hidden ml-auto mt-1">

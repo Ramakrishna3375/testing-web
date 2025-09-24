@@ -16,7 +16,7 @@ return(
     <>
       <Routes>
         {/* Default route */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/homepage" replace />} />
 
         <Route path="/login" element={<UserLogin />} />
         <Route path="/register" element={<CompleteRegistration />} />

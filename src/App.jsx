@@ -5,11 +5,11 @@ import MobilesPage from "./Components/AdsViewPages/AdsPage.jsx";
 import ProductDetailPage from "./Components/AdsViewPages/AdDetailsPage.jsx";
 import PostFreeAdPage from "./Components/PostFreeAd/PostFreeAdPage.jsx";
 import PostAdForm from "./Components/PostFreeAd/PostAdForm.jsx";
-import Layout from './Components/ChatPage/Layout';
 import SearchResultsPage from './Components/AdsViewPages/SearchResultsPage';
 import UserLogin from "./Components/LoginPage/LoginPage.jsx";
 import CompleteRegistration from "./Components/LoginPage/RegisterPage.jsx";
 import ProfilePage from "./Components/Profile/ProfilePage.jsx";
+import ChatPage from "./Components/ChatPage/ChatPage.jsx";
 
 function App(){
 return(
@@ -29,9 +29,9 @@ return(
           path="/post-free-ad/:category/:subcategory"
           element={<PostAdForm />}
         />
-        <Route path="/chat" element={<Layout />} />
-        <Route path="/inbox" element={<Layout />} />
-        <Route path="/chat/:userId" element={<Layout />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/inbox" element={<ChatPage />} />
+        <Route path="/chat/:adId" element={<ChatPage />} /> {/* Use adId as param name as per new ChatPage component */}
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Routes>

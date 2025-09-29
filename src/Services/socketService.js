@@ -115,6 +115,40 @@ class SocketService {
     }
   }
 
+  // Join specific chat room
+  joinChatRoom(adId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('joinChatRoom', adId);
+      console.log('Joined chat room:', adId);
+    }
+  }
+
+  // Leave specific chat room
+  leaveChatRoom(adId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('leaveChatRoom', adId);
+      console.log('Left chat room:', adId);
+    }
+  }
+
+  // Emit chat message
+  emitChatMessage(messageData) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('chatMessage', messageData);
+      console.log('Emitted chat message:', messageData);
+    }
+  }
+
+  // Listen for incoming chat messages
+  onChatMessage(callback) {
+    if (this.socket) {
+      this.socket.on('chatMessage', (message) => {
+        console.log('Received chat message:', message);
+        callback(message);
+      });
+    }
+  }
+
   // Check if socket is connected
   isSocketConnected() {
     return this.socket && this.isConnected;

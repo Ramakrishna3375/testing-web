@@ -74,8 +74,9 @@ export const replyToAdAvailability = async (requestId, adId, isAvailable, messag
 };
 
 //Send Chat Message
-export const sendChatMessage = async (receiverId, adId, message, token) => {
+export const sendChatMessage = async (senderId, receiverId, adId, message, token) => {
   const requestBody = {
+    senderId,
     receiverId,
     adId,
     message
@@ -84,13 +85,13 @@ export const sendChatMessage = async (receiverId, adId, message, token) => {
     body: requestBody,
     token: token ? 'Present' : 'Missing'
   });
-  return await commonRequest("POST", `${BASE_URL}/api/chats/send`, requestBody, { Authorization: `Bearer ${token}` });
+  return await commonRequest("POST", `${BASE_URL}/api/chats/send`, requestBody); // Removed explicit Authorization header
 };
 
 //Get Chat Users
-export const getChatUsers = async (token) => {
-  console.log('API: Getting chat users with token:', token ? 'Present' : 'Missing');
-  return await commonRequest("GET", `${BASE_URL}/api/chats/users`, null, { Authorization: `Bearer ${token}` });
+export const getChatUsers = async (userId, token) => {
+  console.log('API: Getting chat users for user ID:', userId, 'with token:', token ? 'Present' : 'Missing');
+  return await commonRequest("GET", `${BASE_URL}/api/chats/users?userId=${userId}`, null, { Authorization: `Bearer ${token}` });
 };
 
 //Get Chat Messages by Ad ID

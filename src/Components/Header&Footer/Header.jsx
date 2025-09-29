@@ -154,7 +154,11 @@ const Header = () => {
     if (isLoggedIn) {
       const token = sessionStorage.getItem('token');
       const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-      const userId = user.id || user._id;
+      let userId = null;
+      if (user && (user.id || user._id)) { 
+        userId = user.id || user._id;
+      }
+
       if (token && userId) {
         socketService.connect(userId, token);
         setTimeout(() => socketService.joinUserRoom(userId), 1000);
@@ -173,10 +177,15 @@ const Header = () => {
         socketService.onNotificationCount(count => setUnreadCount(count));
       }
     } else {
-      socketService.disconnect();
+      // Disconnect socket when user logs out or is not logged in
+      if (socketService.isSocketConnected()) {
+        socketService.removeAllListeners();
+        socketService.disconnect();
+      }
     }
-    return () => { socketService.removeAllListeners(); socketService.disconnect(); };
-  }, [isLoggedIn]);
+    // This useEffect's cleanup is explicitly handled by the else block above, or by the global unmount cleanup below.
+    // No specific cleanup is needed here for isLoggedIn changes beyond what the else block provides.
+  }, [isLoggedIn]); // Keep isLoggedIn as dependency for connection logic
  
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
@@ -229,8 +238,15 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showNotifications]);
  
-  // Cleanup on unmount
-  useEffect(() => () => { socketService.removeAllListeners(); socketService.disconnect(); }, []);
+  // Cleanup on unmount (global cleanup)
+  useEffect(() => () => {
+    // Only disconnect if the user is NOT logged in when the Header component unmounts.
+    // This prevents premature disconnections during navigation while logged in.
+    if (!isLoggedIn && socketService.getSocket()) {
+      socketService.removeAllListeners(); 
+      socketService.disconnect();
+    }
+  }, [isLoggedIn]); // Added isLoggedIn to the dependency array for conditional cleanup
  
   return (
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
@@ -375,6 +391,7 @@ const Header = () => {
                             try {
                               sessionStorage.removeItem('user');
                               sessionStorage.removeItem('token');
+                              socketService.disconnect(); // Explicitly disconnect on logout
                             } catch (e) {}
                             setShowProfileMenu(false);
                             navigate('/login');
@@ -487,86 +504,86 @@ const Header = () => {
                   <FaBell className="text-xl" />
                   {unreadCount > 0 && (
                     <span className={`absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center font-bold transition-all duration-300 ${countChanged ? 'animate-bounce scale-110' : ''}`}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-                {showNotifications && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
-                    <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
-                      </div>
-                      <div className="flex gap-1">
-                        {unreadCount > 0 && (
-                          <button
-                            onClick={() => {
-                              const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
-                              if (unreadIds.length) {
-                                setNotifications(prev => prev.map(n => unreadIds.includes(n._id) ? { ...n, read: true } : n));
-                                setUnreadCount(0);
-                                setCountChanged(true); setTimeout(() => setCountChanged(false), 1000);
-                                handleMarkAsRead(unreadIds, true);
-                              }
-                            }}
-                            className="text-xs text-orange-500 hover:text-orange-600 font-medium px-2 py-1 rounded hover:bg-orange-50 transition-colors active:bg-orange-100 active:scale-95"
-                          >Mark All Read</button>
-                        )}
-                      </div>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
+                  <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {loadingNotifications ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">Loading notifications...</div>
-                      ) : notifications.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">No notifications yet</div>
-                      ) : (
-                        notifications.map(notification => (
-                          <div
-                            key={notification._id}
-                            className={`p-3 border-b border-gray-100 transition-colors duration-200 ${
-                              markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'
-                            } ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
-                            onClick={() => {
-                              if (markingAsRead.has(notification._id)) return;
-                              if (!notification.read) {
-                                setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, read: true } : n));
-                                setUnreadCount(prev => { const c = Math.max(0, prev - 1); setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); return c; });
-                                handleMarkAsRead([notification._id], true);
-                              }
-                              if (notification.entityId) {
-                                if (['ad_pending_approval', 'ad_approved', 'ad_rejected', 'ad_inquiry', 'ad_availability_request'].includes(notification.type)) {
-                                  navigate(`/ad/${notification.entityId}`); setShowNotifications(false);
-                                } else if (['message', 'chat'].includes(notification.type)) {
-                                  navigate(`/chat/${notification.entityId}`); setShowNotifications(false);
-                                }
-                              }
-                            }}
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <h4 className="text-sm font-medium text-gray-800 pr-2">{notification.title}</h4>
-                              {markingAsRead.has(notification._id)
-                                ? <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1 animate-pulse"></div>
-                                : !notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
-                              }
-                            </div>
-                            <p className="text-xs text-gray-600 mb-2">{notification.message}</p>
-                            <p className="text-xs text-gray-400">
-                              {new Date(notification.timestamp).toLocaleDateString()} {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        ))
+                    <div className="flex gap-1">
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => {
+                            const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
+                            if (unreadIds.length) {
+                              setNotifications(prev => prev.map(n => unreadIds.includes(n._id) ? { ...n, read: true } : n));
+                              setUnreadCount(0);
+                              setCountChanged(true); setTimeout(() => setCountChanged(false), 1000);
+                              handleMarkAsRead(unreadIds, true);
+                            }
+                          }}
+                          className="text-xs text-orange-500 hover:text-orange-600 font-medium px-2 py-1 rounded hover:bg-orange-50 transition-colors active:bg-orange-100 active:scale-95"
+                        >Mark All Read</button>
                       )}
                     </div>
-                    {notifications.length > 0 && (
-                      <div className="p-3 border-t border-gray-200 bg-gray-50">
-                        <button onClick={() => setShowNotifications(false)} className="w-full text-center text-sm text-orange-500 hover:text-orange-600 font-medium">
-                          Close
-                        </button>
-                      </div>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {loadingNotifications ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">Loading notifications...</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">No notifications yet</div>
+                    ) : (
+                      notifications.map(notification => (
+                        <div
+                          key={notification._id}
+                          className={`p-3 border-b border-gray-100 transition-colors duration-200 ${
+                            markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'
+                          } ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                          onClick={() => {
+                            if (markingAsRead.has(notification._id)) return;
+                            if (!notification.read) {
+                              setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, read: true } : n));
+                              setUnreadCount(prev => { const c = Math.max(0, prev - 1); setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); return c; });
+                              handleMarkAsRead([notification._id], true);
+                            }
+                            if (notification.entityId) {
+                              if (['ad_pending_approval', 'ad_approved', 'ad_rejected', 'ad_inquiry', 'ad_availability_request'].includes(notification.type)) {
+                                navigate(`/ad/${notification.entityId}`); setShowNotifications(false);
+                              } else if (['message', 'chat'].includes(notification.type)) {
+                                navigate(`/chat/${notification.entityId}`); setShowNotifications(false);
+                              }
+                            }
+                          }}
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="text-sm font-medium text-gray-800 pr-2">{notification.title}</h4>
+                            {markingAsRead.has(notification._id)
+                              ? <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1 animate-pulse"></div>
+                              : !notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                            }
+                          </div>
+                          <p className="text-xs text-gray-600 mb-2">{notification.message}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(notification.timestamp).toLocaleDateString()} {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      ))
                     )}
                   </div>
-                )}
-              </div>
+                  {notifications.length > 0 && (
+                    <div className="p-3 border-t border-gray-200 bg-gray-50">
+                      <button onClick={() => setShowNotifications(false)} className="w-full text-center text-sm text-orange-500 hover:text-orange-600 font-medium">
+                        Close
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             )}
             {isLoggedIn && (
             <button
@@ -603,6 +620,7 @@ const Header = () => {
                       try {
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('token');
+                        socketService.disconnect(); // Explicitly disconnect on logout
                       } catch (e) {}
                       setShowProfileMenu(false);
                       navigate('/login');

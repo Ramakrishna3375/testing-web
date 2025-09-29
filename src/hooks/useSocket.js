@@ -45,6 +45,23 @@ export const useSocket = (isLoggedIn) => {
     return socketService.isSocketConnected();
   }, []);
 
+  // Chat specific socket functions
+  const joinChatRoom = useCallback((adId) => {
+    socketService.joinChatRoom(adId);
+  }, []);
+
+  const leaveChatRoom = useCallback((adId) => {
+    socketService.leaveChatRoom(adId);
+  }, []);
+
+  const emitChatMessage = useCallback((messageData) => {
+    socketService.emitChatMessage(messageData);
+  }, []);
+
+  const onChatMessage = useCallback((callback) => {
+    socketService.onChatMessage(callback);
+  }, []);
+
   // Auto connect/disconnect based on login status
   useEffect(() => {
     if (isLoggedIn) {
@@ -67,7 +84,11 @@ export const useSocket = (isLoggedIn) => {
     subscribeToNotifications,
     subscribeToNotificationUpdates,
     subscribeToNotificationCount,
-    isConnected
+    isConnected,
+    joinChatRoom,
+    leaveChatRoom,
+    emitChatMessage,
+    onChatMessage,
   };
 };
 

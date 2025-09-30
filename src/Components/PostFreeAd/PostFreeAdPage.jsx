@@ -133,7 +133,7 @@ const subCategoryIcons = {
 
 export default function PostFreeAdPage() {
   const navigate = useNavigate();
-  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
+  const isLoggedIn = !!sessionStorage.getItem('token') || !!sessionStorage.getItem('user');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -207,10 +207,11 @@ export default function PostFreeAdPage() {
 
   return (
     <div className="min-h-screen text-sm">
-      {/* Header */}
+      {isLoggedIn ? (
+        <>
+        {/* Header */}
       <Header />
-      {/* BODY */}
-      {/* Mobile Categories Bar (visible on small screens only) */}
+          {/* Mobile Categories Bar (visible on small screens only) */}
          <div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-1.5 scrollbar-hide">
         <div className="flex gap-2 min-w-max">
           {loadingCategories ? (
@@ -272,7 +273,7 @@ export default function PostFreeAdPage() {
                 Loading subcategories . . .
               </div>
             ) : subCategories.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
                 {subCategories.map((sub) => (
                   <div key={sub._id} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-md p-2 sm:p-4 cursor-pointer hover:bg-blue-100 hover:shadow-lg transition-all duration-200 min-h-[120px] group"
                     onClick={() => navigate(`/post-free-ad/${encodeURIComponent(selectedCategory)}/${encodeURIComponent(sub.name)}`)}>
@@ -305,6 +306,23 @@ export default function PostFreeAdPage() {
         </main>
       </div>
       <Footer />
+    </>
+  ) : (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <main className="flex-1 flex items-center justify-center p-2 md:p-4 lg:p-6">
+        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Please Login to Post Ad</h2>
+          <p className="text-gray-600 mb-6">You need to be logged in to post an ad.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200"
+          >
+            Login Now
+          </button>
+        </div>
+      </main>
+    </div>
+  )}
     </div>
   );
 }

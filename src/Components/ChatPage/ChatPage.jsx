@@ -3,15 +3,72 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
 import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
-import { useAuth } from '../../hooks/useAuth.js';
 import { getChatUsers, getChatMessagesByAdId,  getUserDetails , getAllActiveAds, sendChatMessage } from '../../Services/api';
 import { useSocket } from '../../hooks/useSocket.js';
  
 const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
   const { adId: paramAdId } = useParams();
+
+  // useAuth logic moved here
+  const [user, setUser] = useState(() => {
+    const storedUser = sessionStorage.getItem('user');
+    const storedToken = sessionStorage.getItem('token');
+    let parsedUser = null;
+
+    if (storedUser && storedUser !== "null") {
+      try {
+        parsedUser = JSON.parse(storedUser);
+      } catch (e) {
+        console.error("Auth - Error parsing stored user:", e);
+      }
+    }
+
+    let userId = parsedUser?.id || parsedUser?._id;
+    let userEmail = parsedUser?.email;
+    let userName = parsedUser?.name || parsedUser?.firstName || parsedUser?.lastName;
+    let userProfilePicture = parsedUser?.profilePicture;
+    let userToken = storedToken;
+
+    if (userToken && typeof userToken === 'string' && userToken.split('.').length === 3) {
+      try {
+        const base64Url = userToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const decodedToken = JSON.parse(jsonPayload);
+
+        if (decodedToken.id) userId = decodedToken.id;
+        if (decodedToken.email) userEmail = decodedToken.email;
+        if (!userName && decodedToken.name) userName = decodedToken.name;
+
+      } catch (e) {
+        console.error("Auth - Error decoding token:", e);
+      }
+    }
+
+    if (userId && userToken) {
+      return {
+        id: userId,
+        name: userName,
+        email: userEmail,
+        token: userToken,
+        profilePicture: userProfilePicture,
+      };
+    } else {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('token', user?.token || null);
+  }, [user]);
+
+  const isLoggedIn = !!user;
+  // End useAuth logic
  
   // State
   const [activeFilter, setActiveFilter] = useState('all');
@@ -257,7 +314,7 @@ const ChatPage = () => {
   // UI
   const isChatView = location.pathname.startsWith('/chat/');
 
-  if (!user) {
+  if (!isLoggedIn) {
     return (
       <div className="font-sans min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <main className="flex-1 flex items-center justify-center p-2 md:p-4 lg:p-6">

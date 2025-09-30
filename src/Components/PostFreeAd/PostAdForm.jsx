@@ -12,18 +12,10 @@ export default function PostAdForm() {
   const [subcategories, setSubcategories] = useState([]);
   const [images, setImages] = useState([]);
   const [imageError, setImageError] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Check auth on mount
-  useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    setIsAuthenticated(!!token);
-  }, []);
 
   // Fetch categories and subcategories only when authenticated
   useEffect(() => {
-    if (!isAuthenticated) return;
     async function fetchData() {
       const catRes = await getAllCategories();
       setCategories(catRes?.data?.categories || []);
@@ -31,7 +23,7 @@ export default function PostAdForm() {
       setSubcategories(subRes?.data?.subcategories || []);
     }
     fetchData();
-  }, [isAuthenticated]);
+  }, []);
 
   // Watch for subSubCategory selection
   const watchedTvSubType = watch("tvSubType");
@@ -309,22 +301,6 @@ formData.append("subcategory", subcategoryId);
     setIsLoading(false); // Set loading to false regardless of success or failure
   }
 };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow mt-10 text-center">
-        <h2 className="text-xl font-bold mb-2">Login required</h2>
-        <p className="text-gray-600 mb-4">Please log in to post an ad.</p>
-        <button
-          type="button"
-          className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded font-semibold"
-          onClick={() => navigate('/login')}
-        >
-          Go to Login
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow">
@@ -964,7 +940,17 @@ formData.append("subcategory", subcategoryId);
             </div>
             <div>
               <label className="block font-semibold mb-1">Year</label>
-              <input type="number" {...register("year")} className="w-full border rounded px-3 py-2" placeholder="e.g. 2018" />
+              <input type="number" {...register("year", { 
+                max: { 
+                  value: new Date().getFullYear(), 
+                  message: `Year cannot be greater than ${new Date().getFullYear()}` 
+                },
+                min: { 
+                  value: 1900, 
+                  message: "Year must be at least 1900" 
+                }
+              })} className="w-full border rounded px-3 py-2" placeholder="e.g. 2018" />
+              {errors.year && <span className="text-red-500 text-xs">{errors.year.message}</span>}
             </div>
             <div>
               <label className="block font-semibold mb-1">KM Driven</label>
@@ -1027,7 +1013,17 @@ formData.append("subcategory", subcategoryId);
             </div>
             <div>
               <label className="block font-semibold mb-1">Year</label>
-              <input type="number" {...register("year")} className="w-full border rounded px-3 py-2" placeholder="e.g. 2018" />
+              <input type="number" {...register("year", { 
+                max: { 
+                  value: new Date().getFullYear(), 
+                  message: `Year cannot be greater than ${new Date().getFullYear()}` 
+                },
+                min: { 
+                  value: 1900, 
+                  message: "Year must be at least 1900" 
+                }
+              })} className="w-full border rounded px-3 py-2" placeholder="e.g. 2018" />
+              {errors.year && <span className="text-red-500 text-xs">{errors.year.message}</span>}
             </div>
             {/* Fuel Type */}
     <div>

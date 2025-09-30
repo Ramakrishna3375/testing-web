@@ -11,7 +11,17 @@ import socketService from "../../Services/socketService";
  
 const Header = () => {
   const navigate = useNavigate();
-  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = sessionStorage.getItem('user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (e) {
+      console.error("Header - Error parsing stored user in Header initialization:", e);
+      return null;
+    }
+  });
+  const isLoggedIn = !!user;
+
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [catError, setCatError] = useState(null);
@@ -29,7 +39,6 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
-  const [user, setUser] = useState(null);
  
   useEffect(() => {
     const onDocClick = (e) => {

@@ -116,6 +116,9 @@ const UserLogin = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerLogin]);
 
+  // If already logged in, prevent accessing login page (and back navigation to it)
+  
+
   return (
     <>
     <div className="UserLogin min-h-screen bg-[#F7F7F7] pt-40 flex items-center">
@@ -261,7 +264,8 @@ const UserLogin = () => {
                     setTriggerLogin(true);
                   } else {
                     // For now, just navigate on successful mobile validation
-                    navigate('/homepage');
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    navigate('/homepage', { replace: true });
                   }
                 }}>
                   {/* Email or Mobile Field */}

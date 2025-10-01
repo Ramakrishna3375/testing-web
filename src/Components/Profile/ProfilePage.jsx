@@ -97,7 +97,7 @@ const ProfilePage = () => {
               const cities = okCities ? (citiesResp?.data?.data || []) : [];
               const options = cities
                 .map(c => ({ value: c._id || c.id, label: c.name }))
-                .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+                .sort((a, b) => (a.label || '').trim().localeCompare((b.label || '').trim(), 'en', { sensitivity: 'base' }));
               setCityOptions(options);
             } else {
               setCityOptions([]);
@@ -131,7 +131,7 @@ const ProfilePage = () => {
         const cities = ok ? (resp?.data?.data || []) : [];
         const options = cities
           .map(c => ({ value: c._id || c.id, label: c.name }))
-          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+          .sort((a, b) => (a.label || '').trim().localeCompare((b.label || '').trim(), 'en', { sensitivity: 'base' }));
         setCityOptions(options);
         // if current cityId not in options, clear it
         if (form.cityId && !options.some(o => o.value === form.cityId)) {
@@ -472,9 +472,6 @@ const ProfilePage = () => {
                           </div>
                           <div className="text-sm text-gray-700 whitespace-pre-line">
                             {addr.description}
-                          </div>
-                          <div className="text-sm text-gray-600 mt-2">
-                            {[addr.city, addr.state, addr.country].filter(Boolean).join(', ')}
                           </div>
                         </div>
                       ))}

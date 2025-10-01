@@ -400,10 +400,11 @@ const Header = () => {
                             try {
                               sessionStorage.removeItem('user');
                               sessionStorage.removeItem('token');
+                              sessionStorage.removeItem('isLoggedIn');
                               socketService.disconnect(); // Explicitly disconnect on logout
                             } catch (e) {}
                             setShowProfileMenu(false);
-                            navigate('/login');
+                            navigate('/login', { replace: true });
                           }}
                         >
                           Logout
@@ -629,10 +630,11 @@ const Header = () => {
                       try {
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('token');
+                        sessionStorage.removeItem('isLoggedIn');
                         socketService.disconnect(); // Explicitly disconnect on logout
                       } catch (e) {}
                       setShowProfileMenu(false);
-                      navigate('/login');
+                      navigate('/login', { replace: true });
                     }}
                   >
                     Logout

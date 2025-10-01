@@ -120,7 +120,7 @@ const CompleteRegistration = () => {
         const cities = ok ? resp?.data?.data || [] : [];
         const options = cities
           .map(c => ({ value: c._id || c.id, label: c.name }))
-          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+          .sort((a, b) => (a.label || '').trim().localeCompare((b.label || '').trim(), 'en', { sensitivity: 'base' }));
         setCityOptions(options);
         // Reset selected city if it is not in the new list
         if (selectedCity && !options.some(o => o.value === selectedCity.value)) {

@@ -2,17 +2,24 @@ import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import {postNewAd, getAllCategories, getAllSubCategories} from "../../Services/api";
+import {postNewAd, getAllCategories, getAllSubCategories, getStatesByCountryId, getCitiesByStateId} from "../../Services/api";
 
 export default function PostAdForm() {
   const navigate = useNavigate();
   const { category, subcategory } = useParams();
-  const { register, handleSubmit, formState: { errors }, watch, reset } = useForm();
+  const { register, handleSubmit, formState: { errors }, watch, reset, setValue } = useForm({ mode: "onChange", reValidateMode: "onChange" });
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [images, setImages] = useState([]);
   const [imageError, setImageError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [states, setStates] = useState([]);
+  const [statesLoading, setStatesLoading] = useState(false);
+  const [statesError, setStatesError] = useState("");
+  const [selectedStateId, setSelectedStateId] = useState("");
+  const [cities, setCities] = useState([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [citiesError, setCitiesError] = useState("");
 
   // Fetch categories and subcategories only when authenticated
   useEffect(() => {
@@ -24,6 +31,75 @@ export default function PostAdForm() {
     }
     fetchData();
   }, []);
+
+  // Fetch states for default country id
+  const fetchStates = async () => {
+    setStatesLoading(true);
+    setStatesError("");
+    try {
+      const DEFAULT_COUNTRY_ID = "678da88c9c4467c6aa4eeb86";
+      const res = await getStatesByCountryId(DEFAULT_COUNTRY_ID);
+      // API returns axios response: res.data => { status, success, message, data: [...] }
+      const statesArray = Array.isArray(res?.data?.data) ? res.data.data : [];
+      const sortedStates = [...statesArray].sort((a, b) =>
+        (a?.name || "").localeCompare(b?.name || "", "en", { sensitivity: "base" })
+      );
+      setStates(sortedStates);
+      if (!Array.isArray(statesArray) || statesArray.length === 0) {
+        console.warn("States response empty or invalid:", res?.data);
+      }
+    } catch (e) {
+      console.error("Failed to load states:", e);
+      setStates([]);
+      setStatesError("Failed to load states. Please try again.");
+    } finally {
+      setStatesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStates();
+  }, []);
+
+  // Fetch cities for selected state id
+  const fetchCities = async (stateId) => {
+    if (!stateId) {
+      setCities([]);
+      return;
+    }
+    setCitiesLoading(true);
+    setCitiesError("");
+    try {
+      const res = await getCitiesByStateId(stateId);
+      const citiesArray = Array.isArray(res?.data?.data) ? res.data.data : [];
+      const sortedCities = [...citiesArray].sort((a, b) =>
+        (a?.name || "").localeCompare(b?.name || "", "en", { sensitivity: "base" })
+      );
+      setCities(sortedCities);
+      if (!Array.isArray(sortedCities) || sortedCities.length === 0) {
+        console.warn("Cities response empty or invalid:", res?.data);
+      }
+    } catch (e) {
+      console.error("Failed to load cities:", e);
+      setCities([]);
+      setCitiesError("Failed to load cities. Please try again.");
+    } finally {
+      setCitiesLoading(false);
+    }
+  };
+
+  const handleStateChange = (e) => {
+    const option = e.target.selectedOptions && e.target.selectedOptions[0];
+    const stateId = option ? option.getAttribute("data-id") : "";
+    const stateName = e.target.value || "";
+    setSelectedStateId(stateId || "");
+    // Ensure RHF stores the state name for submission
+    setValue("state", stateName, { shouldValidate: true, shouldDirty: true });
+    // Reset city when state changes, without showing validation error immediately
+    setValue("city", "", { shouldValidate: false, shouldDirty: true });
+    setCities([]);
+    fetchCities(stateId);
+  };
 
   // Watch for subSubCategory selection
   const watchedTvSubType = watch("tvSubType");
@@ -1311,14 +1387,50 @@ formData.append("subcategory", subcategoryId);
         {/* Location */}
         <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block font-semibold mb-1">City <span className="text-red-500">*</span></label>
-            <input type="text" {...register("city", { required: "City is required" })} className="w-full border rounded px-3 py-2" placeholder="e.g. Chennai" />
-            {errors.city && <span className="text-red-500 text-xs">{errors.city.message}</span>}
+            <label className="block font-semibold mb-1">State <span className="text-red-500">*</span></label>
+            <select {...register("state", { required: "State is required" })} onChange={handleStateChange} className="w-full border rounded px-3 py-2" disabled={statesLoading}>
+              {statesLoading ? (
+                <option value="">Loading states...</option>
+              ) : (
+                <>
+                  <option value="">Select</option>
+                  {states.map((s) => (
+                    <option key={s._id || s.id || s.name} value={s.name} data-id={s._id || s.id}>{s.name}</option>
+                  ))}
+                </>
+              )}
+            </select>
+            {statesError && (
+              <div className="text-red-500 text-xs mt-1">{statesError} <button type="button" onClick={fetchStates} className="underline text-blue-600">Retry</button></div>
+            )}
+            {(!statesLoading && !statesError && states.length === 0) && (
+              <div className="text-xs text-gray-600 mt-1">No states found.</div>
+            )}
+            {errors.state && <span className="text-red-500 text-xs">{errors.state.message}</span>}
           </div>
           <div>
-            <label className="block font-semibold mb-1">State <span className="text-red-500">*</span></label>
-            <input type="text" {...register("state", { required: "State is required" })} className="w-full border rounded px-3 py-2" placeholder="e.g. Tamil Nadu" />
-            {errors.state && <span className="text-red-500 text-xs">{errors.state.message}</span>}
+            <label className="block font-semibold mb-1">City <span className="text-red-500">*</span></label>
+            <select {...register("city", { required: "City is required" })} className="w-full border rounded px-3 py-2" disabled={!selectedStateId || citiesLoading}>
+              {!selectedStateId ? (
+                <option value="">Select state first</option>
+              ) : citiesLoading ? (
+                <option value="">Loading cities...</option>
+              ) : (
+                <>
+                  <option value="">Select</option>
+                  {cities.map((c) => (
+                    <option key={c._id || c.id || c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </>
+              )}
+            </select>
+            {citiesError && (
+              <div className="text-red-500 text-xs mt-1">{citiesError} <button type="button" onClick={() => fetchCities(selectedStateId)} className="underline text-blue-600">Retry</button></div>
+            )}
+            {(!citiesLoading && !citiesError && selectedStateId && cities.length === 0) && (
+              <div className="text-xs text-gray-600 mt-1">No cities found.</div>
+            )}
+            {errors.city && <span className="text-red-500 text-xs">{errors.city.message}</span>}
           </div>
           <div>
             <label className="block font-semibold mb-1">Pincode</label>

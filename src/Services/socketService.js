@@ -55,7 +55,7 @@ class SocketService {
 
   // Disconnect socket
   disconnect() {
-    if (this.socket) {
+    if (this.socket && this.socket.connected) {
       console.log('Disconnecting socket...');
       this.socket.disconnect();
       this.socket = null;

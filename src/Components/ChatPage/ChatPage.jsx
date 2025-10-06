@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
 import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
-import { getChatUsers, getChatMessagesByAdId,  getUserDetails , getAllActiveAds, sendChatMessage } from '../../Services/api';
+import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage } from '../../Services/api';
 import { useSocket } from '../../hooks/useSocket.js';
  
 const ChatPage = () => {
@@ -114,10 +114,12 @@ const ChatPage = () => {
       .then(res => {
         console.log('DEBUG: getChatUsers raw response:', res);
         console.log('DEBUG: getChatUsers response data:', res.data);
-        // Assuming res.data.chatUsers is an array of adIds (strings)
-        const formattedChatUsers = (res.data.chatUsers || []).map(adId => ({
-          adId: adId,
-          // productName: `Ad ${adId.substring(0, 5)}...` // Placeholder product name
+        // Assuming res.data.chatUsers is an array of user objects
+        const formattedChatUsers = (res.data.chatUsers || []).map(userObj => ({
+          id: userObj._id, // Renamed adId to id as it's a user ID
+          email: userObj.email,
+          profilePicture: userObj.profilePicture,
+          displayName: userObj.email, // Using email for display, can be enhanced with actual name if available
         }));
         setChatUsers(formattedChatUsers);
       })
@@ -131,9 +133,9 @@ const ChatPage = () => {
   // Effect to set receiverId when paramAdId or chatUsers change
   useEffect(() => {
     if (paramAdId && chatUsers.length > 0) {
-      const activeChatUser = chatUsers.find(chatUser => chatUser.adId === paramAdId);
+      const activeChatUser = chatUsers.find(chatUser => chatUser.id === paramAdId);
       if (activeChatUser) {
-        setReceiverId(activeChatUser.adId); // Assuming adId is the receiverId for now
+        setReceiverId(activeChatUser.id); // Assuming adId is the receiverId for now
       }
     }
   }, [paramAdId, chatUsers]);
@@ -193,10 +195,10 @@ const ChatPage = () => {
     if (!chatUsers.length || !user?.token) return;
     Promise.all(chatUsers.map(async chatUser => {
       try {
-        const res = await getChatMessagesByAdId(chatUser.adId, user.token);
+        const res = await getChatMessagesByUserId(chatUser.id, user.token);
         const msgs = res.data?.chatMessages || [];
-        return { adId: chatUser.adId, lastMsg: msgs.at(-1) || null };
-      } catch { return { adId: chatUser.adId, lastMsg: null }; }
+        return { adId: chatUser.id, lastMsg: msgs.at(-1) || null };
+      } catch { return { adId: chatUser.id, lastMsg: null }; }
     })).then(results => {
       const obj = {};
       results.forEach(({ adId, lastMsg }) => { obj[adId] = lastMsg; });
@@ -223,7 +225,7 @@ const ChatPage = () => {
     }
     setLoadingChat(true);
     console.log('Fetching chat messages for ad ID:', paramAdId, 'token:', user.token ? 'present' : 'missing');
-    getChatMessagesByAdId(paramAdId, user.token)
+    getChatMessagesByUserId(paramAdId, user.token)
       .then(res => {
         console.log('DEBUG: getChatMessagesByAdId raw response:', res);
         console.log('DEBUG: getChatMessagesByAdId response data:', res.data);
@@ -396,12 +398,12 @@ const ChatPage = () => {
                 </div>
               ) : (
                 filteredMessages.map(chatUser => {
-                  const lastMsg = lastMessages[chatUser.adId];
+                  const lastMsg = lastMessages[chatUser.id];
                   return (
                     <div
-                      key={chatUser.adId}
+                      key={chatUser.id}
                       className="rounded-lg p-3 cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100"
-                      onClick={() => navigate(`/chat/${chatUser.adId}`)}
+                      onClick={() => navigate(`/chat/${chatUser.id}`)}
                     >
                       <div className="flex items-start gap-2">
                         <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -409,7 +411,7 @@ const ChatPage = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="text-sm font-bold text-black">{chatUser.adId}</span>
+                            <span className="text-sm font-bold text-black">{chatUser.displayName}</span>
                             <div className="flex items-center gap-1 text-gray-500 text-xs"><span>📎</span><span>⋮</span></div>
                           </div>
                           <p className="text-black text-sm mb-1">{lastMsg?.message || 'No messages yet.'}</p>

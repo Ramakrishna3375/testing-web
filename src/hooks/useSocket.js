@@ -64,26 +64,22 @@ export const useSocket = (isLoggedIn) => {
 
   // Auto connect/disconnect based on login status
   useEffect(() => {
-    let timeoutId;
     if (isLoggedIn) {
-      connectSocket();
+      // Only connect if not already connected
+      if (!socketService.isSocketConnected()) {
+        connectSocket();
+      }
     } else {
-      // Introduce a delay before disconnecting to avoid premature disconnections
-      // during React's double-invocation of effects in development mode.
-      timeoutId = setTimeout(() => {
+      // Disconnect only if currently connected
+      if (socketService.isSocketConnected()) {
         disconnectSocket();
-        socketService.removeAllListeners(); // Ensure all listeners are removed on disconnect
-      }, 100); // Small delay, adjust if needed
+      }
     }
 
     return () => {
-      clearTimeout(timeoutId);
-      // Only disconnect if `isLoggedIn` is false during cleanup, indicating a genuine logout/unmount.
-      // If `isLoggedIn` is true, the socket should remain active.
-      if (!isLoggedIn) {
-        disconnectSocket();
-        socketService.removeAllListeners();
-      }
+      // Cleanup: remove all listeners when the component unmounts.
+      // Disconnection logic is handled in the effect itself based on isLoggedIn.
+      socketService.removeAllListeners();
     };
   }, [isLoggedIn, connectSocket, disconnectSocket]);
 

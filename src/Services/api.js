@@ -34,8 +34,8 @@ export const searchAdsByTitle = async (title) => {
 };
 
 //Get Chat History
-export const getChatHistory = async (token) => {
-  return await commonRequest("GET", `${BASE_URL}/api/chats/history`, null, { Authorization: `Bearer ${token}` });
+export const getChatHistory = async (recipientId, token) => {
+  return await commonRequest("GET", `${BASE_URL}/api/chats/history?recipientId=${recipientId}`, null, { Authorization: `Bearer ${token}` });
 };
 
 //Get Notifications
@@ -94,10 +94,10 @@ export const getChatUsers = async (userId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chats/users?userId=${userId}`, null, { Authorization: `Bearer ${token}` });
 };
 
-//Get Chat Messages by Ad ID
-export const getChatMessagesByAdId = async (adId, token) => {
-  console.log('API: Getting chat messages for ad ID:', adId, 'with token:', token ? 'Present' : 'Missing');
-  return await commonRequest("GET", `${BASE_URL}/api/chats/messages/${adId}`, null, { Authorization: `Bearer ${token}` });
+//Get Chat Messages by User ID
+export const getChatMessagesByUserId = async (userId, token) => {
+  console.log('API: Getting chat messages for user ID:', userId, 'with token:', token ? 'Present' : 'Missing');
+  return await commonRequest("GET", `${BASE_URL}/api/chats/messages/${userId}`, null, { Authorization: `Bearer ${token}` });
 };
 
 //User Login

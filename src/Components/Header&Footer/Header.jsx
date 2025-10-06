@@ -169,8 +169,7 @@ const Header = () => {
       }
 
       if (token && userId) {
-        socketService.connect(userId, token);
-        setTimeout(() => socketService.joinUserRoom(userId), 1000);
+        // Socket connection and joinUserRoom are handled in useSocket hook in App.jsx
         socketService.onNewNotification(notification => {
           setNotifications(prev => [notification, ...prev]);
           if (!notification.read) {
@@ -186,15 +185,13 @@ const Header = () => {
         socketService.onNotificationCount(count => setUnreadCount(count));
       }
     } else {
-      // Disconnect socket when user logs out or is not logged in
-      if (socketService.isSocketConnected()) {
-        socketService.removeAllListeners();
-        socketService.disconnect();
-      }
+      // Socket disconnection is handled in useSocket hook in App.jsx
     }
-    // This useEffect's cleanup is explicitly handled by the else block above, or by the global unmount cleanup below.
-    // No specific cleanup is needed here for isLoggedIn changes beyond what the else block provides.
-  }, [isLoggedIn]); // Keep isLoggedIn as dependency for connection logic
+    // Cleanup listeners when component unmounts or isLoggedIn changes to false
+    return () => {
+      socketService.removeAllListeners();
+    };
+  }, [isLoggedIn]);
  
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
@@ -246,16 +243,6 @@ const Header = () => {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showNotifications]);
- 
-  // Cleanup on unmount (global cleanup)
-  useEffect(() => () => {
-    // Only disconnect if the user is NOT logged in when the Header component unmounts.
-    // This prevents premature disconnections during navigation while logged in.
-    if (!isLoggedIn && socketService.getSocket()) {
-      socketService.removeAllListeners(); 
-      socketService.disconnect();
-    }
-  }, [isLoggedIn]); // Added isLoggedIn to the dependency array for conditional cleanup
  
   return (
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
@@ -613,7 +600,6 @@ const Header = () => {
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                   onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
                   onClick={(e) => {
-                    // e.stopPropagation(); // Removed as onMouseDown handles it
                     setShowProfileMenu(false);
                     navigate('/profile');
                   }}
@@ -626,7 +612,6 @@ const Header = () => {
                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                     onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
                     onClick={(e) => {
-                      // e.stopPropagation(); // Removed as onMouseDown handles it
                       try {
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('token');

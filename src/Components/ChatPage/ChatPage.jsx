@@ -96,6 +96,7 @@ const ChatPage = () => {
  
   // State for other participant's info
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
+  const [otherDisplayEmail, setOtherDisplayEmail] = useState(null);
  
   // Dummy info (replace with real data if available)
   const currentUserInfo = { name: 'Chat User', email: 'user@example.com', phone: '+1 (000) 000-0000', location: 'Location', joinDate: 'Recently', rating: 0, totalAds: 0, avatar: null };
@@ -179,7 +180,7 @@ const ChatPage = () => {
                 path: `/ads/${foundAd.category.id || foundAd.category._id}`
               });
             }
-            newHistoryStack.push({ name: foundAd.title, path: `/product/${foundAd._id || foundAd.id}` });
+            newHistoryStack.push({ name: foundAd.title, path: `/ad/${foundAd._id || foundAd.id}` });
 
             setHistoryStack(newHistoryStack);
           }
@@ -219,6 +220,14 @@ const ChatPage = () => {
     activeFilter === 'unread' ? !u.isRead :
     activeFilter === 'important' ? u.isImportant : true
   );
+  // Sort by latest message timestamp (desc)
+  const sortedFilteredMessages = [...filteredMessages].sort((a, b) => {
+    const taRaw = lastMessages[a.id]?.timestamp || lastMessages[a.id]?.createdAt;
+    const tbRaw = lastMessages[b.id]?.timestamp || lastMessages[b.id]?.createdAt;
+    const ta = taRaw ? new Date(taRaw).getTime() : 0;
+    const tb = tbRaw ? new Date(tbRaw).getTime() : 0;
+    return tb - ta;
+  });
  
   // Fetch messages for selected ad
   useEffect(() => {
@@ -275,6 +284,30 @@ const ChatPage = () => {
       .finally(() => setLoadingChat(false));
   }, [paramUserId, user]);
  
+  // Derive and show seller email in header when entering from product page or when messages/users load
+  useEffect(() => {
+    let email = null;
+
+    // 1) From chatUsers list
+    const match = chatUsers.find(u => u.id === paramUserId);
+    if (match?.email) email = match.email;
+
+    // 2) From messages (if any)
+    if (!email && messages && messages.length > 0) {
+      const first = messages[0];
+      const senderId = first?.sender?._id || first?.sender?.id || first?.sender;
+      const other = senderId === user?.id ? first?.receiver : first?.sender;
+      email = other?.email || email;
+    }
+
+    // 3) From navigation state (if provided)
+    if (!email && location.state?.sellerEmail) {
+      email = location.state.sellerEmail;
+    }
+
+    setOtherDisplayEmail(email || null);
+  }, [chatUsers, paramUserId, messages, user, location.state]);
+
   // Scroll to bottom on new message
   // useEffect(() => { chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
  
@@ -285,8 +318,19 @@ const ChatPage = () => {
 
       const handleIncomingMessage = (newMessage) => {
         // Ensure the message is for the currently active chat and ad
-        if (newMessage.sender._id === paramUserId || newMessage.receiver._id === paramUserId && newMessage.ad._id === currentAdId) {
-          setMessages(prev => [...prev, newMessage]);
+        const isSameUser = (newMessage?.sender?._id || newMessage?.sender?.id) === paramUserId || (newMessage?.receiver?._id || newMessage?.receiver?.id) === paramUserId;
+        const isSameAd = (newMessage?.ad?._id || newMessage?.ad?.id) === currentAdId;
+        if (isSameUser && isSameAd) {
+          const normalized = {
+            ...newMessage,
+            sender: {
+              ...(newMessage.sender || {}),
+              _id: newMessage?.sender?._id || newMessage?.sender?.id,
+              profilePicture: ((newMessage?.sender?._id || newMessage?.sender?.id) === user.id) ? (user?.profilePicture || null) : (newMessage?.sender?.profilePicture || null)
+            }
+          };
+          setMessages(prev => [...prev, normalized]);
+          setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
         }
       };
 
@@ -308,7 +352,17 @@ const ChatPage = () => {
       const res = await sendChatMessage(receiverId, currentAdId, message.trim(), user.token);
 
       if (res && res.data && res.data.chatMessage) {
-        setMessages(prev => [...prev, res.data.chatMessage]);
+        const sent = res.data.chatMessage;
+        const normalized = {
+          ...sent,
+          sender: {
+            ...(sent.sender || {}),
+            _id: sent?.sender?._id || sent?.sender?.id || user.id,
+            profilePicture: user?.profilePicture || sent?.sender?.profilePicture || null
+          }
+        };
+        setMessages(prev => [...prev, normalized]);
+        setLastMessages(prev => ({ ...prev, [paramUserId || receiverId]: normalized }));
         setMessage('');
       } else {
         console.error('Failed to send message: Unexpected API response', res);
@@ -404,12 +458,12 @@ const ChatPage = () => {
                   </div>
                 </div>
               ) : (
-                filteredMessages.map(chatUser => {
+                sortedFilteredMessages.map(chatUser => {
                   const lastMsg = lastMessages[chatUser.id];
                   return (
                     <div
                       key={chatUser.id}
-                      className="rounded-lg p-3 cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100"
+                      className={`rounded-lg p-3 cursor-pointer transition-colors ${chatUser.id === paramUserId ? 'bg-blue-50 border border-blue-300' : 'bg-gray-100 hover:bg-gray-200'}`}
                       onClick={() => navigate(`/chat/${chatUser.id}`)}
                     >
                       <div className="flex items-start gap-2">
@@ -418,11 +472,11 @@ const ChatPage = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="text-sm font-bold text-black">{chatUser.displayName}</span>
+                            <span className={`text-sm font-bold ${chatUser.id === paramUserId ? 'text-blue-700' : 'text-black'}`}>{chatUser.displayName}</span>
                             <div className="flex items-center gap-1 text-gray-500 text-xs"><span>📎</span><span>⋮</span></div>
                           </div>
                           <p className="text-black text-sm mb-1">{lastMsg?.message || 'No messages yet.'}</p>
-                          <p className="text-gray-500 text-xs mt-1">{lastMsg?.timestamp ? new Date(lastMsg.timestamp).toLocaleString() : ''}</p>
+                          <p className="text-gray-500 text-xs mt-1">{(lastMsg?.timestamp || lastMsg?.createdAt) ? new Date(lastMsg.timestamp || lastMsg.createdAt).toLocaleString() : ''}</p>
                         </div>
                       </div>
                     </div>
@@ -440,7 +494,7 @@ const ChatPage = () => {
                     <button onClick={() => navigate('/inbox')} className="text-white hover:text-gray-200 mr-2">←</button>
                     <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"><span className="text-gray-600 text-sm">👤</span></div>
                     <div>
-                      <span className="font-semibold text-sm">{adDetails?.title || otherParticipantInfo?.firstName || otherParticipantInfo?.email || 'Chat User'}</span>
+                      <span className="font-semibold text-sm">{otherDisplayEmail || 'Chat User'}</span>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -499,14 +553,14 @@ const ChatPage = () => {
                             if (index === 0 || dateLabel !== lastRenderedDateLabel) {
                               acc.push({ type: 'date', label: dateLabel, key: `date-${dateLabel}` });
                             }
-                            acc.push({ type: 'message', content: msg, key: msg._id });
+                            acc.push({ type: 'message', content: msg, key: msg._id || msg.id || `${msg.timestamp}-${index}` });
                             return acc;
                           }, []).map((item) => (
                             item.type === 'date' ? (
                               <div key={item.key} className="text-center text-gray-500 text-xs my-3">{item.label}</div>
                             ) : (
-                              <div key={item.key} className={`flex mb-3 items-end gap-2 ${item.content.sender._id === user.id ? 'justify-end' : 'justify-start'}`}>
-                                {item.content.sender._id !== user.id && (
+                              <div key={item.key} className={`flex mb-3 items-end gap-2 ${(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) ? 'justify-end' : 'justify-start'}`}>
+                                {!(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) && (
                                   <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
                                     {item.content.sender.profilePicture ? (
                                       <img src={item.content.sender.profilePicture} alt="Other User" className="w-full h-full object-cover" />
@@ -515,11 +569,11 @@ const ChatPage = () => {
                                     )}
                                   </div>
                                 )}
-                                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${item.content.sender._id === user.id ? 'bg-blue-100 rounded-br-sm text-gray-800' : 'bg-gray-200 rounded-bl-sm text-gray-800'}`}>
+                                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) ? 'bg-blue-100 rounded-br-sm text-gray-800' : 'bg-gray-200 rounded-bl-sm text-gray-800'}`}>
                                   <p className="mb-1">{item.content.message}</p>
                                   <span className="text-xs text-gray-500">{new Date(item.content.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
-                                {item.content.sender._id === user.id && (
+                                {(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) && (
                                   <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
                                     {item.content.sender.profilePicture ? (
                                       <img src={item.content.sender.profilePicture} alt="You" className="w-full h-full object-cover" />

@@ -9,7 +9,10 @@ import { useSocket } from '../../hooks/useSocket.js';
 const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { adId: paramAdId } = useParams();
+  const { adId: paramUserId } = useParams(); // Renamed adId to paramUserId
+
+  // Get adId from location state if available
+  const initialAdId = location.state?.adId || null;
 
   // useAuth logic moved here
   const [user, setUser] = useState(() => {
@@ -85,7 +88,8 @@ const ChatPage = () => {
  
   // State for receiver ID
   const [receiverId, setReceiverId] = useState(null);
-  const [adDetails, setAdDetails] = useState(null); // New state for ad details
+  const [adDetails, setAdDetails] = useState(null); // New state for ad details, initialized to null
+  const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
   const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
  
   const { connectSocket, disconnectSocket, isConnected, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage } = useSocket(!!user?.id); // Pass login status
@@ -132,20 +136,20 @@ const ChatPage = () => {
  
   // Effect to set receiverId when paramAdId or chatUsers change
   useEffect(() => {
-    if (paramAdId && chatUsers.length > 0) {
-      const activeChatUser = chatUsers.find(chatUser => chatUser.id === paramAdId);
+    if (paramUserId && chatUsers.length > 0) {
+      const activeChatUser = chatUsers.find(chatUser => chatUser.id === paramUserId);
       if (activeChatUser) {
         setReceiverId(activeChatUser.id); // Assuming adId is the receiverId for now
       }
     }
-  }, [paramAdId, chatUsers]);
+  }, [paramUserId, chatUsers]);
  
-  // Fetch ad details when paramAdId changes
+  // Fetch ad details based on currentAdId
   useEffect(() => {
     const fetchAdDetails = async () => {
       setLoadingAd(true);
       setAdError(null);
-      if (!paramAdId) {
+      if (!currentAdId) {
         setAdDetails(null);
         setLoadingAd(false);
         return;
@@ -153,7 +157,7 @@ const ChatPage = () => {
       try {
         const res = await getAllActiveAds();
         if (res && res.data && Array.isArray(res.data.postAds)) {
-          const foundAd = res.data.postAds.find(item => (item.id || item._id) === paramAdId);
+          const foundAd = res.data.postAds.find(item => (item.id || item._id) === currentAdId);
           setAdDetails(foundAd || null);
           console.log("DEBUG: Ad Details fetched:", foundAd); // Debug log to inspect adDetails
 
@@ -188,7 +192,7 @@ const ChatPage = () => {
       setLoadingAd(false);
     };
     fetchAdDetails();
-  }, [paramAdId]); // Dependency changed to paramAdId
+  }, [currentAdId, location.state]);
  
   // Fetch last message for each chat user
   useEffect(() => {
@@ -215,26 +219,31 @@ const ChatPage = () => {
   // Fetch messages for selected ad
   useEffect(() => {
     console.log('DEBUG: user object (for messages):', user);
-    console.log('DEBUG: paramAdId (for messages):', paramAdId);
+    console.log('DEBUG: paramAdId (for messages):', paramUserId);
     console.log('DEBUG: user.token (for messages):', user?.token);
-    if (!paramAdId || !user?.token) {
-      console.log('DEBUG: paramAdId or user.token is missing, skipping chat message fetch.');
+    if (!paramUserId || !user?.token) {
+      console.log('DEBUG: paramUserId or user.token is missing, skipping chat message fetch.');
       setMessages([]);
       setLoadingChat(false);
       return;
     }
     setLoadingChat(true);
-    console.log('Fetching chat messages for ad ID:', paramAdId, 'token:', user.token ? 'present' : 'missing');
-    getChatMessagesByUserId(paramAdId, user.token)
+    console.log('Fetching chat messages for user ID:', paramUserId, 'token:', user.token ? 'present' : 'missing');
+    getChatMessagesByUserId(paramUserId, user.token)
       .then(res => {
         console.log('DEBUG: getChatMessagesByAdId raw response:', res);
         console.log('DEBUG: getChatMessagesByAdId response data:', res.data);
         setMessages(res.data.chatMessages || []);
 
+        // If adId is not already set, try to get it from the first message
+        if (!currentAdId && res.data.chatMessages && res.data.chatMessages.length > 0) {
+          setCurrentAdId(res.data.chatMessages[0].ad._id || res.data.chatMessages[0].ad.id);
+        }
+
         // Determine other participant ID and fetch details
         if (res.data.chatMessages && res.data.chatMessages.length > 0) {
           const firstMessage = res.data.chatMessages[0];
-          const otherId = firstMessage.sender === user.id ? firstMessage.receiver : firstMessage.sender;
+          const otherId = firstMessage.sender._id === user.id ? firstMessage.receiver._id : firstMessage.sender._id;
           if (otherId) {
             getUserDetails(user.token, otherId) // Pass user.token first, then otherId
               .then(participantRes => {
@@ -260,19 +269,19 @@ const ChatPage = () => {
         setMessages([]);
       })
       .finally(() => setLoadingChat(false));
-  }, [paramAdId, user]);
+  }, [paramUserId, user]);
  
   // Scroll to bottom on new message
   // useEffect(() => { chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
  
   // Connect to socket and join room
   useEffect(() => {
-    if (user?.id && isConnected() && paramAdId) {
-      joinChatRoom(paramAdId);
+    if (user?.id && isConnected() && paramUserId && currentAdId) {
+      joinChatRoom(currentAdId); // Use currentAdId for joining chat room
 
       const handleIncomingMessage = (newMessage) => {
-        // Ensure the message is for the currently active chat
-        if (newMessage.adId === paramAdId) {
+        // Ensure the message is for the currently active chat and ad
+        if (newMessage.sender._id === paramUserId || newMessage.receiver._id === paramUserId && newMessage.ad._id === currentAdId) {
           setMessages(prev => [...prev, newMessage]);
         }
       };
@@ -280,22 +289,22 @@ const ChatPage = () => {
       onChatMessage(handleIncomingMessage);
     }
     return () => {
-      if (paramAdId) {
-        leaveChatRoom(paramAdId);
+      if (currentAdId) {
+        leaveChatRoom(currentAdId); // Use currentAdId for leaving chat room
         // Also clean up the message listener when leaving the chat room
         // socketService.getSocket()?.off('chatMessage'); // This line was removed as per the new_code, as it's not directly related to the new_code.
       }
     };
-  }, [user, isConnected, paramAdId, joinChatRoom, leaveChatRoom, onChatMessage]);
+  }, [user, isConnected, paramUserId, joinChatRoom, leaveChatRoom, onChatMessage, currentAdId]);
  
   // Send message
   const handleSendMessage = async () => {
-    if (!message.trim() || !user?.id || !paramAdId || !receiverId) return;
+    if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // Ensure currentAdId is present
     try {
       const messageData = {
         senderId: user.id,
         receiverId: receiverId,
-        adId: paramAdId,
+        adId: currentAdId, // Use currentAdId here
         message: message.trim(),
       };
       const res = await sendChatMessage(messageData.senderId, messageData.receiverId, messageData.adId, messageData.message, user.token);
@@ -357,7 +366,7 @@ const ChatPage = () => {
         </div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-4 h-[calc(100vh-120px)] bg-white rounded-lg overflow-hidden shadow-lg">
           {/* Inbox List */}
-          <div className={`${isChatView && paramAdId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
+          <div className={`${isChatView && paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
             <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-100">
               <h2 className="text-xl font-bold text-pink-600 m-0">Inbox</h2>
               <div className="flex gap-3 cursor-pointer text-gray-600 text-lg">
@@ -425,15 +434,15 @@ const ChatPage = () => {
             </div>
           </div>
           {/* Chat Interface */}
-          <div className={`${isChatView && paramAdId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
-            {isChatView && paramAdId ? (
+          <div className={`${isChatView && paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
+            {isChatView && paramUserId ? (
               <>
                 <div className="bg-blue-600 p-3 flex justify-between items-center text-white flex-shrink-0 relative z-20">
                   <div className="flex items-center gap-3">
                     <button onClick={() => navigate('/inbox')} className="text-white hover:text-gray-200 mr-2">←</button>
                     <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"><span className="text-gray-600 text-sm">👤</span></div>
                     <div>
-                      <span className="font-semibold text-sm">{paramAdId || 'Product'}</span>
+                      <span className="font-semibold text-sm">{adDetails?.title || otherParticipantInfo?.firstName || otherParticipantInfo?.email || 'Chat User'}</span>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -600,10 +609,10 @@ const ChatPage = () => {
                   <div className="border-t pt-4">
                     <h4 className="font-medium mb-2">About this conversation</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">Product:</span> {paramAdId || 'N/A'}</p>
-                      <p><span className="font-medium">Category:</span> {currentProductInfo.category}</p>
-                      <p><span className="font-medium">Price:</span> {currentProductInfo.price}</p>
-                      <p><span className="font-medium">Location:</span> {currentProductInfo.location}</p>
+                      <p><span className="font-medium">Product:</span> {adDetails?.title || 'N/A'}</p>
+                      <p><span className="font-medium">Category:</span> {adDetails?.category?.name || currentProductInfo.category}</p>
+                      <p><span className="font-medium">Price:</span> {adDetails?.price ? `₹${adDetails.price}` : currentProductInfo.price}</p>
+                      <p><span className="font-medium">Location:</span> {adDetails?.location && (adDetails.location.city || adDetails.location.address) || currentProductInfo.location}</p>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-4">

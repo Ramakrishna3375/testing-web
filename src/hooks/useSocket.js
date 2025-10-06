@@ -69,16 +69,15 @@ export const useSocket = (isLoggedIn) => {
       if (!socketService.isSocketConnected()) {
         connectSocket();
       }
-    } else {
-      // Disconnect only if currently connected
-      if (socketService.isSocketConnected()) {
-        disconnectSocket();
-      }
     }
 
     return () => {
       // Cleanup: remove all listeners when the component unmounts.
-      // Disconnection logic is handled in the effect itself based on isLoggedIn.
+      // Disconnect only if `isLoggedIn` is is false (user logged out or never logged in) or the component is unmounting in a non-logged-in state.
+      if (!isLoggedIn && socketService.socket) {
+        disconnectSocket();
+      }
+      // Always remove listeners to prevent memory leaks
       socketService.removeAllListeners();
     };
   }, [isLoggedIn, connectSocket, disconnectSocket]);

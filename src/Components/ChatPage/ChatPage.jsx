@@ -498,17 +498,29 @@ const ChatPage = () => {
                             item.type === 'date' ? (
                               <div key={item.key} className="text-center text-gray-500 text-xs my-3">{item.label}</div>
                             ) : (
-                              <div key={item.key} className={`flex mb-3 items-end gap-2 ${item.content.sender === user.id ? 'justify-end' : 'justify-start'}`}>
-                                {item.content.sender !== user.id && (
-                                  <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0 flex items-center justify-center">
-                                    <span className="text-gray-600 text-sm">👤</span>
+                              <div key={item.key} className={`flex mb-3 items-end gap-2 ${item.content.sender._id === user.id ? 'justify-end' : 'justify-start'}`}>
+                                {item.content.sender._id !== user.id && (
+                                  <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                    {item.content.sender.profilePicture ? (
+                                      <img src={item.content.sender.profilePicture} alt="Other User" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-gray-600 text-sm">👤</span>
+                                    )}
                                   </div>
                                 )}
-                                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${item.content.sender === user.id ? 'bg-blue-100 rounded-br-sm text-gray-800' : 'bg-gray-200 rounded-bl-sm text-gray-800'}`}>
+                                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${item.content.sender._id === user.id ? 'bg-blue-100 rounded-br-sm text-gray-800' : 'bg-gray-200 rounded-bl-sm text-gray-800'}`}>
                                   <p className="mb-1">{item.content.message}</p>
                                   <span className="text-xs text-gray-500">{new Date(item.content.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
-                                {item.content.sender === user.id && <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0"></div>}
+                                {item.content.sender._id === user.id && (
+                                  <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                    {item.content.sender.profilePicture ? (
+                                      <img src={item.content.sender.profilePicture} alt="You" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-white text-sm">👤</span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             )
                           ))}

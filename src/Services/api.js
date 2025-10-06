@@ -74,9 +74,8 @@ export const replyToAdAvailability = async (requestId, adId, isAvailable, messag
 };
 
 //Send Chat Message
-export const sendChatMessage = async (senderId, receiverId, adId, message, token) => {
+export const sendChatMessage = async (receiverId, adId, message, token) => {
   const requestBody = {
-    senderId,
     receiverId,
     adId,
     message
@@ -85,7 +84,7 @@ export const sendChatMessage = async (senderId, receiverId, adId, message, token
     body: requestBody,
     token: token ? 'Present' : 'Missing'
   });
-  return await commonRequest("POST", `${BASE_URL}/api/chats/send`, requestBody); // Removed explicit Authorization header
+  return await commonRequest("POST", `${BASE_URL}/api/chats/send`, requestBody, { Authorization: `Bearer ${token}` });
 };
 
 //Get Chat Users

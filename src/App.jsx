@@ -14,26 +14,11 @@ import { useSocket } from "./hooks/useSocket.js";
 import { useState, useEffect } from "react";
 
 function App(){
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const checkLoginStatus = () => {
-      const token = sessionStorage.getItem('token');
-      setIsLoggedIn(!!token);
-    };
-    checkLoginStatus();
-
-    window.addEventListener('storage', checkLoginStatus);
-    return () => window.removeEventListener('storage', checkLoginStatus);
-  }, []);
-
-  useSocket(isLoggedIn);
-
 return(
     <>
       <Routes>
         {/* Default route */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/homepage" replace />} />
 
         <Route path="/login" element={<UserLogin />} />
         <Route path="/register" element={<CompleteRegistration />} />
@@ -48,7 +33,7 @@ return(
         />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/inbox" element={<ChatPage />} />
-        <Route path="/chat/:adId" element={<ChatPage />} /> {/* Use adId as param name as per new ChatPage component */}
+        <Route path="/chat/:userId" element={<ChatPage />} /> {/* userId of the seller */}
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Routes>

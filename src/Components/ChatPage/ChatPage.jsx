@@ -9,7 +9,7 @@ import { useSocket } from '../../hooks/useSocket.js';
 const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { adId: paramUserId } = useParams(); // Renamed adId to paramUserId
+  const { userId: paramUserId } = useParams(); // seller's userId from route
 
   // Get adId from location state if available
   const initialAdId = location.state?.adId || null;
@@ -134,14 +134,18 @@ const ChatPage = () => {
       .finally(() => setLoadingInbox(false));
   }, [user]);
  
-  // Effect to set receiverId when paramAdId or chatUsers change
+  // Effect to set receiverId when paramUserId or chatUsers change
   useEffect(() => {
-    if (paramUserId && chatUsers.length > 0) {
+    if (!paramUserId) return;
+    if (chatUsers.length > 0) {
       const activeChatUser = chatUsers.find(chatUser => chatUser.id === paramUserId);
       if (activeChatUser) {
-        setReceiverId(activeChatUser.id); // Assuming adId is the receiverId for now
+        setReceiverId(activeChatUser.id);
+        return;
       }
     }
+    // Fallback to URL seller id directly if not found in chatUsers yet
+    setReceiverId(paramUserId);
   }, [paramUserId, chatUsers]);
  
   // Fetch ad details based on currentAdId
@@ -301,13 +305,7 @@ const ChatPage = () => {
   const handleSendMessage = async () => {
     if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // Ensure currentAdId is present
     try {
-      const messageData = {
-        senderId: user.id,
-        receiverId: receiverId,
-        adId: currentAdId, // Use currentAdId here
-        message: message.trim(),
-      };
-      const res = await sendChatMessage(messageData.senderId, messageData.receiverId, messageData.adId, messageData.message, user.token);
+      const res = await sendChatMessage(receiverId, currentAdId, message.trim(), user.token);
 
       if (res && res.data && res.data.chatMessage) {
         setMessages(prev => [...prev, res.data.chatMessage]);

@@ -10,8 +10,6 @@ import UserLogin from "./Components/LoginPage/LoginPage.jsx";
 import CompleteRegistration from "./Components/LoginPage/RegisterPage.jsx";
 import ProfilePage from "./Components/Profile/ProfilePage.jsx";
 import ChatPage from "./Components/ChatPage/ChatPage.jsx";
-import { useSocket } from "./hooks/useSocket.js";
-import { useState, useEffect } from "react";
 
 function App(){
 return(

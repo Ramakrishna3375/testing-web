@@ -160,36 +160,79 @@ const Header = () => {
  
   // Socket setup
   useEffect(() => {
-    if (isLoggedIn) {
-      const token = sessionStorage.getItem('token');
-      const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-      let userId = null;
-      if (user && (user.id || user._id)) { 
-        userId = user.id || user._id;
-      }
-
-      if (token && userId) {
-        // Socket connection and joinUserRoom are handled in useSocket hook in App.jsx
-        socketService.onNewNotification(notification => {
-          setNotifications(prev => [notification, ...prev]);
-          if (!notification.read) {
-            setUnreadCount(prev => { setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); return prev + 1; });
-          }
-        });
-        socketService.onNotificationUpdate(data => {
-          if (Array.isArray(data.notificationIds)) {
-            setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
-          }
-        });
-        socketService.onNotificationCount(count => setUnreadCount(count));
-      }
-    } else {
-      // Socket disconnection is handled in useSocket hook in App.jsx
+    if (!isLoggedIn) {
+      // Clear header-specific listeners when logged out
+      socketService.off('newNotification');
+      socketService.off('notificationUpdate');
+      socketService.off('notificationCount');
+      return;
     }
-    // Cleanup listeners when component unmounts or isLoggedIn changes to false
+
+    const token = sessionStorage.getItem('token');
+    const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const userId = rawUser?.id || rawUser?._id;
+    if (!token || !userId) return;
+
+    const attachListeners = () => {
+      // Remove any previous header-specific listeners to avoid duplicates
+      socketService.off('newNotification');
+      socketService.off('notificationUpdate');
+      socketService.off('notificationCount');
+
+      socketService.onNewNotification(notification => {
+        setNotifications(prev => [notification, ...prev]);
+        if (!notification.read) {
+          setUnreadCount(prev => {
+            setCountChanged(true);
+            setTimeout(() => setCountChanged(false), 1000);
+            return prev + 1;
+          });
+        }
+      });
+
+      socketService.onNotificationUpdate(data => {
+        if (Array.isArray(data.notificationIds)) {
+          setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
+          setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
+        }
+      });
+
+      socketService.onNotificationCount(count => setUnreadCount(count));
+    };
+
+    // Ensure socket exists and is connected
+    const ensureConnected = () => {
+      const existing = socketService.getSocket?.();
+      if (!existing || !socketService.isSocketConnected()) {
+        socketService.connect(userId, token);
+      }
+      return socketService.getSocket?.();
+    };
+
+    let socket = ensureConnected();
+
+    // Join user room and attach listeners on connect/reconnect
+    const onConnect = () => {
+      socketService.joinUserRoom(userId);
+      attachListeners();
+    };
+
+    // If already connected, run immediately
+    if (socketService.isSocketConnected()) {
+      onConnect();
+    }
+
+    // Also attach for future connect events (initial connect and reconnects)
+    socket = socketService.getSocket?.();
+    if (socket) {
+      socket.on('connect', onConnect);
+    }
+
     return () => {
-      socketService.removeAllListeners();
+      if (socket) socket.off('connect', onConnect);
+      socketService.off('newNotification');
+      socketService.off('notificationUpdate');
+      socketService.off('notificationCount');
     };
   }, [isLoggedIn]);
  

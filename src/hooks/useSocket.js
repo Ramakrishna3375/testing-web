@@ -40,6 +40,11 @@ export const useSocket = (isLoggedIn) => {
     socketService.onNotificationCount(callback);
   }, []);
 
+  // Subscribe to connect event
+  const onConnect = useCallback((callback) => {
+    return socketService.onConnect(callback);
+  }, []);
+
   // Check if socket is connected
   const isConnected = useCallback(() => {
     return socketService.isSocketConnected();
@@ -59,7 +64,7 @@ export const useSocket = (isLoggedIn) => {
   }, []);
 
   const onChatMessage = useCallback((callback) => {
-    socketService.onChatMessage(callback);
+    return socketService.onChatMessage(callback);
   }, []);
 
   // Auto connect/disconnect based on login status
@@ -72,13 +77,13 @@ export const useSocket = (isLoggedIn) => {
     }
 
     return () => {
-      // Cleanup: remove all listeners when the component unmounts.
-      // Disconnect only if `isLoggedIn` is is false (user logged out or never logged in) or the component is unmounting in a non-logged-in state.
+      // Only disconnect socket when user is logged out or not logged in
       if (!isLoggedIn && socketService.socket) {
         disconnectSocket();
       }
-      // Always remove listeners to prevent memory leaks
-      socketService.removeAllListeners();
+      // Do NOT remove all listeners globally here; individual components manage their own subscriptions
+      // via the unsubscribe functions returned by onChatMessage/onConnect/etc. Removing all listeners here
+      // can break other mounted components (e.g., Header notifications) that are using the same singleton socket.
     };
   }, [isLoggedIn, connectSocket, disconnectSocket]);
 
@@ -89,6 +94,7 @@ export const useSocket = (isLoggedIn) => {
     subscribeToNotificationUpdates,
     subscribeToNotificationCount,
     isConnected,
+    onConnect,
     joinChatRoom,
     leaveChatRoom,
     emitChatMessage,

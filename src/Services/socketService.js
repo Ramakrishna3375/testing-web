@@ -139,14 +139,21 @@ class SocketService {
     }
   }
 
-  // Listen for incoming chat messages
+  // Listen for incoming chat messages (returns unsubscribe)
   onChatMessage(callback) {
     if (this.socket) {
-      this.socket.on('chatMessage', (message) => {
+      const handler = (message) => {
         console.log('Received chat message:', message);
         callback(message);
-      });
+      };
+      this.socket.on('chatMessage', handler);
+      return () => {
+        if (this.socket) {
+          this.socket.off('chatMessage', handler);
+        }
+      };
     }
+    return () => {};
   }
 
   // Check if socket is connected
@@ -157,6 +164,17 @@ class SocketService {
   // Get socket instance
   getSocket() {
     return this.socket;
+  }
+
+  // Subscribe to connect event (returns unsubscribe)
+  onConnect(callback) {
+    if (this.socket) {
+      this.socket.on('connect', callback);
+      return () => {
+        if (this.socket) this.socket.off('connect', callback);
+      };
+    }
+    return () => {};
   }
 }
 

@@ -92,7 +92,7 @@ const ChatPage = () => {
   const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
   const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
  
-  const { connectSocket, disconnectSocket, isConnected, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage } = useSocket(!!user?.id); // Pass login status
+  const { connectSocket, disconnectSocket, isConnected, onConnect, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage } = useSocket(!!user?.id); // Pass login status
  
   // State for other participant's info
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
@@ -343,41 +343,83 @@ const ChatPage = () => {
   }, [paramUserId, user?.token, otherDisplayEmail]);
 
   // Scroll to bottom on new message
-  // useEffect(() => { chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
- 
-  // Connect to socket and join room
   useEffect(() => {
-    if (user?.id && isConnected() && paramUserId && currentAdId) {
-      joinChatRoom(currentAdId); // Use currentAdId for joining chat room
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+ 
+  // Join/leave chat room; also re-join on socket reconnect
+  useEffect(() => {
+    if (!(user?.id && currentAdId)) return;
 
-      const handleIncomingMessage = (newMessage) => {
-        // Ensure the message is for the currently active chat and ad
-        const isSameUser = (newMessage?.sender?._id || newMessage?.sender?.id) === paramUserId || (newMessage?.receiver?._id || newMessage?.receiver?.id) === paramUserId;
-        const isSameAd = (newMessage?.ad?._id || newMessage?.ad?.id) === currentAdId;
-        if (isSameUser && isSameAd) {
-          const normalized = {
-            ...newMessage,
-            sender: {
-              ...(newMessage.sender || {}),
-              _id: newMessage?.sender?._id || newMessage?.sender?.id,
-              profilePicture: ((newMessage?.sender?._id || newMessage?.sender?.id) === user.id) ? (user?.profilePicture || null) : (newMessage?.sender?.profilePicture || null)
-            }
-          };
-          setMessages(prev => [...prev, normalized]);
-          setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
-        }
+    const tryJoin = () => {
+      if (isConnected()) joinChatRoom(currentAdId);
+    };
+
+    // Attempt immediately if connected
+    tryJoin();
+
+    // Also join when socket (re)connects
+    const offConnect = onConnect(() => {
+      joinChatRoom(currentAdId);
+    });
+
+    return () => {
+      if (typeof offConnect === 'function') offConnect();
+      if (isConnected()) leaveChatRoom(currentAdId);
+    };
+  }, [user?.id, currentAdId, isConnected, joinChatRoom, leaveChatRoom, onConnect]);
+
+  // Listen for incoming messages; keep listener active across reconnects
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const handleIncomingMessage = (newMessage) => {
+      const senderId = newMessage?.sender?._id || newMessage?.sender?.id;
+      const receiverIdMsg = newMessage?.receiver?._id || newMessage?.receiver?.id;
+
+      const involvesMe = senderId === user.id || receiverIdMsg === user.id;
+      const involvesCounterparty = senderId === paramUserId || receiverIdMsg === paramUserId;
+      if (!involvesMe || !involvesCounterparty) return;
+
+      const newMsgAdId = newMessage?.ad?._id || newMessage?.ad?.id || newMessage?.ad;
+      const adMatches = !currentAdId || (newMsgAdId && newMsgAdId === currentAdId);
+      if (!adMatches) return;
+
+      // If currentAdId is not yet known, set it from the first incoming message
+      if (!currentAdId && newMsgAdId) {
+        setCurrentAdId(newMsgAdId);
+      }
+
+      const normalized = {
+        ...newMessage,
+        sender: {
+          ...(newMessage.sender || {}),
+          _id: newMessage?.sender?._id || newMessage?.sender?.id,
+          profilePicture: ((newMessage?.sender?._id || newMessage?.sender?.id) === user.id)
+            ? (user?.profilePicture || null)
+            : (newMessage?.sender?.profilePicture || null),
+        },
       };
 
-      onChatMessage(handleIncomingMessage);
-    }
-    return () => {
-      if (currentAdId) {
-        leaveChatRoom(currentAdId); // Use currentAdId for leaving chat room
-        // Also clean up the message listener when leaving the chat room
-        // socketService.getSocket()?.off('chatMessage'); // This line was removed as per the new_code, as it's not directly related to the new_code.
-      }
+      setMessages(prev => [...prev, normalized]);
+      setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
     };
-  }, [user, isConnected, paramUserId, joinChatRoom, leaveChatRoom, onChatMessage, currentAdId]);
+
+    // Attach the listener now (if socket exists it will subscribe, returns off)
+    const offMsg = onChatMessage(handleIncomingMessage);
+
+    // Also re-attach on reconnect to be safe
+    const offConnect = onConnect(() => {
+      // Re-subscribe to ensure listener exists after reconnect
+      if (typeof offMsg === 'function') offMsg();
+      onChatMessage(handleIncomingMessage);
+    });
+
+    return () => {
+      if (typeof offMsg === 'function') offMsg();
+      if (typeof offConnect === 'function') offConnect();
+    };
+  }, [user?.id, paramUserId, onChatMessage, onConnect, currentAdId]);
  
   // Send message
   const handleSendMessage = async () => {

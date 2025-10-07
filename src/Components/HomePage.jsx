@@ -88,14 +88,34 @@ const HomePage = () => {
   }, []);
 
  useEffect(() => {
+    let allAds = [];
+    let selectedLocation = null;
+
+    const applyFilter = () => {
+      if (!Array.isArray(allAds)) return;
+      try {
+        const storedLocation = sessionStorage.getItem('selectedLocation');
+        selectedLocation = storedLocation ? JSON.parse(storedLocation) : null;
+      } catch {}
+      if (selectedLocation && selectedLocation.name) {
+        const filtered = allAds.filter(ad => {
+          const city = ad?.location?.city || ad?.city;
+          return city && city.toLowerCase() === selectedLocation.name.toLowerCase();
+        });
+        setAds(filtered);
+      } else {
+        setAds(allAds);
+      }
+    };
+
     const fetchAds = async () => {
       setLoadingAds(true);
       setAdsError(null);
       try {
         const res = await getAllActiveAds();
-        // Use postAds array from response
         if (res && res.data && Array.isArray(res.data.postAds)) {
-          setAds(res.data.postAds);
+          allAds = res.data.postAds;
+          applyFilter();
         } else {
           setAds([]);
           setAdsError("Could not fetch ads");
@@ -106,7 +126,15 @@ const HomePage = () => {
       }
       setLoadingAds(false);
     };
+
     fetchAds();
+
+    const onLocChange = (e) => {
+      selectedLocation = e?.detail || null;
+      applyFilter();
+    };
+    window.addEventListener('selectedLocationChanged', onLocChange);
+    return () => window.removeEventListener('selectedLocationChanged', onLocChange);
   }, []);
 
   useEffect(() => {

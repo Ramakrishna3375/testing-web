@@ -6,7 +6,7 @@ import UserProfile from '../../assets/Website logos/UserProfile.jpg';
  
 import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
-import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails } from "../../Services/api";
+import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails, searchCities } from "../../Services/api";
 import socketService from "../../Services/socketService";
  
 const Header = () => {
@@ -39,6 +39,23 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
+  
+  // Location search states
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    try {
+      const storedLocation = sessionStorage.getItem('selectedLocation');
+      return storedLocation ? JSON.parse(storedLocation) : null;
+    } catch (e) {
+      console.error("Error parsing stored location:", e);
+      return null;
+    }
+  });
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const locationDropdownRef = useRef(null);
+  const [highlightLocation, setHighlightLocation] = useState(false);
  
   useEffect(() => {
     const onDocClick = (e) => {
@@ -158,83 +175,122 @@ const Header = () => {
   useEffect(() => { isLoggedIn ? fetchNotifications() : (setNotifications([]), setUnreadCount(0)); }, [isLoggedIn]);
   useEffect(() => { if (isLoggedIn) fetchNotifications(); }, []); // eslint-disable-line
  
-  // Socket setup
+  // Location search effect
   useEffect(() => {
-    if (!isLoggedIn) {
-      // Clear header-specific listeners when logged out
-      socketService.off('newNotification');
-      socketService.off('notificationUpdate');
-      socketService.off('notificationCount');
+    if (!locationQuery.trim()) {
+      setLocationResults([]);
+      setIsSearchingLocation(false);
       return;
     }
-
-    const token = sessionStorage.getItem('token');
-    const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
-    const userId = rawUser?.id || rawUser?._id;
-    if (!token || !userId) return;
-
-    const attachListeners = () => {
-      // Remove any previous header-specific listeners to avoid duplicates
-      socketService.off('newNotification');
-      socketService.off('notificationUpdate');
-      socketService.off('notificationCount');
-
-      socketService.onNewNotification(notification => {
-        setNotifications(prev => [notification, ...prev]);
-        if (!notification.read) {
-          setUnreadCount(prev => {
-            setCountChanged(true);
-            setTimeout(() => setCountChanged(false), 1000);
-            return prev + 1;
-          });
+    
+    setIsSearchingLocation(true);
+    const delay = setTimeout(async () => {
+      try {
+        const res = await searchCities(locationQuery.trim());
+        let cityNames = [];
+        
+        // Handle the API response format which returns an array of city names
+        if (Array.isArray(res?.data?.cities)) {
+          cityNames = res.data.cities.map(cityName => ({ name: cityName, id: cityName }));
+        } else if (Array.isArray(res?.data)) {
+          cityNames = res.data.map(cityName => ({ name: cityName, id: cityName }));
         }
-      });
-
-      socketService.onNotificationUpdate(data => {
-        if (Array.isArray(data.notificationIds)) {
-          setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
-          setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
-        }
-      });
-
-      socketService.onNotificationCount(count => setUnreadCount(count));
-    };
-
-    // Ensure socket exists and is connected
-    const ensureConnected = () => {
-      const existing = socketService.getSocket?.();
-      if (!existing || !socketService.isSocketConnected()) {
-        socketService.connect(userId, token);
+        
+        setLocationResults(cityNames);
+      } catch (error) {
+        console.error("Error searching cities:", error);
+        setLocationResults([]);
       }
-      return socketService.getSocket?.();
+      setIsSearchingLocation(false);
+    }, 400);
+    
+    return () => clearTimeout(delay);
+  }, [locationQuery]);
+
+  // Handle click outside location dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target)) {
+        setShowLocationDropdown(false);
+      }
     };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    let socket = ensureConnected();
+  // Listen for external request to open location selector (e.g., from HomePage prompt)
+  useEffect(() => {
+    const openSelector = () => {
+      setShowLocationDropdown(true);
+      setHighlightLocation(true);
+      setTimeout(() => setHighlightLocation(false), 2500);
+    };
+    window.addEventListener('openLocationSelector', openSelector);
+    return () => window.removeEventListener('openLocationSelector', openSelector);
+  }, []);
 
-    // Join user room and attach listeners on connect/reconnect
-    const onConnect = () => {
+  // Socket setup
+useEffect(() => {
+  if (!isLoggedIn) {
+    socketService.off('newNotification');
+    socketService.off('notificationUpdate');
+    socketService.off('notificationCount');
+    return;
+  }
+
+  const token = sessionStorage.getItem('token');
+  const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const userId = rawUser?.id || rawUser?._id;
+  if (!token || !userId) return;
+
+  // Always attach listeners
+  socketService.off('newNotification');
+  socketService.off('notificationUpdate');
+  socketService.off('notificationCount');
+
+  socketService.onNewNotification(notification => {
+  console.log("Frontend: Received new notification via socket:", notification);
+  setNotifications(prev => [notification, ...prev]);
+    if (!notification.read) {
+      setUnreadCount(prev => {
+        setCountChanged(true);
+        setTimeout(() => setCountChanged(false), 1000);
+        return prev + 1;
+      });
+    }
+  });
+
+  socketService.onNotificationUpdate(data => {
+    if (Array.isArray(data.notificationIds)) {
+      setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
+    }
+  });
+
+  socketService.onNotificationCount(count => setUnreadCount(count));
+
+  // Ensure socket is connected and join room
+  if (!socketService.isSocketConnected()) {
+    socketService.connect(userId, token);
+  }
+  socketService.joinUserRoom(userId);
+
+  const socket = socketService.getSocket?.();
+  if (socket) {
+    socket.on('connect', () => {
+      console.log("Frontend: Socket connected, joining user room...");
       socketService.joinUserRoom(userId);
-      attachListeners();
-    };
+    });
+  }
 
-    // If already connected, run immediately
-    if (socketService.isSocketConnected()) {
-      onConnect();
-    }
-
-    // Also attach for future connect events (initial connect and reconnects)
-    socket = socketService.getSocket?.();
-    if (socket) {
-      socket.on('connect', onConnect);
-    }
-
-    return () => {
-      if (socket) socket.off('connect', onConnect);
-      socketService.off('newNotification');
-      socketService.off('notificationUpdate');
-      socketService.off('notificationCount');
-    };
-  }, [isLoggedIn]);
+  return () => {
+    if (socket) socket.off('connect');
+    socketService.off('newNotification');
+    socketService.off('notificationUpdate');
+    socketService.off('notificationCount');
+  };
+}, [isLoggedIn]);
  
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
@@ -448,19 +504,68 @@ const Header = () => {
           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
             <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
               {/* Location */}
-              <div className="flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border border-gray-300">
-                <FaMapMarkerAlt className="text-lg text-orange-500" />
-                <select className="w-[110px] sm:w-[130px] text-xs font-semibold bg-transparent focus:outline-none">
-                  <option>Hyderabad</option>
-                  <option>Visakhapatnam</option>
-                  <option>Vijayawada</option>
-                  <option>Chennai</option>
-                  <option>Bengaluru</option>
-                  <option>Mumbai</option>
-                  <option>Delhi</option>
-                  <option>Kolkata</option>
-                  <option>Pune</option>
-                </select>
+              <div className="relative" ref={locationDropdownRef}>
+                <div
+                  className={`flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border cursor-pointer transition-shadow ${highlightLocation ? 'border-orange-400 ring-2 ring-orange-300' : 'border-gray-300'}`}
+                  onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                >
+                  <FaMapMarkerAlt className="text-lg text-orange-500" />
+                  <span className="w-[110px] sm:w-[130px] text-xs font-semibold truncate">
+                    {selectedLocation ? selectedLocation.name : "Select city"}
+                  </span>
+                </div>
+                
+                {showLocationDropdown && (
+                  <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg z-50">
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        placeholder="Search city..."
+                        value={locationQuery}
+                        onChange={(e) => {
+                          setLocationQuery(e.target.value);
+                          if (e.target.value.trim()) {
+                            setShowLocationDropdown(true);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    
+                    <div className="max-h-60 overflow-auto">
+                      {isSearchingLocation ? (
+                        <div className="p-2 text-sm text-gray-500">Searching cities...</div>
+                      ) : locationResults.length > 0 ? (
+                        <ul>
+                          {locationResults.map((city, index) => (
+                            <li
+                              key={city._id || city.id || `city-${index}`}
+                              className="p-2 hover:bg-orange-50 cursor-pointer text-sm"
+                              onClick={() => {
+                                setSelectedLocation(city);
+                                setShowLocationDropdown(false);
+                                setLocationQuery("");
+                                // Store selected location in sessionStorage for other components
+                                sessionStorage.setItem('selectedLocation', JSON.stringify(city));
+                                // Broadcast change so other pages react instantly
+                                window.dispatchEvent(new CustomEvent('selectedLocationChanged', { detail: city }));
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <FaMapMarkerAlt className="text-orange-500" />
+                                <span>{city.name}</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : locationQuery.trim() ? (
+                        <div className="p-2 text-sm text-gray-500">No cities found</div>
+                      ) : (
+                        <div className="p-2 text-sm text-gray-500">Type to search cities</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               {/* Categories */}
               <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">

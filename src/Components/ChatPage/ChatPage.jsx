@@ -308,6 +308,40 @@ const ChatPage = () => {
     setOtherDisplayEmail(email || null);
   }, [chatUsers, paramUserId, messages, user, location.state]);
 
+  // Fallback: if we still don't have the seller email, fetch it directly by seller (param) userId
+  useEffect(() => {
+    if (!paramUserId || !user?.token) return;
+    if (otherDisplayEmail) return; // already resolved from other sources
+
+    getUserDetails(user.token, paramUserId)
+      .then((res) => {
+        const data = res?.data?.data;
+        const email = data?.email;
+        if (email) {
+          setOtherDisplayEmail(email);
+          setOtherParticipantInfo((prev) => prev || data);
+          // Ensure the desktop inbox (left side) shows this seller even if not part of chat list yet
+          setChatUsers((prev) => {
+            if (prev.some((u) => u.id === paramUserId)) return prev;
+            return [
+              ...prev,
+              {
+                id: paramUserId,
+                email,
+                profilePicture: data?.profilePicture || null,
+                displayName: email,
+              },
+            ];
+          });
+          // Allow showing the list immediately if it was waiting
+          setLoadingInbox(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Fallback fetch of seller user details failed:', err);
+      });
+  }, [paramUserId, user?.token, otherDisplayEmail]);
+
   // Scroll to bottom on new message
   // useEffect(() => { chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
  
@@ -347,6 +381,13 @@ const ChatPage = () => {
  
   // Send message
   const handleSendMessage = async () => {
+    // Prevent sending a message to yourself
+    if (user?.id && (receiverId === user.id || paramUserId === user.id)) {
+      const err =  "Cannot send message to yourself." ;
+      console.warn('Send blocked:', err);
+      alert(JSON.stringify(err, null, 2));
+      return;
+    }
     if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // Ensure currentAdId is present
     try {
       const res = await sendChatMessage(receiverId, currentAdId, message.trim(), user.token);

@@ -151,7 +151,7 @@ const Header = () => {
     return () => clearTimeout(delay);
   }, [searchQuery]);
  
-  // Fetch notifications
+  // Fetch notifications (socket-first with HTTP fallback)
   const fetchNotifications = async () => {
     if (!isLoggedIn) {
       setNotifications([]); setUnreadCount(0); return;
@@ -160,15 +160,57 @@ const Header = () => {
     if (!token) return;
     setLoadingNotifications(true);
     try {
-      const res = await getNotifications(token);
-      if (res?.data?.success && Array.isArray(res.data.notifications)) {
-        const localRead = JSON.parse(localStorage.getItem('readNotifications') || '[]');
-        const updated = res.data.notifications.map(n => localRead.includes(n._id) ? { ...n, read: true } : n);
-        setNotifications(updated);
-        setUnreadCount(updated.filter(n => !n.read).length);
+      // Ensure socket is connected using stored user
+      const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+      const userId = rawUser?.id || rawUser?._id;
+      if (!socketService.isSocketConnected() && userId) {
+        socketService.connect(userId, token);
       }
-    } catch {}
-    setLoadingNotifications(false);
+
+      let list = null;
+      const socket = socketService.getSocket();
+
+      if (socket && socket.connected) {
+        // Try to fetch notifications via socket with ack
+        list = await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('socket_timeout')), 4000);
+          try {
+            socket.emit('getNotifications', { token }, (resp) => {
+              clearTimeout(timer);
+              if (Array.isArray(resp)) {
+                resolve(resp);
+              } else if (resp && Array.isArray(resp.notifications)) {
+                resolve(resp.notifications);
+              } else if (resp && resp.data && Array.isArray(resp.data.notifications)) {
+                resolve(resp.data.notifications);
+              } else if (resp && resp.error) {
+                reject(new Error(resp.error));
+              } else {
+                reject(new Error('invalid_socket_response'));
+              }
+            });
+          } catch (err) {
+            clearTimeout(timer);
+            reject(err);
+          }
+        });
+      }
+
+      // Fallback to HTTP if socket not available or invalid response
+      if (!Array.isArray(list)) {
+        const res = await getNotifications(token);
+        list = res?.data?.notifications || [];
+      }
+
+      const localRead = JSON.parse(localStorage.getItem('readNotifications') || '[]');
+      const updated = list.map(n => localRead.includes(n._id) ? { ...n, read: true } : n);
+      setNotifications(updated);
+      setUnreadCount(updated.filter(n => !n.read).length);
+    } catch (e) {
+      // Swallow error; UI retains previous state
+    } finally {
+      setLoadingNotifications(false);
+    }
   };
  
   // Notifications effect
@@ -249,9 +291,10 @@ useEffect(() => {
   socketService.off('notificationUpdate');
   socketService.off('notificationCount');
 
-  socketService.onNewNotification(notification => {
-  console.log("Frontend: Received new notification via socket:", notification);
-  setNotifications(prev => [notification, ...prev]);
+  // Set up notification listeners with unsubscribe functions
+  const unsubNewNotification = socketService.onNewNotification(notification => {
+    console.log("Frontend: Received new notification via socket:", notification);
+    setNotifications(prev => [notification, ...prev]);
     if (!notification.read) {
       setUnreadCount(prev => {
         setCountChanged(true);
@@ -261,34 +304,59 @@ useEffect(() => {
     }
   });
 
-  socketService.onNotificationUpdate(data => {
+  const unsubNotificationUpdate = socketService.onNotificationUpdate(data => {
     if (Array.isArray(data.notificationIds)) {
       setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
     }
   });
 
-  socketService.onNotificationCount(count => setUnreadCount(count));
+  const unsubNotificationCount = socketService.onNotificationCount(count => setUnreadCount(count));
 
   // Ensure socket is connected and join room
   if (!socketService.isSocketConnected()) {
+    console.log("Header: Socket not connected, connecting now...");
     socketService.connect(userId, token);
   }
+  
+  // Set up event listeners for socket connection status
+  const handleSocketConnected = () => {
+    console.log("Header: Socket connected event received");
+    socketService.joinUserRoom(userId);
+    fetchNotifications();
+  };
+  
+  const handleSocketDisconnected = () => {
+    console.log("Header: Socket disconnected event received");
+  };
+  
+  const handleSocketAuthError = () => {
+    console.log("Header: Socket auth error event received");
+    // Try to reconnect with fresh token if available
+    const freshToken = sessionStorage.getItem('token');
+    if (freshToken && userId) {
+      setTimeout(() => socketService.connect(userId, freshToken), 2000);
+    }
+  };
+  
+  // Add global event listeners
+  window.addEventListener('socket_connected', handleSocketConnected);
+  window.addEventListener('socket_disconnected', handleSocketDisconnected);
+  window.addEventListener('socket_auth_error', handleSocketAuthError);
+  
+  // Join user room immediately if socket is already connected
   socketService.joinUserRoom(userId);
 
-  const socket = socketService.getSocket?.();
-  if (socket) {
-    socket.on('connect', () => {
-      console.log("Frontend: Socket connected, joining user room...");
-      socketService.joinUserRoom(userId);
-    });
-  }
-
   return () => {
-    if (socket) socket.off('connect');
-    socketService.off('newNotification');
-    socketService.off('notificationUpdate');
-    socketService.off('notificationCount');
+    // Clean up all listeners
+    unsubNewNotification();
+    unsubNotificationUpdate();
+    unsubNotificationCount();
+    
+    // Remove global event listeners
+    window.removeEventListener('socket_connected', handleSocketConnected);
+    window.removeEventListener('socket_disconnected', handleSocketDisconnected);
+    window.removeEventListener('socket_auth_error', handleSocketAuthError);
   };
 }, [isLoggedIn]);
  

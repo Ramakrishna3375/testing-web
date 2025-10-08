@@ -33,6 +33,11 @@ export const searchAdsByTitle = async (title) => {
   return await commonRequest("GET", `${BASE_URL}/api/post-ads/${encodedTitle}`);
 };
 
+//search city names
+export const searchCities = async (query) => {
+  return await commonRequest("GET", `${BASE_URL}/api/post-ads/cities?q=${query}`);
+};
+
 //Get Chat History
 export const getChatHistory = async (recipientId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chats/history?recipientId=${recipientId}`, null, { Authorization: `Bearer ${token}` });
@@ -40,9 +45,7 @@ export const getChatHistory = async (recipientId, token) => {
 
 //Get Notifications
 export const getNotifications = async (token) => {
-  console.log('🔄 API: Getting notifications with token:', token ? 'Present' : 'Missing');
   const result = await commonRequest("GET", `${BASE_URL}/api/notifications`, null, { Authorization: `Bearer ${token}` });
-  console.log('🔄 API: getNotifications result:', result);
   return result;
 };
 

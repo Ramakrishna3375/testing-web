@@ -4,7 +4,7 @@ import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
-import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails } from "../../Services/api";
+import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails, searchCities } from "../../Services/api";
 import socketService from "../../Services/socketService";
 
 const Header = () => {
@@ -35,8 +35,24 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
-
-  // Profile menu outside click
+  
+  // Location search states
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    try {
+      const storedLocation = sessionStorage.getItem('selectedLocation');
+      return storedLocation ? JSON.parse(storedLocation) : null;
+    } catch (e) {
+      console.error("Error parsing stored location:", e);
+      return null;
+    }
+  });
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const locationDropdownRef = useRef(null);
+  const [highlightLocation, setHighlightLocation] = useState(false);
+ 
   useEffect(() => {
     const onDocClick = (e) => {
       if (!profileMenuRef.current || !mobileProfileButtonRef.current || !desktopProfileButtonRef.current) return;
@@ -146,6 +162,61 @@ const Header = () => {
 
   // Fetch notifications on login
   useEffect(() => { isLoggedIn ? fetchNotifications() : (setNotifications([]), setUnreadCount(0)); }, [isLoggedIn]);
+ 
+  // Location search effect
+  useEffect(() => {
+    if (!locationQuery.trim()) {
+      setLocationResults([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+    
+    setIsSearchingLocation(true);
+    const delay = setTimeout(async () => {
+      try {
+        const res = await searchCities(locationQuery.trim());
+        let cityNames = [];
+        
+        // Handle the API response format which returns an array of city names
+        if (Array.isArray(res?.data?.cities)) {
+          cityNames = res.data.cities.map(cityName => ({ name: cityName, id: cityName }));
+        } else if (Array.isArray(res?.data)) {
+          cityNames = res.data.map(cityName => ({ name: cityName, id: cityName }));
+        }
+        
+        setLocationResults(cityNames);
+      } catch (error) {
+        console.error("Error searching cities:", error);
+        setLocationResults([]);
+      }
+      setIsSearchingLocation(false);
+    }, 400);
+    
+    return () => clearTimeout(delay);
+  }, [locationQuery]);
+
+  // Handle click outside location dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target)) {
+        setShowLocationDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Listen for external request to open location selector (e.g., from HomePage prompt)
+  useEffect(() => {
+    const openSelector = () => {
+      setShowLocationDropdown(true);
+      setHighlightLocation(true);
+      setTimeout(() => setHighlightLocation(false), 2500);
+    };
+    window.addEventListener('openLocationSelector', openSelector);
+    return () => window.removeEventListener('openLocationSelector', openSelector);
+  }, []);
 
   // SOCKET.IO: Listen for notifications in real-time
   useEffect(() => {
@@ -215,7 +286,7 @@ const Header = () => {
       unsubscribeConnect(); // Clean up connect listener
     };
   }, [isLoggedIn, user]);
-
+ 
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
     const token = sessionStorage.getItem('token');
@@ -340,9 +411,7 @@ const Header = () => {
                         notifications.map(notification => (
                           <div
                             key={notification._id}
-                            className={`p-3 border-b border-gray-100 transition-colors duration-200 ${
-                              markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'
-                            } ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                            className={`p-3 border-b border-gray-100 transition-colors duration-200 ${markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'} ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
                             onClick={() => {
                               if (markingAsRead.has(notification._id)) return;
                               if (!notification.read) {
@@ -425,19 +494,68 @@ const Header = () => {
           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
             <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
               {/* Location */}
-              <div className="flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border border-gray-300">
-                <FaMapMarkerAlt className="text-lg text-orange-500" />
-                <select className="w-[110px] sm:w-[130px] text-xs font-semibold bg-transparent focus:outline-none">
-                  <option>Hyderabad</option>
-                  <option>Visakhapatnam</option>
-                  <option>Vijayawada</option>
-                  <option>Chennai</option>
-                  <option>Bengaluru</option>
-                  <option>Mumbai</option>
-                  <option>Delhi</option>
-                  <option>Kolkata</option>
-                  <option>Pune</option>
-                </select>
+              <div className="relative" ref={locationDropdownRef}>
+                <div
+                  className={`flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border cursor-pointer transition-shadow ${highlightLocation ? 'border-orange-400 ring-2 ring-orange-300' : 'border-gray-300'}`}
+                  onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                >
+                  <FaMapMarkerAlt className="text-lg text-orange-500" />
+                  <span className="w-[110px] sm:w-[130px] text-xs font-semibold truncate">
+                    {selectedLocation ? selectedLocation.name : "Select city"}
+                  </span>
+                </div>
+                
+                {showLocationDropdown && (
+                  <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg z-50">
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        placeholder="Search city..."
+                        value={locationQuery}
+                        onChange={(e) => {
+                          setLocationQuery(e.target.value);
+                          if (e.target.value.trim()) {
+                            setShowLocationDropdown(true);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    
+                    <div className="max-h-60 overflow-auto">
+                      {isSearchingLocation ? (
+                        <div className="p-2 text-sm text-gray-500">Searching cities...</div>
+                      ) : locationResults.length > 0 ? (
+                        <ul>
+                          {locationResults.map((city, index) => (
+                            <li
+                              key={city._id || city.id || `city-${index}`}
+                              className="p-2 hover:bg-orange-50 cursor-pointer text-sm"
+                              onClick={() => {
+                                setSelectedLocation(city);
+                                setShowLocationDropdown(false);
+                                setLocationQuery("");
+                                // Store selected location in sessionStorage for other components
+                                sessionStorage.setItem('selectedLocation', JSON.stringify(city));
+                                // Broadcast change so other pages react instantly
+                                window.dispatchEvent(new CustomEvent('selectedLocationChanged', { detail: city }));
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <FaMapMarkerAlt className="text-orange-500" />
+                                <span>{city.name}</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : locationQuery.trim() ? (
+                        <div className="p-2 text-sm text-gray-500">No cities found</div>
+                      ) : (
+                        <div className="p-2 text-sm text-gray-500">Type to search cities</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               {/* Categories */}
               <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">
@@ -556,9 +674,7 @@ const Header = () => {
                         notifications.map(notification => (
                           <div
                             key={notification._id}
-                            className={`p-3 border-b border-gray-100 transition-colors duration-200 ${
-                              markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'
-                            } ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                            className={`p-3 border-b border-gray-100 transition-colors duration-200 ${markingAsRead.has(notification._id) ? 'cursor-wait bg-gray-100 opacity-75' : 'cursor-pointer hover:bg-gray-50'} ${!notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
                             onClick={() => {
                               if (markingAsRead.has(notification._id)) return;
                               if (!notification.read) {

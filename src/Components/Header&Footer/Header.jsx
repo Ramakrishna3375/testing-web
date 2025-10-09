@@ -7,7 +7,7 @@ import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails, searchCities } from "../../Services/api";
-import socketService from "../../Services/socketService";
+import socketService from "../../hooks/socketService";
  
 const Header = () => {
   const navigate = useNavigate();
@@ -551,6 +551,17 @@ useEffect(() => {
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                           onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
                           onClick={() => {
+                            setShowProfileMenu(false);
+                            navigate('/my-ads');
+                          }}
+                        >
+                          My Ads
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                          onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
+                          onClick={() => {
                             try {
                               sessionStorage.removeItem('user');
                               sessionStorage.removeItem('token');
@@ -821,6 +832,17 @@ useEffect(() => {
                   }}
                 >
                   Profile
+                </button>
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                  onMouseDown={(e) => e.stopPropagation()} // Stop propagation of mousedown
+                  onClick={(e) => {
+                    setShowProfileMenu(false);
+                    navigate('/my-ads');
+                  }}
+                >
+                  My Ads
                 </button>
                 {isLoggedIn && (
                   <button

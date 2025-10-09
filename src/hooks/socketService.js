@@ -1,5 +1,5 @@
 import io from 'socket.io-client';
-import { BASE_URL } from "./helper";
+import { BASE_URL } from "../Services/helper";
 
 class SocketService {
   constructor() {

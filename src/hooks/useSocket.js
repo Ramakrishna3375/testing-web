@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
-import socketService from '../Services/socketService';
+import socketService from './socketService';
 
 export const useSocket = (isLoggedIn) => {
   // Track active rooms to prevent duplicate joins

@@ -16,6 +16,11 @@ export const getAllActiveAds = async () => {
   return await commonRequest("GET", `${BASE_URL}/api/post-ads`);
 };
 
+//Get My Ads
+export const getMyAds = async (token) => {
+  return await commonRequest("GET", `${BASE_URL}/api/post-ads/my-ads`, null, { Authorization: `Bearer ${token}` });
+};
+
 //Get Banners
 export const getBanners = async () => {
   return await commonRequest("GET", `${BASE_URL}/api/banners`);
@@ -24,6 +29,11 @@ export const getBanners = async () => {
 //Post New Ad
 export const postNewAd = async (adData, token) => {
   return await commonRequest("POST", `${BASE_URL}/api/post-ads`, adData, { Authorization: token });
+};
+
+//Update Ad
+export const updateAd = async (adId, adData, token) => {
+  return await commonRequest("PUT", `${BASE_URL}/api/post-ads/${adId}`, adData, { Authorization: `Bearer ${token}` });
 };
 
 
@@ -180,5 +190,3 @@ export const uploadProfilePicture = async (formData, token) => {
     token ? { Authorization: token } : undefined
   );
 };
-
-

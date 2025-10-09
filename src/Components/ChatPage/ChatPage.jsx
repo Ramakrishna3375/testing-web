@@ -5,7 +5,7 @@ import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
 import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage } from '../../Services/api';
 import { useSocket } from '../../hooks/useSocket.js';
-import socketService from '../../Services/socketService';
+import socketService from '../../hooks/socketService';
  
 const ChatPage = () => {
   const navigate = useNavigate();

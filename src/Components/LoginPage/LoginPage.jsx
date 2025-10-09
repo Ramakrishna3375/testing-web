@@ -80,7 +80,7 @@ const UserLogin = () => {
             sessionStorage.setItem('isLoggedIn', 'true');
             
             // Import and use socketService directly to ensure immediate connection
-            import('../../Services/socketService').then(module => {
+            import('../../hooks/socketService').then(module => {
               const socketService = module.default;
               // Connect socket immediately after successful login
               if (userId && token) {

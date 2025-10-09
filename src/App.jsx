@@ -10,6 +10,7 @@ import UserLogin from "./Components/LoginPage/LoginPage.jsx";
 import CompleteRegistration from "./Components/LoginPage/RegisterPage.jsx";
 import ProfilePage from "./Components/Profile/ProfilePage.jsx";
 import ChatPage from "./Components/ChatPage/ChatPage.jsx";
+import MyAdsPage from "./Components/Profile/MyAdsPage.jsx";
 
 function App(){
 return(
@@ -34,6 +35,7 @@ return(
         <Route path="/chat/:userId" element={<ChatPage />} /> {/* userId of the seller */}
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/my-ads" element={<MyAdsPage />} />
       </Routes>
     </>
   );

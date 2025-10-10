@@ -36,7 +36,6 @@ export const updateAd = async (adId, adData, token) => {
   return await commonRequest("PUT", `${BASE_URL}/api/post-ads/${adId}`, adData, { Authorization: `Bearer ${token}` });
 };
 
-
 //Search Ads by Title
 export const searchAdsByTitle = async (title) => {
   const encodedTitle = encodeURIComponent(title);

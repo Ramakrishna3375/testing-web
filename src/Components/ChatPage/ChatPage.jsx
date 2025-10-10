@@ -93,36 +93,8 @@ const ChatPage = () => {
   const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
   const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
  
-  // Use socket with JWT token authentication
-  const { connectSocket, disconnectSocket, isConnected, onConnect, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage } = useSocket(!!user?.id); // Pass login status
-  
-  // Ensure socket is connected with JWT token and handle reconnection with fresh token
-  useEffect(() => {
-    if (user?.id && sessionStorage.getItem('token')) {
-      connectSocket(); // This will use the JWT token from sessionStorage
-      console.log('Socket connection initialized with JWT token');
-      
-      // Listen for socket authentication errors to reconnect with fresh token
-      const handleAuthError = () => {
-        console.log('Socket auth error detected, reconnecting with fresh token');
-        // Small delay to ensure token is refreshed if needed
-        setTimeout(() => {
-          connectSocket();
-        }, 500);
-      };
-      
-      window.addEventListener('socket_auth_error', handleAuthError);
-      
-      return () => {
-        window.removeEventListener('socket_auth_error', handleAuthError);
-        disconnectSocket();
-      };
-    }
-    
-    return () => {
-      disconnectSocket();
-    };
-  }, [user?.id, connectSocket, disconnectSocket]);
+  // Use the simplified socket hook. Connection is managed by Header.
+  const { isConnected, onConnect, joinChatRoom, leaveChatRoom, onChatMessage } = useSocket();
  
   // State for other participant's info
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
@@ -326,63 +298,6 @@ const ChatPage = () => {
     }
   };
   
-  // Function to initialize socket connection and listen for chat messages
-  const initializeSocketConnection = (userId, chatAdId) => {
-    if (!chatAdId || !userId) {
-      console.error('Cannot initialize socket: Missing chatAdId or userId');
-      return false;
-    }
-    
-    console.log(`Joining chat room for ad: ${chatAdId}`);
-    
-    // Always disconnect and reconnect to ensure a fresh connection
-    if (isConnected) {
-      console.log('Disconnecting existing socket connection');
-      disconnectSocket();
-    }
-    
-    // Get token for authentication
-    const authToken = sessionStorage.getItem('token') || localStorage.getItem('token');
-    
-    if (!authToken) {
-      console.error('Cannot connect socket: No token available');
-      // Redirect to login if no token is available
-      navigate('/login');
-      return false;
-    }
-    
-    // Set up a listener for socket connection to ensure we join the room
-    const handleSocketConnect = () => {
-      console.log('Socket connected, joining chat room with token auth');
-      
-      // Join user room first
-      socketService.joinUserRoom(user.id);
-      
-      // Then join chat room
-      socketService.joinChatRoom(chatAdId);
-      
-      // Set up message listener after joining room
-      setupMessageListener(userId);
-    };
-    
-    // Remove any existing listeners to prevent duplicates
-    window.removeEventListener('socket_connected', handleSocketConnect);
-    
-    console.log('Connecting socket with user token authentication');
-    connectSocket();
-    
-    // Listen for socket connection event
-    window.addEventListener('socket_connected', handleSocketConnect);
-    
-    // If already connected, manually trigger the handler
-    if (isConnected) {
-      console.log('Socket already connected, manually triggering room join');
-      handleSocketConnect();
-    }
-    
-    return true;
-  };
-  
   // Function to fetch and listen for chat messages
   const fetchAndListenForChatMessages = async (userId, token, adId) => {
     console.log('Fetching and listening for chat messages with userId:', userId);
@@ -408,22 +323,12 @@ const ChatPage = () => {
       const finalAdId = adId || extractedAdId;
       if (finalAdId) {
         setCurrentAdId(finalAdId);
-        
-        // Initialize socket connection
-        initializeSocketConnection(userId, finalAdId);
+        // The useSocket hook will handle joining the room
       }
       
       return finalAdId;
     } catch (error) {
       console.error('Error in fetchAndListenForChatMessages:', error);
-      
-      // Try to recover by connecting to socket anyway if we have an adId
-      if (adId && user?.id) {
-        console.log('Attempting to recover by connecting to socket for ad:', adId);
-        initializeSocketConnection(userId, adId);
-        return adId;
-      }
-      
       return null;
     }
   };
@@ -438,7 +343,7 @@ const ChatPage = () => {
     }
     
     // Then, add a new listener
-    return onChatMessage((newMessage) => {
+    const offChatMessage = onChatMessage((newMessage) => {
       console.log('Received new chat message via socket:', newMessage);
       
       try {
@@ -574,6 +479,7 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error fetching chat messages:', error);
     } });
+    return () => offChatMessage();
   }
 
   // Separate function to fetch participant details
@@ -635,40 +541,31 @@ const ChatPage = () => {
     
     // Make sure we're connected to the socket and joined to the chat room
     if (user?.id && currentAdId) {
-      console.log(`Ensuring socket connection for chat room: ${currentAdId}`);
-      if (!isConnected()) {
-        connectSocket();
-      }
-      joinChatRoom(currentAdId);
+      console.log(`Joining chat room on mount: ${currentAdId}`);
+      if (isConnected()) joinChatRoom(currentAdId);
     }
     
     return () => {
       setLoadingChat(false);
       // Don't leave the chat room when unmounting to keep receiving messages
     };
-  }, [paramUserId, user, isConnected, joinChatRoom, connectSocket, currentAdId]);
+  }, [paramUserId, user, currentAdId, joinChatRoom]);
  
   // Derive and show seller email in header when entering from product page or when messages/users load
   useEffect(() => {
     let email = null;
-
-    // 1) From chatUsers list
-    const match = chatUsers.find(u => u.id === paramUserId);
-    if (match?.email) email = match.email;
-
-    // 2) From messages (if any)
-    if (!email && messages && messages.length > 0) {
-      const first = messages[0];
-      const senderId = first?.sender?._id || first?.sender?.id || first?.sender;
-      const other = senderId === user?.id ? first?.receiver : first?.sender;
-      email = other?.email || email;
-    }
-
-    // 3) From navigation state (if provided)
-    if (!email && location.state?.sellerEmail) {
+ 
+    // 1) Prioritize email from navigation state (most direct)
+    if (location.state?.sellerEmail) {
       email = location.state.sellerEmail;
     }
-
+ 
+    // 2) Fallback to chatUsers list
+    const match = chatUsers.find(u => u.id === paramUserId);
+    if (!email && match?.email) {
+      email = match.email;
+    }
+ 
     setOtherDisplayEmail(email || null);
   }, [chatUsers, paramUserId, messages, user, location.state]);
 
@@ -718,140 +615,27 @@ const ChatPage = () => {
     }
   }, [messages]);
  
-  // Join/leave chat room; also re-join on socket reconnect
+  // Join chat room and listen for messages
   useEffect(() => {
     if (!(user?.id && currentAdId)) return;
-
+ 
     const tryJoin = () => {
       if (isConnected()) joinChatRoom(currentAdId);
     };
-
+  
     // Attempt immediately if connected
     tryJoin();
 
-    // Also join when socket (re)connects
-    const offConnect = onConnect(() => {
-      joinChatRoom(currentAdId);
-    });
-
-    return () => {
-      if (typeof offConnect === 'function') offConnect();
-      if (isConnected()) leaveChatRoom(currentAdId);
-    };
-  }, [user?.id, currentAdId, isConnected, joinChatRoom, leaveChatRoom, onConnect]);
-
-  // Listen for incoming messages; keep listener active across reconnects
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const handleIncomingMessage = (newMessage) => {
-      console.log('Received new chat message via socket:', newMessage);
-      
-      try {
-        // Skip if message is not for current chat
-        if (paramUserId) {
-          const senderId = newMessage.sender?._id || newMessage.sender?.id || newMessage.sender;
-          const receiverId = newMessage.receiver?._id || newMessage.receiver?.id || newMessage.receiver;
-          const messageAdId = newMessage.ad?._id || newMessage.ad?.id || newMessage.adId || newMessage.ad;
-          
-          // Check if this message is relevant to the current chat
-          const isRelevantUser = senderId === paramUserId || receiverId === paramUserId || 
-                                senderId === user.id || receiverId === user.id;
-          const isRelevantAd = messageAdId === currentAdId;
-          
-          console.log('Message relevance check:', { 
-            isRelevantUser, 
-            isRelevantAd,
-            senderId,
-            receiverId,
-            paramUserId,
-            userId: user.id,
-            messageAdId,
-            currentAdId
-          });
-          
-          if (!isRelevantUser || !isRelevantAd) {
-            console.log('Message not relevant to current chat, skipping');
-            return;
-          }
-        }
-        
-        // Normalize message format
-        const normalized = {
-          ...newMessage,
-          _id: newMessage._id || newMessage.id || `temp-${Date.now()}`,
-          sender: typeof newMessage.sender === 'object' 
-            ? newMessage.sender 
-            : { _id: newMessage.sender },
-          receiver: typeof newMessage.receiver === 'object'
-            ? newMessage.receiver
-            : { _id: newMessage.receiver },
-          ad: typeof newMessage.ad === 'object'
-            ? newMessage.ad
-            : { _id: newMessage.ad || newMessage.adId },
-          message: newMessage.message || newMessage.content,
-          timestamp: newMessage.timestamp || newMessage.createdAt || new Date().toISOString()
-        };
-        
-        console.log('Processing normalized message:', normalized);
-        
-        // Force UI update with the new message
-        setMessages(prev => {
-          // Check if we already have this message
-          const exists = prev.some(msg => 
-            msg._id === normalized._id || 
-            (msg.message === normalized.message && 
-             msg.sender?._id === normalized.sender?._id &&
-             Math.abs(new Date(msg.timestamp) - new Date(normalized.timestamp)) < 1000)
-          );
-          
-          if (exists) {
-            console.log('Message already exists in state, skipping');
-            return prev;
-          }
-          
-          console.log('Adding new message to state immediately');
-          const updated = [...prev, normalized].sort((a, b) => {
-            const timeA = new Date(a.timestamp || a.createdAt).getTime();
-            const timeB = new Date(b.timestamp || b.createdAt).getTime();
-            return timeA - timeB; // Ascending order - oldest first
-          });
-          return updated;
-        });
-      
-      // Update last message for this chat
-        if (paramUserId) {
-          setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
-        }
-        
-        // No need to refresh from API immediately after receiving a socket message
-        // as we've already added it to the state above
-      } catch (error) {
-        console.error('Error processing incoming message:', error);
-      }
-    };
-
-    // Always join chat room before listening for messages
-    if (currentAdId) {
-      joinChatRoom(currentAdId);
-    }
-
-    // Attach the socket listener (returns the unsubscribe function)
-    const offMsg = onChatMessage(handleIncomingMessage);
-
-    // Re-attach on socket reconnect
     const offConnect = onConnect(() => {
       if (currentAdId) joinChatRoom(currentAdId);
-      if (typeof offMsg === 'function') offMsg();
-      onChatMessage(handleIncomingMessage);
     });
 
     return () => {
       if (typeof offMsg === 'function') offMsg();
       if (typeof offConnect === 'function') offConnect();
     };
-  }, [user?.id, paramUserId, onChatMessage, onConnect, currentAdId, joinChatRoom]);
-
+  }, [user?.id, currentAdId, isConnected, joinChatRoom, onConnect]);
+  
  {/* ---------------------------------------------------------------------------------------------------------------------- */}
   // Send message using socket for instant delivery
   const handleSendMessage = async () => {
@@ -866,12 +650,10 @@ const ChatPage = () => {
     
     // Create message object
     const messageData = {
-      sender: user.id,
+      senderId: user.id, // Backend might expect senderId from socket context, but good to have
       receiver: receiverId,
-      ad: currentAdId,
-      adId: currentAdId, // Add adId explicitly for socket compatibility
+      adId: currentAdId,
       message: message.trim(),
-      timestamp: new Date().toISOString()
     };
     
     // Optimistically add message to UI
@@ -910,11 +692,11 @@ const ChatPage = () => {
       // Ensure we're in the chat room before sending
       if (isConnected()) {
         joinChatRoom(currentAdId);
-        
-        // First try to send via socket for instant delivery
-        console.log('Sending message via socket:', messageData);
-        const socketSent = emitChatMessage(messageData);
-        console.log('Socket message sent status:', socketSent);
+
+        // Send via socket using the 'sendMessage' event
+        console.log('Emitting chat message via socket service:', messageData);
+        socketService.emitChatMessage(messageData);
+
       } else {
         console.warn('Socket not connected, falling back to API only');
       }
@@ -958,8 +740,6 @@ const ChatPage = () => {
   };
  
   // UI
-  const isChatView = location.pathname.startsWith('/chat/');
-
   if (!isLoggedIn) {
     return (
       <div className="font-sans min-h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -1001,7 +781,7 @@ const ChatPage = () => {
         </div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-4 h-[calc(100vh-120px)] bg-white rounded-lg overflow-hidden shadow-lg">
           {/* Inbox List */}
-          <div className={`${isChatView && paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
+          <div className={`${paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
             <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-100">
               <h2 className="text-xl font-bold text-pink-600 m-0">Inbox</h2>
               <div className="flex gap-3 cursor-pointer text-gray-600 text-lg">
@@ -1069,8 +849,8 @@ const ChatPage = () => {
             </div>
           </div>
           {/* Chat Interface */}
-          <div className={`${isChatView && paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
-            {isChatView && paramUserId ? (
+          <div className={`${paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
+            {paramUserId ? (
               <>
                 <div className="bg-blue-600 p-3 flex justify-between items-center text-white flex-shrink-0 relative z-20">
                   <div className="flex items-center gap-3">

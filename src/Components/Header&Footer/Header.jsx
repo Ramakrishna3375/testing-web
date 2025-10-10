@@ -6,6 +6,7 @@ import UserProfile from '../../assets/Website logos/UserProfile.jpg';
  
 import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
+import { PiChatCircleDotsBold } from "react-icons/pi";
 import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails, searchCities } from "../../Services/api";
 import socketService from "../../hooks/socketService";
  
@@ -272,132 +273,99 @@ const Header = () => {
     return () => window.removeEventListener('openLocationSelector', openSelector);
   }, []);
 
-  // Socket setup
-useEffect(() => {
-  if (!isLoggedIn) {
-    socketService.off('newNotification');
-    socketService.off('notificationUpdate');
-    socketService.off('notificationCount');
-    return;
-  }
+  // Centralized Socket Connection Management
+  useEffect(() => {
+    if (isLoggedIn && user?.id) {
+      const token = sessionStorage.getItem('token');
+      if (token && !socketService.isSocketConnected()) {
+        console.log("Header: User is logged in, connecting socket...");
+        socketService.connect(user.id, token);
+      }
+    } else if (!isLoggedIn && socketService.isSocketConnected()) {
+      console.log("Header: User is logged out, disconnecting socket...");
+      socketService.disconnect();
+    }
+    // This effect handles the socket connection lifecycle based on login status.
+  }, [isLoggedIn, user?.id]);
 
-  const token = sessionStorage.getItem('token');
-  const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
-  const userId = rawUser?.id || rawUser?._id;
-  if (!token || !userId) return;
-
-  // Always attach listeners
-  socketService.off('newNotification');
-  socketService.off('notificationUpdate');
-  socketService.off('notificationCount');
-
-  // Set up notification listeners with unsubscribe functions
-  const unsubNewNotification = socketService.onNewNotification(notification => {
-    console.log("Frontend: Received new notification via socket:", notification);
-    setNotifications(prev => [notification, ...prev]);
-    if (!notification.read) {
-      setUnreadCount(prev => {
+  // Listen for instant notifications and connection events
+  useEffect(() => {
+    if (!isLoggedIn) return; // Do nothing if logged out
+    
+    const handleNewNotification = (event) => {
+      const { notification } = event.detail;
+      console.log("Header: Received instant notification via window event:", notification);
+      setNotifications(prev => [notification, ...prev]);
+      if (!notification.read) {
+        setUnreadCount(prev => prev + 1);
         setCountChanged(true);
         setTimeout(() => setCountChanged(false), 1000);
-        return prev + 1;
-      });
-    }
-  });
+      }
+    };
+  
+    const handleSocketConnected = () => {
+      console.log("Header: Socket connected event received, fetching notifications.");
+      fetchNotifications();
+    };
 
-  const unsubNotificationUpdate = socketService.onNotificationUpdate(data => {
-    if (Array.isArray(data.notificationIds)) {
-      setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
-    }
-  });
+    // Add listeners when the user is logged in
+    window.addEventListener('notification_received', handleNewNotification);
+    window.addEventListener('socket_connected', handleSocketConnected);
 
-  const unsubNotificationCount = socketService.onNotificationCount(count => setUnreadCount(count));
-
-  // Ensure socket is connected and join room
-  if (!socketService.isSocketConnected()) {
-    console.log("Header: Socket not connected, connecting now...");
-    socketService.connect(userId, token);
-  }
-  
-  // Set up event listeners for socket connection status
-  const handleSocketConnected = () => {
-    console.log("Header: Socket connected event received");
-    socketService.joinUserRoom(userId);
-    fetchNotifications();
-  };
-  
-  const handleSocketDisconnected = () => {
-    console.log("Header: Socket disconnected event received");
-  };
-  
-  const handleSocketAuthError = () => {
-    console.log("Header: Socket auth error event received");
-    // Try to reconnect with fresh token if available
-    const freshToken = sessionStorage.getItem('token');
-    if (freshToken && userId) {
-      setTimeout(() => socketService.connect(userId, freshToken), 2000);
-    }
-  };
-  
-  // Add global event listeners
-  window.addEventListener('socket_connected', handleSocketConnected);
-  window.addEventListener('socket_disconnected', handleSocketDisconnected);
-  window.addEventListener('socket_auth_error', handleSocketAuthError);
-  
-  // Join user room immediately if socket is already connected
-  socketService.joinUserRoom(userId);
-
-  return () => {
-    // Clean up all listeners
-    unsubNewNotification();
-    unsubNotificationUpdate();
-    unsubNotificationCount();
-    
-    // Remove global event listeners
-    window.removeEventListener('socket_connected', handleSocketConnected);
-    window.removeEventListener('socket_disconnected', handleSocketDisconnected);
-    window.removeEventListener('socket_auth_error', handleSocketAuthError);
-  };
-}, [isLoggedIn]);
+    // Cleanup function to remove listeners when the component unmounts or user logs out
+    return () => {
+      window.removeEventListener('notification_received', handleNewNotification);
+      window.removeEventListener('socket_connected', handleSocketConnected);
+    };
+  }, [isLoggedIn]); // This effect depends only on the login status
  
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
     const token = sessionStorage.getItem('token');
     if (!token || !ids.length) return;
+
+    // --- Start of Fix ---
+    // 1. Immediately update localStorage to persist the "read" state locally.
+    const localRead = JSON.parse(localStorage.getItem('readNotifications') || '[]');
+    const newRead = [...new Set([...localRead, ...ids])];
+    localStorage.setItem('readNotifications', JSON.stringify(newRead));
+
+    // 2. Optimistically update UI unless skipped.
+    const unreadToReduce = notifications.filter(n => ids.includes(n._id) && !n.read).length;
+    if (!skipUIUpdate) {
+      setNotifications(prev => prev.map(n => ids.includes(n._id) ? { ...n, read: true } : n));
+      setUnreadCount(prev => {
+        const newCount = Math.max(0, prev - unreadToReduce);
+        if (prev !== newCount) {
+          setCountChanged(true);
+          setTimeout(() => setCountChanged(false), 1000);
+        }
+        return newCount;
+      });
+    }
+    // --- End of Fix ---
+
     setMarkingAsRead(prev => new Set([...prev, ...ids]));
     const timeoutId = setTimeout(() => setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; }), 10000);
-    const unreadToReduce = notifications.filter(n => ids.includes(n._id) && !n.read).length;
     try {
       const res = await markNotificationsAsRead(ids, token);
       if (res && (res.status === 200 || res.data?.success)) {
-        if (!skipUIUpdate) {
-          setNotifications(prev => prev.map(n => ids.includes(n._id) ? { ...n, read: true } : n));
-          setUnreadCount(prev => { const c = Math.max(0, prev - unreadToReduce); if (prev !== c) { setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); } return c; });
-        }
+        // API call was successful, state is already updated.
         clearTimeout(timeoutId);
         setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
-        setTimeout(fetchNotifications, 2000);
       } else if (res?.status === 404) {
-        const localRead = JSON.parse(localStorage.getItem('readNotifications') || '[]');
-        const newRead = [...new Set([...localRead, ...ids])];
-        localStorage.setItem('readNotifications', JSON.stringify(newRead));
-        if (!skipUIUpdate) {
-          setNotifications(prev => prev.map(n => ids.includes(n._id) ? { ...n, read: true } : n));
-          setUnreadCount(prev => { const c = Math.max(0, prev - unreadToReduce); if (prev !== c) { setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); } return c; });
-        }
+        // API returned 404, but localStorage is already updated.
         clearTimeout(timeoutId);
         setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
       } else {
+        // Handle other non-successful API responses
         clearTimeout(timeoutId);
         setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
       }
     } catch {
+      // Handle API call failure
       clearTimeout(timeoutId);
       setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
-      if (skipUIUpdate) {
-        setNotifications(prev => prev.map(n => ids.includes(n._id) ? { ...n, read: false } : n));
-        setUnreadCount(prev => prev + unreadToReduce);
-      }
     }
   };
  
@@ -434,6 +402,13 @@ useEffect(() => {
                    </div>
                 ) : (
                   <div className="sm:hidden ml-auto mt-1 relative flex items-center gap-2 notification-container" >
+                    <button
+                      onClick={() => navigate('/inbox')}
+                      className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
+                      aria-label="Chat"
+                    >
+                      <PiChatCircleDotsBold className="text-xl" />
+                    </button>
                     <button
                       onClick={toggleNotifications}
                       className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
@@ -719,6 +694,14 @@ useEffect(() => {
             )}
             {/* Desktop: Bell placed left of profile icon */}
             {isLoggedIn && (
+              <>
+              <button
+                onClick={() => navigate('/inbox')}
+                className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
+                aria-label="Chat"
+              >
+                <PiChatCircleDotsBold className="text-xl" />
+              </button>
               <div className="hidden sm:flex items-center gap-2 relative notification-container">
                 <button
                   onClick={toggleNotifications}
@@ -808,6 +791,7 @@ useEffect(() => {
                 </div>
               )}
             </div>
+            </>
             )}
             {isLoggedIn && (
             <button

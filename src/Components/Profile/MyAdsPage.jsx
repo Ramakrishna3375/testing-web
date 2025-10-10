@@ -138,7 +138,11 @@ const MyAdsPage = () => {
                   {(ad.approvalStatus === 'Pending' || ad.approvalStatus === 'Rejected') && (
                     <div className="p-2 bg-gray-50 border-t">
                       <button 
-                        onClick={() => navigate(`/edit-ad/${ad.id || ad._id}`)} 
+                        onClick={() => {
+                          const category = ad.category?.name || 'unknown';
+                          const subcategory = ad.subcategory?.name || 'unknown';
+                          navigate(`/post-free-ad/${encodeURIComponent(category)}/${encodeURIComponent(subcategory)}?edit=${ad.id || ad._id}`);
+                        }}
                         className="w-full text-center bg-blue-500 text-white text-sm font-semibold py-2 rounded-md hover:bg-blue-600 transition-colors"
                       >
                         Edit Ad

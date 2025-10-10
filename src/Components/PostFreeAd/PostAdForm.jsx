@@ -1,12 +1,15 @@
 import { useForm } from "react-hook-form";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import {postNewAd, getAllCategories, getAllSubCategories, getStatesByCountryId, getCitiesByStateId} from "../../Services/api";
+import {postNewAd, updateAd, getAllCategories, getAllSubCategories, getStatesByCountryId, getCitiesByStateId} from "../../Services/api";
 
 export default function PostAdForm() {
   const navigate = useNavigate();
-  const { category, subcategory } = useParams();
+  const { category, subcategory } = useParams(); // These are still used to render the correct form fields
+  const [searchParams] = useSearchParams();
+  const adId = searchParams.get('edit');
+  const isEditMode = !!adId;
   const { register, handleSubmit, formState: { errors }, watch, reset, setValue } = useForm({ mode: "onChange", reValidateMode: "onChange" });
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -29,8 +32,9 @@ export default function PostAdForm() {
       const subRes = await getAllSubCategories();
       setSubcategories(subRes?.data?.subcategories || []);
     }
+
     fetchData();
-  }, []);
+  }, [isEditMode, adId, reset]);
 
   // Fetch states for default country id
   const fetchStates = async () => {
@@ -131,17 +135,23 @@ export default function PostAdForm() {
   };
 
   const onSubmit = async (data) => {
-  const token = sessionStorage.getItem("token");
-  setIsLoading(true); // Set loading to true
-  try {
-    const formData = new FormData();
+    const token = sessionStorage.getItem("token");
+    if (!token) {
+      alert("You must be logged in to post or update an ad.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
 
-    // Basic fields
-    formData.append("title", data.title);
-    formData.append("description", data.description || "");
-    formData.append("price", data.price || "");
-    formData.append("priceType", data.priceType || "Fixed");
-    formData.append("termsAccepted", data.termsAccepted ? "true" : "false");
+      // Basic fields
+      formData.append("title", data.title);
+      formData.append("description", data.description || "");
+      formData.append("price", data.price || "");
+      formData.append("priceType", data.priceType || "Fixed");
+      if (!isEditMode) {
+        formData.append("termsAccepted", data.termsAccepted ? "true" : "false");
+      }
 
     // Use category/subcategory IDs if available
     // Example mapping (replace with your actual mapping logic)
@@ -343,44 +353,46 @@ formData.append("subcategory", subcategoryId);
       console.log(pair[0], pair[1]);
     }
 
-    // Post ad
-    const res = await postNewAd(formData, token);
-    // Log the full response object
-    console.log("Backend response:", res);
+      // Choose between creating a new ad or updating an existing one
+      const apiCall = isEditMode ? updateAd(adId, formData, token) : postNewAd(formData, token);
+      const res = await apiCall;
 
-    // Check for success
-    if (res && res.data && res.data.success) {
-      alert("Ad sent for admin verification!");
-      reset(); 
-      setImages([]);
-      navigate('/post-free-ad'); // Redirect to post-free-ad page
-    } else if (res?.response?.data?.message) {
-      alert(res.response.data.message);
-      console.error("Backend error message:", res.response.data.message);
-      console.error("Backend error data:", res.response.data);
-    } else if (res?.response) {
-      alert("Failed to post ad. See console for backend error.");
-      console.error("Backend error response:", res.response);
-    } else {
-      alert("Failed to post ad.");
-      console.error("Unknown error, full response:", res);
+      // Log the full response object
+      console.log("Backend response:", res);
+
+      // Check for success
+      if (res && res.data && res.data.success) {
+        alert(isEditMode ? "Ad updated successfully and sent for verification!" : "Ad sent for admin verification!");
+        reset();
+        setImages([]);
+        navigate(isEditMode ? '/my-ads' : '/post-free-ad');
+      } else if (res?.response?.data?.message) {
+        alert(res.response.data.message);
+        console.error("Backend error message:", res.response.data.message);
+        console.error("Backend error data:", res.response.data);
+      } else if (res?.response) {
+        alert(`Failed to ${isEditMode ? 'update' : 'post'} ad. See console for backend error.`);
+        console.error("Backend error response:", res.response);
+      } else {
+        alert(`Failed to ${isEditMode ? 'update' : 'post'} ad.`);
+        console.error("Unknown error, full response:", res);
+      }
+    } catch (error) {
+      console.error(`Post/Update ad error (catch block):`, error);
+      if (error?.response?.data) {
+        console.error("Backend error (catch):", error.response.data);
+        alert(error.response.data.message || `Failed to ${isEditMode ? 'update' : 'post'} ad`);
+      } else {
+        alert(`Failed to ${isEditMode ? 'update' : 'post'} ad`);
+      }
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Post ad error (catch block):", error);
-    if (error?.response?.data) {
-      console.error("Backend error (catch):", error.response.data);
-      alert(error.response.data.message || "Failed to post ad");
-    } else {
-      alert("Failed to post ad");
-    }
-  } finally {
-    setIsLoading(false); // Set loading to false regardless of success or failure
-  }
-};
+  };
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-bold mb-4">Post Your Ad</h2>
+      <h2 className="text-xl font-bold mb-4">{isEditMode ? 'Edit Your Ad' : 'Post Your Ad'}</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
         {/* Title */}
         <div className="mb-4">
@@ -1368,7 +1380,7 @@ formData.append("subcategory", subcategoryId);
 </div>
 
         {/* Price */}
-        {category !== "Jobs" && (
+        
         <div className="mb-4">
           <label className="block font-semibold mb-1"> Price <span className="text-red-500">*</span> </label>
           <div className="flex gap-2 items-center">
@@ -1382,7 +1394,7 @@ formData.append("subcategory", subcategoryId);
           {errors.price && <span className="text-red-500 text-xs">{errors.price.message}</span>}
           </div>
         </div>
-        )}
+        
 
         {/* Location */}
         <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1459,25 +1471,27 @@ formData.append("subcategory", subcategoryId);
           <label className="block font-semibold mb-1">Email (optional)</label>
           <input type="email" {...register("email")} className="w-full border rounded px-3 py-2" placeholder="Email address (optional)" />
         </div>
-        <div className="mb-4">
-  <label className="inline-flex items-center">
-    <input
-      type="checkbox"
-      {...register("termsAccepted", { required: true })}
-      className="mr-2"
-    />
-    <span>
-      I accept the <a href="/terms" target="_blank" className="text-blue-600 underline">Terms & Conditions</a>
-      <span className="text-red-500">*</span>
-    </span>
-  </label>
-  {errors.termsAccepted && (
-    <span className="text-red-500 text-xs">You must accept the terms.</span>
-  )}
-</div>
+        {!isEditMode && (
+          <div className="mb-4">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                {...register("termsAccepted", { required: !isEditMode })}
+                className="mr-2"
+              />
+              <span>
+                I accept the <a href="/terms" target="_blank" className="text-blue-600 underline">Terms & Conditions</a>
+                <span className="text-red-500">*</span>
+              </span>
+            </label>
+            {errors.termsAccepted && (
+              <span className="text-red-500 text-xs">You must accept the terms.</span>
+            )}
+          </div>
+        )}
         <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700"
-          disabled={images.length === 0 || isLoading}> 
-          {isLoading ? "Posting Ad..." : "Post Ad"}
+          disabled={(images.length === 0 && !isEditMode) || isLoading}>
+          {isLoading ? (isEditMode ? 'Updating...' : 'Posting...') : (isEditMode ? 'Update Ad' : 'Post Ad')}
          </button>
       </form>
     </div>

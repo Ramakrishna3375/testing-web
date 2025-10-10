@@ -7,9 +7,6 @@ class SocketService {
     this.userId = null;
     this.token = null;
     this.isConnected = false;
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectDelay = 1000; // Start with 1 second
     this.activeRooms = new Set(); // Track active chat rooms
   }
   
@@ -34,9 +31,9 @@ class SocketService {
     this.socket = io(BASE_URL, {
       auth: { token },
       query: { userId },
-      reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
-      reconnectionDelay: this.reconnectDelay,
+      reconnection: true, // Enable automatic reconnection
+      reconnectionAttempts: 5, // Default is Infinity, but 5 is reasonable
+      reconnectionDelay: 1000, // Start with 1s, will increase automatically
       timeout: 10000,
       transports: ['websocket', 'polling'] // Prefer WebSocket, fallback to polling
     });
@@ -45,8 +42,6 @@ class SocketService {
     this.socket.on('connect', () => {
       console.log('Socket connected successfully:', this.socket.id);
       this.isConnected = true;
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
       
       // Dispatch custom event for components to listen to
       window.dispatchEvent(new CustomEvent('socket_connected', { 
@@ -70,6 +65,10 @@ class SocketService {
         window.dispatchEvent(new CustomEvent('socket_auth_error', { 
           detail: { error }
         }));
+        // Do not attempt to reconnect on auth errors, as it's a credential issue
+        if (this.socket) {
+          this.socket.disconnect();
+        }
       }
     });
 
@@ -82,24 +81,9 @@ class SocketService {
       }));
     });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      this.isConnected = false;
-      
-      // Handle authentication errors specifically
-      if (error.message === 'Authentication error' || error.message.includes('auth')) {
-        console.error('Socket authentication failed. Will not attempt reconnection.');
-        // Try to refresh token or notify user to login again
-        window.dispatchEvent(new CustomEvent('socket_auth_error', { detail: { error } }));
-      } else {
-        this.handleManualReconnect();
-      }
-    });
-
     this.socket.on('reconnect', (attemptNumber) => {
       console.log('Socket reconnected after', attemptNumber, 'attempts');
       this.isConnected = true;
-      this.reconnectAttempts = 0;
       
       // Re-join user room after reconnection
       if (this.userId) {
@@ -110,8 +94,7 @@ class SocketService {
     });
 
     this.socket.on('reconnect_error', (error) => {
-      console.error('Socket reconnection error:', error);
-      this.handleManualReconnect();
+      console.error('Socket reconnection error:', error); // Library handles this
     });
     
     this.socket.on('reconnect_failed', () => {
@@ -143,58 +126,14 @@ class SocketService {
     });
   }
   
-  // Handle manual reconnection with exponential backoff
-  handleManualReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Maximum reconnection attempts reached');
-      window.dispatchEvent(new CustomEvent('socket_reconnect_failed'));
-      return;
-    }
-    
-    // Clear any existing timer
-    if (this.reconnectionTimer) {
-      clearTimeout(this.reconnectionTimer);
-    }
-    
-    // Calculate backoff delay (exponential with jitter)
-    const baseDelay = 1000; // 1 second
-    const maxDelay = 30000; // 30 seconds
-    const exponentialDelay = Math.min(maxDelay, baseDelay * Math.pow(2, this.reconnectAttempts));
-    const jitter = Math.random() * 0.5 + 0.75; // Random between 0.75 and 1.25
-    const delay = Math.floor(exponentialDelay * jitter);
-    
-    console.log(`Attempting manual reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
-    
-    this.reconnectionTimer = setTimeout(() => {
-      this.reconnectAttempts++;
-      
-      // Only attempt reconnection if we have credentials and socket is not already connected
-      if (this.userId && this.token && (!this.socket || !this.isConnected)) {
-        if (this.socket) {
-          this.socket.close();
-          this.socket = null;
-        }
-        this.connect(this.userId, this.token);
-      }
-    }, delay);
-  }
-
   // Disconnect socket
   disconnect() {
-    // Clear any reconnection timer
-    if (this.reconnectionTimer) {
-      clearTimeout(this.reconnectionTimer);
-      this.reconnectionTimer = null;
-    }
-    
     if (this.socket) {
       console.log('Disconnecting socket...');
       // Remove all listeners before disconnecting to prevent memory leaks
       this.socket.removeAllListeners();
       this.socket.disconnect();
-      this.socket = null;
       this.isConnected = false;
-      this.reconnectAttempts = 0;
       
       // Dispatch a global event that socket is disconnected
       window.dispatchEvent(new CustomEvent('socket_disconnected', { detail: { reason: 'manual_disconnect' } }));

@@ -5,6 +5,7 @@ import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
 import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage } from '../../Services/api';
 import { useSocket } from '../../hooks/useSocket.js';
+import socketService from '../../hooks/socketService';
  
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -92,7 +93,8 @@ const ChatPage = () => {
   const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
   const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
  
-  const { connectSocket, disconnectSocket, isConnected, onConnect, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage } = useSocket(!!user?.id); // Pass login status
+  // Use the simplified socket hook. Connection is managed by Header.
+  const { isConnected, onConnect, joinChatRoom, leaveChatRoom, onChatMessage } = useSocket();
  
   // State for other participant's info
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
@@ -134,6 +136,22 @@ const ChatPage = () => {
       })
       .finally(() => setLoadingInbox(false));
   }, [user]);
+
+  // Fetch last message for each chat user
+  useEffect(() => {
+    if (!chatUsers.length || !user?.token) return;
+    Promise.all(chatUsers.map(async chatUser => {
+      try {
+        const res = await getChatMessagesByUserId(chatUser.id, user.token);
+        const msgs = res.data?.chatMessages || [];
+        return { adId: chatUser.id, lastMsg: msgs.at(-1) || null };
+      } catch { return { adId: chatUser.id, lastMsg: null }; }
+    })).then(results => {
+      const obj = {};
+      results.forEach(({ adId, lastMsg }) => { obj[adId] = lastMsg; });
+      setLastMessages(obj);
+    });
+  }, [chatUsers, user]);
  
   // Effect to set receiverId when paramUserId or chatUsers change
   useEffect(() => {
@@ -199,21 +217,6 @@ const ChatPage = () => {
     fetchAdDetails();
   }, [currentAdId, location.state]);
  
-  // Fetch last message for each chat user
-  useEffect(() => {
-    if (!chatUsers.length || !user?.token) return;
-    Promise.all(chatUsers.map(async chatUser => {
-      try {
-        const res = await getChatMessagesByUserId(chatUser.id, user.token);
-        const msgs = res.data?.chatMessages || [];
-        return { adId: chatUser.id, lastMsg: msgs.at(-1) || null };
-      } catch { return { adId: chatUser.id, lastMsg: null }; }
-    })).then(results => {
-      const obj = {};
-      results.forEach(({ adId, lastMsg }) => { obj[adId] = lastMsg; });
-      setLastMessages(obj);
-    });
-  }, [chatUsers, user]);
  
   // Filter chat users
   const filteredMessages = chatUsers.filter(u =>
@@ -229,7 +232,284 @@ const ChatPage = () => {
     return tb - ta;
   });
  
-  // Fetch messages for selected ad
+  // Function to fetch chat messages from API
+  const fetchChatMessages = async (userId, token) => {
+    console.log('Fetching chat messages with userId:', userId);
+    
+    if (!token || !user?.id) {
+      console.error('Cannot fetch messages: No token or user ID available');
+      return null;
+    }
+    
+    try {
+      setLoadingChat(true);
+      const res = await getChatMessagesByUserId(userId, token);
+      console.log('API messages received:', res.data);
+      
+      if (!res.data || !res.data.chatMessages) {
+        console.error('Invalid response format from getChatMessagesByUserId:', res);
+        setLoadingChat(false);
+        return null;
+      }
+      
+      // Sort messages by timestamp to ensure oldest messages are at the top
+      const sortedMessages = (res.data.chatMessages || []).sort((a, b) => {
+        const timeA = new Date(a.timestamp || a.createdAt).getTime();
+        const timeB = new Date(b.timestamp || b.createdAt).getTime();
+        return timeA - timeB; // Ascending order - oldest first
+      });
+      
+      // Ensure we have all message data properly formatted
+      const normalizedMessages = sortedMessages.map(msg => ({
+        ...msg,
+        _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
+        sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
+        receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
+        ad: typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId },
+        message: msg.message || msg.content,
+        timestamp: msg.timestamp || msg.createdAt || new Date().toISOString()
+      }));
+      
+      console.log('Normalized messages:', normalizedMessages);
+      
+      // Check if we have both sent and received messages
+      const sentMessages = normalizedMessages.filter(msg => 
+        msg.sender?._id === user?.id || msg.sender?.id === user?.id);
+      const receivedMessages = normalizedMessages.filter(msg => 
+        msg.receiver?._id === user?.id || msg.receiver?.id === user?.id);
+      
+      console.log(`Found ${sentMessages.length} sent messages and ${receivedMessages.length} received messages`);
+      
+      // Set all messages
+      setMessages(normalizedMessages);
+      
+      // Extract adId from messages if not provided
+      let chatAdId = null;
+      if (normalizedMessages.length > 0) {
+        chatAdId = normalizedMessages[0].ad?._id || normalizedMessages[0].ad?.id || normalizedMessages[0].adId;
+      }
+      
+      setLoadingChat(false);
+      return { messages: normalizedMessages, chatAdId };
+    } catch (error) {
+      console.error('Error fetching chat messages:', error);
+      setLoadingChat(false);
+      return null;
+    }
+  };
+  
+  // Function to fetch and listen for chat messages
+  const fetchAndListenForChatMessages = async (userId, token, adId) => {
+    console.log('Fetching and listening for chat messages with userId:', userId);
+    
+    if (!token || !user?.id) {
+      console.error('Cannot fetch messages: No token or user ID available');
+      setLoadingChat(false);
+      return null;
+    }
+    
+    try {
+      // First, fetch messages from API
+      const result = await fetchChatMessages(userId, token);
+      
+      if (!result) {
+        console.error('Failed to fetch chat messages');
+        return null;
+      }
+      
+      const { messages, chatAdId: extractedAdId } = result;
+      
+      // Use provided adId or extracted one
+      const finalAdId = adId || extractedAdId;
+      if (finalAdId) {
+        setCurrentAdId(finalAdId);
+        // The useSocket hook will handle joining the room
+      }
+      
+      return finalAdId;
+    } catch (error) {
+      console.error('Error in fetchAndListenForChatMessages:', error);
+      return null;
+    }
+  };
+  
+  // Set up socket message listener
+  const setupMessageListener = (userId) => {
+    console.log('Setting up message listener for userId:', userId);
+    
+    // First, remove any existing listeners to prevent duplicates
+    if (typeof socketService.offChatMessage === 'function') {
+      socketService.offChatMessage();
+    }
+    
+    // Then, add a new listener
+    const offChatMessage = onChatMessage((newMessage) => {
+      console.log('Received new chat message via socket:', newMessage);
+      
+      try {
+        // Skip if message is not for current chat
+        if (userId) {
+          const senderId = newMessage.sender?._id || newMessage.sender?.id || newMessage.sender;
+          const receiverId = newMessage.receiver?._id || newMessage.receiver?.id || newMessage.receiver;
+          const messageAdId = newMessage.ad?._id || newMessage.ad?.id || newMessage.adId || newMessage.ad;
+          
+          // Check if this message is relevant to the current chat
+          const isRelevantUser = senderId === userId || receiverId === userId || 
+                                senderId === user?.id || receiverId === user?.id;
+          
+          // More flexible ad relevance check - if currentAdId is set, check it, otherwise accept any ad
+          const isRelevantAd = !currentAdId || messageAdId === currentAdId;
+          
+          console.log('Message relevance check:', { 
+            isRelevantUser, 
+            isRelevantAd,
+            senderId,
+            receiverId,
+            userId,
+            currentUserId: user?.id,
+            messageAdId,
+            currentAdId
+          });
+          
+          // Only process messages relevant to this chat
+          // Check both user and ad relevance
+          if (!isRelevantUser || !isRelevantAd) {
+            console.log('Message not relevant to current chat, skipping');
+            return;
+          }
+          
+          // Log successful message match for debugging
+          console.log('Message is relevant to current chat, processing...');
+        }
+      
+      // Normalize message format
+      const normalized = {
+        ...newMessage,
+        _id: newMessage._id || newMessage.id || `temp-${Date.now()}`,
+        sender: typeof newMessage.sender === 'object' 
+          ? newMessage.sender 
+          : { _id: newMessage.sender },
+        receiver: typeof newMessage.receiver === 'object'
+          ? newMessage.receiver
+          : { _id: newMessage.receiver },
+        ad: typeof newMessage.ad === 'object'
+          ? newMessage.ad
+          : { _id: newMessage.ad || newMessage.adId || currentAdId }, // Fallback to currentAdId if needed
+        message: newMessage.message || newMessage.content,
+        timestamp: newMessage.timestamp || newMessage.createdAt || new Date().toISOString()
+      };
+      
+      console.log('Processing normalized message:', normalized);
+      
+      // Add to messages if not already present
+      setMessages(prev => {
+        // Check if message already exists
+        const exists = prev.some(msg => 
+          msg._id === normalized._id || 
+          (msg.message === normalized.message && 
+           msg.sender?._id === normalized.sender?._id &&
+           msg.receiver?._id === normalized.receiver?._id &&
+           Math.abs(new Date(msg.timestamp) - new Date(normalized.timestamp)) < 1000)
+        );
+        
+        if (exists) {
+          console.log('Message already exists, skipping');
+          return prev;
+        }
+        
+        console.log('Adding new message to chat');
+        // Add new message and sort by timestamp
+        const updated = [...prev, normalized].sort((a, b) => {
+          const timeA = new Date(a.timestamp || a.createdAt).getTime();
+          const timeB = new Date(b.timestamp || b.createdAt).getTime();
+          return timeA - timeB; // Ascending order - oldest first
+        });
+        
+        return updated;
+      });
+      
+      // Update last message for this chat
+      if (paramUserId) {
+        setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
+      }
+      
+      // We've already added the message to the state, so no need to refresh from API immediately
+      // This reduces unnecessary API calls and prevents race conditions
+      // Only refresh from API if it's been more than 5 seconds since the last refresh
+      if (user?.token && paramUserId) {
+        const now = Date.now();
+        const lastRefreshTime = window.lastMessageRefreshTime || 0;
+        const timeSinceLastRefresh = now - lastRefreshTime;
+        
+        // Reduced refresh frequency to 2 seconds to ensure more timely updates
+        if (timeSinceLastRefresh > 2000) { 
+          console.log('Refreshing messages from API after receiving socket message');
+          window.lastMessageRefreshTime = now;
+          
+          getChatMessagesByUserId(paramUserId, user.token)
+            .then(res => {
+              if (!res.data || !res.data.chatMessages) {
+                console.error('Invalid response format from getChatMessagesByUserId:', res);
+                return;
+              }
+              
+              // Normalize and sort messages
+              const normalizedMessages = (res.data.chatMessages || []).map(msg => ({
+                ...msg,
+                _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
+                sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
+                receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
+                ad: typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId },
+                message: msg.message || msg.content,
+                timestamp: msg.timestamp || msg.createdAt || new Date().toISOString()
+              })).sort((a, b) => {
+                const timeA = new Date(a.timestamp || a.createdAt).getTime();
+                const timeB = new Date(b.timestamp || b.createdAt).getTime();
+                return timeA - timeB; // Ascending order - oldest first
+              });
+              
+              // Update messages with the latest from API
+              setMessages(normalizedMessages);
+            })
+            .catch(err => console.error('Error refreshing messages:', err));
+        } else {
+          console.log(`Skipping API refresh, last refresh was ${timeSinceLastRefresh}ms ago`);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching chat messages:', error);
+    } });
+    return () => offChatMessage();
+  }
+
+  // Separate function to fetch participant details
+  const fetchParticipantDetails = async () => {
+    if (!paramUserId || !user?.token) return;
+    
+    try {
+      const res = await getChatMessagesByUserId(paramUserId, user.token);
+      if (res?.data?.chatMessages && res.data.chatMessages.length > 0) {
+        const firstMessage = res.data.chatMessages[0];
+        const otherId = firstMessage.sender._id === user.id ? firstMessage.receiver._id : firstMessage.sender._id;
+        if (otherId) {
+          const participantRes = await getUserDetails(user.token, otherId);
+          console.log('DEBUG: other participant details:', participantRes.data);
+          setOtherParticipantInfo(participantRes.data.data);
+          // Update currentUserInfo for display purposes
+          currentUserInfo.name = participantRes.data.data.firstName || 'Unknown User';
+          currentUserInfo.email = participantRes.data.data.email || 'N/A';
+          currentUserInfo.phone = participantRes.data.data.mobileNumber || 'Not provided';
+          currentUserInfo.location = `${participantRes.data.data.city?.name || ''}, ${participantRes.data.data.state?.name || ''}`.trim().replace(/^, |^ /, '') || 'N/A';
+          currentUserInfo.joinDate = participantRes.data.data.createdAt ? new Date(participantRes.data.data.createdAt).toLocaleDateString() : 'N/A';
+          currentUserInfo.avatar = participantRes.data.data.profilePicture || null;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching participant details:', error);
+    }
+  };
+
+  // Fetch messages for selected ad - using socket for real-time updates
   useEffect(() => {
     console.log('DEBUG: user object (for messages):', user);
     console.log('DEBUG: paramAdId (for messages):', paramUserId);
@@ -239,72 +519,53 @@ const ChatPage = () => {
       setMessages([]);
       setLoadingChat(false);
       return;
+    } 
+    
+    // Use the combined function to fetch and listen for messages
+    fetchAndListenForChatMessages(paramUserId, user.token, currentAdId)
+      .then(adId => {
+        if (adId) {
+          console.log(`Successfully connected to chat room for ad: ${adId}`);
+        }
+      });
+      
+    // Fetch participant details separately
+    fetchParticipantDetails();
+  }, [paramUserId, user?.token]);
+  
+  // Load initial messages and ensure socket connection
+  useEffect(() => {
+    if (paramUserId && user?.token) {
+      fetchAndListenForChatMessages(paramUserId, user.token, currentAdId);
     }
-    setLoadingChat(true);
-    console.log('Fetching chat messages for user ID:', paramUserId, 'token:', user.token ? 'present' : 'missing');
-    getChatMessagesByUserId(paramUserId, user.token)
-      .then(res => {
-        console.log('DEBUG: getChatMessagesByAdId raw response:', res);
-        console.log('DEBUG: getChatMessagesByAdId response data:', res.data);
-        setMessages(res.data.chatMessages || []);
-
-        // If adId is not already set, try to get it from the first message
-        if (!currentAdId && res.data.chatMessages && res.data.chatMessages.length > 0) {
-          setCurrentAdId(res.data.chatMessages[0].ad._id || res.data.chatMessages[0].ad.id);
-        }
-
-        // Determine other participant ID and fetch details
-        if (res.data.chatMessages && res.data.chatMessages.length > 0) {
-          const firstMessage = res.data.chatMessages[0];
-          const otherId = firstMessage.sender._id === user.id ? firstMessage.receiver._id : firstMessage.sender._id;
-          if (otherId) {
-            getUserDetails(user.token, otherId) // Pass user.token first, then otherId
-              .then(participantRes => {
-                console.log('DEBUG: other participant details:', participantRes.data);
-                setOtherParticipantInfo(participantRes.data.data);
-                // Update currentUserInfo for display purposes
-                currentUserInfo.name = participantRes.data.data.firstName || 'Unknown User';
-                currentUserInfo.email = participantRes.data.data.email || 'N/A';
-                currentUserInfo.phone = participantRes.data.data.mobileNumber || 'Not provided';
-                currentUserInfo.location = `${participantRes.data.data.city?.name || ''}, ${participantRes.data.data.state?.name || ''}`.trim().replace(/^, |^ /, '') || 'N/A';
-                currentUserInfo.joinDate = participantRes.data.data.createdAt ? new Date(participantRes.data.data.createdAt).toLocaleDateString() : 'N/A';
-                currentUserInfo.avatar = participantRes.data.data.profilePicture || null;
-                // Note: Rating and totalAds would need additional API calls or be part of user details
-              })
-              .catch(error => {
-                console.error('Error fetching other participant details:', error);
-              });
-          }
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching chat messages:', error);
-        setMessages([]);
-      })
-      .finally(() => setLoadingChat(false));
-  }, [paramUserId, user]);
+    
+    // Make sure we're connected to the socket and joined to the chat room
+    if (user?.id && currentAdId) {
+      console.log(`Joining chat room on mount: ${currentAdId}`);
+      if (isConnected()) joinChatRoom(currentAdId);
+    }
+    
+    return () => {
+      setLoadingChat(false);
+      // Don't leave the chat room when unmounting to keep receiving messages
+    };
+  }, [paramUserId, user, currentAdId, joinChatRoom]);
  
   // Derive and show seller email in header when entering from product page or when messages/users load
   useEffect(() => {
     let email = null;
-
-    // 1) From chatUsers list
-    const match = chatUsers.find(u => u.id === paramUserId);
-    if (match?.email) email = match.email;
-
-    // 2) From messages (if any)
-    if (!email && messages && messages.length > 0) {
-      const first = messages[0];
-      const senderId = first?.sender?._id || first?.sender?.id || first?.sender;
-      const other = senderId === user?.id ? first?.receiver : first?.sender;
-      email = other?.email || email;
-    }
-
-    // 3) From navigation state (if provided)
-    if (!email && location.state?.sellerEmail) {
+ 
+    // 1) Prioritize email from navigation state (most direct)
+    if (location.state?.sellerEmail) {
       email = location.state.sellerEmail;
     }
-
+ 
+    // 2) Fallback to chatUsers list
+    const match = chatUsers.find(u => u.id === paramUserId);
+    if (!email && match?.email) {
+      email = match.email;
+    }
+ 
     setOtherDisplayEmail(email || null);
   }, [chatUsers, paramUserId, messages, user, location.state]);
 
@@ -344,96 +605,111 @@ const ChatPage = () => {
 
   // Scroll to bottom on new message
   useEffect(() => {
-    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll if the container exists
+    if (chatMessagesEndRef.current) {
+      // Use a more controlled approach to scroll the chat container only
+      const chatContainer = document.querySelector('.relative.z-10.h-full.overflow-y-auto.p-3');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }
   }, [messages]);
  
-  // Join/leave chat room; also re-join on socket reconnect
+  // Join chat room and listen for messages
   useEffect(() => {
     if (!(user?.id && currentAdId)) return;
-
+ 
     const tryJoin = () => {
       if (isConnected()) joinChatRoom(currentAdId);
     };
-
+  
     // Attempt immediately if connected
     tryJoin();
 
-    // Also join when socket (re)connects
     const offConnect = onConnect(() => {
-      joinChatRoom(currentAdId);
-    });
-
-    return () => {
-      if (typeof offConnect === 'function') offConnect();
-      if (isConnected()) leaveChatRoom(currentAdId);
-    };
-  }, [user?.id, currentAdId, isConnected, joinChatRoom, leaveChatRoom, onConnect]);
-
-  // Listen for incoming messages; keep listener active across reconnects
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const handleIncomingMessage = (newMessage) => {
-      const senderId = newMessage?.sender?._id || newMessage?.sender?.id;
-      const receiverIdMsg = newMessage?.receiver?._id || newMessage?.receiver?.id;
-
-      const involvesMe = senderId === user.id || receiverIdMsg === user.id;
-      const involvesCounterparty = senderId === paramUserId || receiverIdMsg === paramUserId;
-      if (!involvesMe || !involvesCounterparty) return;
-
-      const newMsgAdId = newMessage?.ad?._id || newMessage?.ad?.id || newMessage?.ad;
-      const adMatches = !currentAdId || (newMsgAdId && newMsgAdId === currentAdId);
-      if (!adMatches) return;
-
-      // If currentAdId is not yet known, set it from the first incoming message
-      if (!currentAdId && newMsgAdId) {
-        setCurrentAdId(newMsgAdId);
-      }
-
-      const normalized = {
-        ...newMessage,
-        sender: {
-          ...(newMessage.sender || {}),
-          _id: newMessage?.sender?._id || newMessage?.sender?.id,
-          profilePicture: ((newMessage?.sender?._id || newMessage?.sender?.id) === user.id)
-            ? (user?.profilePicture || null)
-            : (newMessage?.sender?.profilePicture || null),
-        },
-      };
-
-      setMessages(prev => [...prev, normalized]);
-      setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
-    };
-
-    // Attach the listener now (if socket exists it will subscribe, returns off)
-    const offMsg = onChatMessage(handleIncomingMessage);
-
-    // Also re-attach on reconnect to be safe
-    const offConnect = onConnect(() => {
-      // Re-subscribe to ensure listener exists after reconnect
-      if (typeof offMsg === 'function') offMsg();
-      onChatMessage(handleIncomingMessage);
+      if (currentAdId) joinChatRoom(currentAdId);
     });
 
     return () => {
       if (typeof offMsg === 'function') offMsg();
       if (typeof offConnect === 'function') offConnect();
     };
-  }, [user?.id, paramUserId, onChatMessage, onConnect, currentAdId]);
- 
-  // Send message
+  }, [user?.id, currentAdId, isConnected, joinChatRoom, onConnect]);
+  
+ {/* ---------------------------------------------------------------------------------------------------------------------- */}
+  // Send message using socket for instant delivery
   const handleSendMessage = async () => {
     // Prevent sending a message to yourself
     if (user?.id && (receiverId === user.id || paramUserId === user.id)) {
-      const err =  "Cannot send message to yourself." ;
+      const err = "Cannot send message to yourself.";
       console.warn('Send blocked:', err);
       alert(JSON.stringify(err, null, 2));
       return;
     }
     if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // Ensure currentAdId is present
+    
+    // Create message object
+    const messageData = {
+      senderId: user.id, // Backend might expect senderId from socket context, but good to have
+      receiver: receiverId,
+      adId: currentAdId,
+      message: message.trim(),
+    };
+    
+    // Optimistically add message to UI
+    const optimisticMessage = {
+      ...messageData,
+      _id: `temp-${Date.now()}`, // Temporary ID until server confirms
+      sender: {
+        _id: user.id,
+        profilePicture: user?.profilePicture || null
+      },
+      receiver: {
+        _id: receiverId
+      },
+      ad: {
+        _id: currentAdId
+      },
+      pending: true // Mark as pending until confirmed
+    };
+    
+    // Add message to UI and sort by timestamp
+    setMessages(prev => {
+      const updated = [...prev, optimisticMessage].sort((a, b) => {
+        const timeA = new Date(a.timestamp || a.createdAt).getTime();
+        const timeB = new Date(b.timestamp || b.createdAt).getTime();
+        return timeA - timeB; // Ascending order - oldest first
+      });
+      return updated;
+    });
+    
+    // Update last message for this chat
+    setLastMessages(prev => ({ ...prev, [paramUserId]: optimisticMessage }));
+    
+    setMessage(''); // Clear input field immediately
+    
     try {
-      const res = await sendChatMessage(receiverId, currentAdId, message.trim(), user.token);
+      // Ensure we're in the chat room before sending
+      if (isConnected()) {
+        joinChatRoom(currentAdId);
 
+        // Send via socket using the 'sendMessage' event
+        console.log('Emitting chat message via socket service:', messageData);
+        socketService.emitChatMessage(messageData);
+
+      } else {
+        console.warn('Socket not connected, falling back to API only');
+      }
+      
+      // Also send via API as backup and to ensure persistence
+      console.log('Sending message via API:', {
+        receiverId,
+        adId: currentAdId,
+        message: message.trim()
+      });
+      const res = await sendChatMessage(receiverId, currentAdId, message.trim(), user.token);
+      console.log('API message response:', res);
+      
       if (res && res.data && res.data.chatMessage) {
         const sent = res.data.chatMessage;
         const normalized = {
@@ -444,22 +720,26 @@ const ChatPage = () => {
             profilePicture: user?.profilePicture || sent?.sender?.profilePicture || null
           }
         };
-        setMessages(prev => [...prev, normalized]);
-        setLastMessages(prev => ({ ...prev, [paramUserId || receiverId]: normalized }));
-        setMessage('');
+        
+        // Replace the optimistic message with the confirmed one
+        setMessages(prev => prev.map(msg => 
+          msg._id === optimisticMessage._id ? normalized : msg
+        ));
+        
+        setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
       } else {
         console.error('Failed to send message: Unexpected API response', res);
-        alert('Failed to send message: Server did not return expected message data.');
       }
     } catch (error) {
-      console.error('Failed to send message via API:', error);
-      alert('Failed to send message.');
+      console.error('Error sending message:', error);
+      // Mark the optimistic message as failed
+      setMessages(prev => prev.map(msg => 
+        msg._id === optimisticMessage._id ? {...msg, failed: true, pending: false} : msg
+      ));
     }
   };
  
   // UI
-  const isChatView = location.pathname.startsWith('/chat/');
-
   if (!isLoggedIn) {
     return (
       <div className="font-sans min-h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -501,7 +781,7 @@ const ChatPage = () => {
         </div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-4 h-[calc(100vh-120px)] bg-white rounded-lg overflow-hidden shadow-lg">
           {/* Inbox List */}
-          <div className={`${isChatView && paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
+          <div className={`${paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
             <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-100">
               <h2 className="text-xl font-bold text-pink-600 m-0">Inbox</h2>
               <div className="flex gap-3 cursor-pointer text-gray-600 text-lg">
@@ -569,8 +849,8 @@ const ChatPage = () => {
             </div>
           </div>
           {/* Chat Interface */}
-          <div className={`${isChatView && paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
-            {isChatView && paramUserId ? (
+          <div className={`${paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
+            {paramUserId ? (
               <>
                 <div className="bg-blue-600 p-3 flex justify-between items-center text-white flex-shrink-0 relative z-20">
                   <div className="flex items-center gap-3">
@@ -595,8 +875,8 @@ const ChatPage = () => {
                     backgroundAttachment: 'fixed',
                     opacity: '0.1'
                   }} />
-                  <div className="relative z-10 h-full overflow-y-auto p-3">
-                    <div className="min-h-full">
+                  <div className="relative z-10 h-full overflow-y-auto p-3 pb-4">
+                    <div className="min-h-full flex flex-col">
                       {loadingChat ? (
                         <div className="flex items-center justify-center h-full text-gray-500">Loading chat...</div>
                       ) : messages.length === 0 ? (
@@ -766,7 +1046,6 @@ const ChatPage = () => {
       <Footer />
     </div>
   );
-};
- 
+}
+
 export default ChatPage;
- 

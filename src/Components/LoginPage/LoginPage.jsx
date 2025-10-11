@@ -70,9 +70,24 @@ const UserLogin = () => {
         if (isSuccess) {
           const data = resp?.data;
           const token = data?.data?.token || data?.token || data?.accessToken || data?.jwt;
+          const userData = data?.data?.user || data?.user || { email };
+          const userId = userData?.id || userData?._id;
+          
           if (token) {
+            // Store auth data in session storage
             sessionStorage.setItem('token', token);
-            sessionStorage.setItem('user', JSON.stringify({ email }));
+            sessionStorage.setItem('user', JSON.stringify(userData));
+            sessionStorage.setItem('isLoggedIn', 'true');
+            
+            // Import and use socketService directly to ensure immediate connection
+            import('../../hooks/socketService').then(module => {
+              const socketService = module.default;
+              // Connect socket immediately after successful login
+              if (userId && token) {
+                console.log('Connecting socket after login success');
+                socketService.connect(userId, token);
+              }
+            });
           }
           navigate('/homepage');
         } else {

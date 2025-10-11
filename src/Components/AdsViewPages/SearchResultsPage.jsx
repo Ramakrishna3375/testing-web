@@ -15,23 +15,41 @@ const SearchResultsPage = () => {
   const [adsError, setAdsError] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
+  // Function to apply location filter
+  const applyLocationFilter = (allAds) => {
+    try {
+      const storedLocation = sessionStorage.getItem('selectedLocation');
+      const selectedLocation = storedLocation ? JSON.parse(storedLocation) : null;
+      if (selectedLocation && selectedLocation.name) {
+        return allAds.filter(ad => {
+          const city = ad?.location?.city || ad?.city;
+          return city && city.toLowerCase() === selectedLocation.name.toLowerCase();
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing selected location:", e);
+    }
+    return allAds; // Return all ads if no location is set or on error
+  };
+
   useEffect(() => {
     if (!query) {
       setAds([]);
       return;
     }
+
     setLoadingAds(true);
     setAdsError(null);
 
     searchAdsByTitle(query)
       .then((res) => {
-        // Handle different response structures gracefully
-        if (res?.data?.postAd) {
-          setAds([res.data.postAd]); // Wrap single ad into array
-        } else if (Array.isArray(res?.data?.ads)) {
-          setAds(res.data.ads);
-        } else if (Array.isArray(res?.data?.postAds)) {
-          setAds(res.data.postAds);
+        let fetchedAds = [];
+        if (res?.data?.postAd) fetchedAds = [res.data.postAd];
+        else if (Array.isArray(res?.data?.ads)) fetchedAds = res.data.ads;
+        else if (Array.isArray(res?.data?.postAds)) fetchedAds = res.data.postAds;
+
+        if (fetchedAds.length > 0) {
+          setAds(applyLocationFilter(fetchedAds));
         } else {
           setAds([]);
         }
@@ -67,7 +85,13 @@ const SearchResultsPage = () => {
               <div
                 key={ad.id || ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2.5 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
-                onClick={() => navigate(`/ad/${ad.id || ad._id}`)}
+                onClick={() => navigate(`/ad/${ad.id || ad._id}`, { 
+                  state: { 
+                    from: "search", 
+                    categoryName: ad.category?.name, 
+                    categoryPath: `/ads/${ad.category?.id || ad.category?._id}`
+                  } 
+                })}
               >
                 <img
                   src={(ad.images && ad.images[0]) ? ad.images[0] : "/no-image.png"}

@@ -93,8 +93,7 @@ const ChatPage = () => {
   const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
   const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
  
-  // Use the simplified socket hook. Connection is managed by Header.
-  const { isConnected, onConnect, joinChatRoom, leaveChatRoom, onChatMessage } = useSocket();
+  const { connectSocket, disconnectSocket, isConnected, onConnect, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage, subscribeToNotifications } = useSocket(!!user?.id, user?.id); // Pass login status and user ID
  
   // State for other participant's info
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
@@ -242,7 +241,7 @@ const ChatPage = () => {
     }
     
     try {
-      setLoadingChat(true);
+    setLoadingChat(true);
       const res = await getChatMessagesByUserId(userId, token);
       console.log('API messages received:', res.data);
       
@@ -430,7 +429,7 @@ const ChatPage = () => {
       
       // Update last message for this chat
       if (paramUserId) {
-        setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
+      setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
       }
       
       // We've already added the message to the state, so no need to refresh from API immediately
@@ -533,92 +532,10 @@ const ChatPage = () => {
     fetchParticipantDetails();
   }, [paramUserId, user?.token]);
   
-  // Load initial messages and ensure socket connection
-  useEffect(() => {
-    if (paramUserId && user?.token) {
-      fetchAndListenForChatMessages(paramUserId, user.token, currentAdId);
-    }
-    
-    // Make sure we're connected to the socket and joined to the chat room
-    if (user?.id && currentAdId) {
-      console.log(`Joining chat room on mount: ${currentAdId}`);
-      if (isConnected()) joinChatRoom(currentAdId);
-    }
-    
-    return () => {
-      setLoadingChat(false);
-      // Don't leave the chat room when unmounting to keep receiving messages
-    };
-  }, [paramUserId, user, currentAdId, joinChatRoom]);
- 
-  // Derive and show seller email in header when entering from product page or when messages/users load
-  useEffect(() => {
-    let email = null;
- 
-    // 1) Prioritize email from navigation state (most direct)
-    if (location.state?.sellerEmail) {
-      email = location.state.sellerEmail;
-    }
- 
-    // 2) Fallback to chatUsers list
-    const match = chatUsers.find(u => u.id === paramUserId);
-    if (!email && match?.email) {
-      email = match.email;
-    }
- 
-    setOtherDisplayEmail(email || null);
-  }, [chatUsers, paramUserId, messages, user, location.state]);
-
-  // Fallback: if we still don't have the seller email, fetch it directly by seller (param) userId
-  useEffect(() => {
-    if (!paramUserId || !user?.token) return;
-    if (otherDisplayEmail) return; // already resolved from other sources
-
-    getUserDetails(user.token, paramUserId)
-      .then((res) => {
-        const data = res?.data?.data;
-        const email = data?.email;
-        if (email) {
-          setOtherDisplayEmail(email);
-          setOtherParticipantInfo((prev) => prev || data);
-          // Ensure the desktop inbox (left side) shows this seller even if not part of chat list yet
-          setChatUsers((prev) => {
-            if (prev.some((u) => u.id === paramUserId)) return prev;
-            return [
-              ...prev,
-              {
-                id: paramUserId,
-                email,
-                profilePicture: data?.profilePicture || null,
-                displayName: email,
-              },
-            ];
-          });
-          // Allow showing the list immediately if it was waiting
-          setLoadingInbox(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Fallback fetch of seller user details failed:', err);
-      });
-  }, [paramUserId, user?.token, otherDisplayEmail]);
-
-  // Scroll to bottom on new message
-  useEffect(() => {
-    // Only scroll if the container exists
-    if (chatMessagesEndRef.current) {
-      // Use a more controlled approach to scroll the chat container only
-      const chatContainer = document.querySelector('.relative.z-10.h-full.overflow-y-auto.p-3');
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-    }
-  }, [messages]);
- 
   // Join chat room and listen for messages
   useEffect(() => {
     if (!(user?.id && currentAdId)) return;
- 
+
     const tryJoin = () => {
       if (isConnected()) joinChatRoom(currentAdId);
     };
@@ -631,13 +548,27 @@ const ChatPage = () => {
     });
 
     return () => {
-      if (typeof offMsg === 'function') offMsg();
+      if (typeof onChatMessage === 'function') onChatMessage();
       if (typeof offConnect === 'function') offConnect();
     };
-  }, [user?.id, currentAdId, isConnected, joinChatRoom, onConnect]);
-  
- {/* ---------------------------------------------------------------------------------------------------------------------- */}
-  // Send message using socket for instant delivery
+  }, [user?.id, currentAdId, paramUserId, isConnected, joinChatRoom, onConnect, onChatMessage]);
+
+  // Subscribe to notifications
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsubscribe = subscribeToNotifications((notification) => {
+      console.log('=================== NEW NOTIFICATION RECEIVED IN CHAT PAGE ===================', notification);
+      console.log('New Notification Received:', notification);
+      alert(notification.message || 'You have a new notification!');
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [user?.id, subscribeToNotifications]);
+
+  // Send message
   const handleSendMessage = async () => {
     // Prevent sending a message to yourself
     if (user?.id && (receiverId === user.id || paramUserId === user.id)) {
@@ -709,7 +640,7 @@ const ChatPage = () => {
       });
       const res = await sendChatMessage(receiverId, currentAdId, message.trim(), user.token);
       console.log('API message response:', res);
-      
+
       if (res && res.data && res.data.chatMessage) {
         const sent = res.data.chatMessage;
         const normalized = {
@@ -1047,5 +978,5 @@ const ChatPage = () => {
     </div>
   );
 }
-
+ 
 export default ChatPage;

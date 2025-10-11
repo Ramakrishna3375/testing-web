@@ -6,6 +6,7 @@ import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails, searchCities } from "../../Services/api";
 import socketService from "../../Services/socketService";
+import { useSocket } from '../../hooks/useSocket.js';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -35,6 +36,9 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
+  
+  // Use useSocket hook
+  const { connectSocket, disconnectSocket, isConnected, onConnect, subscribeToNotifications, subscribeToNotificationUpdates, subscribeToNotificationCount } = useSocket(isLoggedIn, user?.id);
   
   // Location search states
   const [locationQuery, setLocationQuery] = useState("");
@@ -220,26 +224,21 @@ const Header = () => {
 
   // SOCKET.IO: Listen for notifications in real-time
   useEffect(() => {
-    if (!isLoggedIn) {
-      // Clear header-specific listeners when logged out
-      socketService.off('newNotification');
-      socketService.off('notificationUpdate');
-      socketService.off('notificationCount');
+    if (!isLoggedIn || !user?.id) {
+      // Disconnect socket and clear header-specific listeners when logged out
+      disconnectSocket();
       return;
     }
 
-    const token = sessionStorage.getItem('token');
-    const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
-    const userId = rawUser?.id || rawUser?._id;
-    if (!token || !userId) return;
+    // Re-connect socket if not already connected (useSocket handles primary connection)
+    if (isLoggedIn && user?.id && !isConnected()) {
+      connectSocket();
+    }
 
     const attachListeners = () => {
-      // Remove any previous header-specific listeners to avoid duplicates
-      socketService.off('newNotification');
-      socketService.off('notificationUpdate');
-      socketService.off('notificationCount');
-
-      socketService.onNewNotification(notification => {
+      // Clear existing listeners to prevent duplicates (useSocket handles this internally)
+      
+      const unsubscribeNew = subscribeToNotifications(notification => {
         setNotifications(prev => [notification, ...prev]);
         if (!notification.read) {
           setUnreadCount(prev => {
@@ -250,42 +249,42 @@ const Header = () => {
         }
       });
 
-      socketService.onNotificationUpdate(data => {
+      const unsubscribeUpdate = subscribeToNotificationUpdates(data => {
         if (Array.isArray(data.notificationIds)) {
           setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
           setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
         }
       });
 
-      socketService.onNotificationCount(count => {
+      const unsubscribeCount = subscribeToNotificationCount(count => {
         setUnreadCount(count);
       });
+      return () => {
+        unsubscribeNew();
+        unsubscribeUpdate();
+        unsubscribeCount();
+      };
     };
 
-    const ensureConnected = () => {
-      if (!socketService.isSocketConnected()) {
-        socketService.connect(userId, token);
-      }
-    };
+    let cleanUpListeners = () => {};
+    if (isConnected()) {
+      cleanUpListeners = attachListeners();
+      // Ensure joinUserRoom is called for the Header too if it's the first component to connect
+      // However, useSocket already handles joinUserRoom on connect, so this might be redundant here
+      // We should rely on the primary useSocket instance for joining the user room
+    }
 
-    const onConnect = () => {
-      socketService.joinUserRoom(userId);
-      attachListeners();
-    };
-
-    // Attach connect listener for initial connection and reconnects
-    const unsubscribeConnect = socketService.onConnect(onConnect);
-
-    // Try to ensure connection immediately if not already connected
-    ensureConnected();
+    // Ensure listeners are re-attached on reconnects
+    const unsubscribeOnConnect = onConnect(() => {
+      cleanUpListeners(); // Clean up old listeners before re-attaching
+      cleanUpListeners = attachListeners();
+    });
 
     return () => {
-      socketService.off('newNotification');
-      socketService.off('notificationUpdate');
-      socketService.off('notificationCount');
-      unsubscribeConnect(); // Clean up connect listener
+      cleanUpListeners();
+      unsubscribeOnConnect();
     };
-  }, [isLoggedIn, user]);
+  }, [isLoggedIn, user?.id, connectSocket, disconnectSocket, isConnected, onConnect, subscribeToNotifications, subscribeToNotificationUpdates, subscribeToNotificationCount]);
  
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
@@ -477,7 +476,7 @@ const Header = () => {
                           sessionStorage.removeItem('user');
                           sessionStorage.removeItem('token');
                           sessionStorage.removeItem('isLoggedIn');
-                          socketService.disconnect();
+                          disconnectSocket(); // Use disconnectSocket from useSocket
                         } catch {}
                         setShowProfileMenu(false);
                         navigate('/login', { replace: true });
@@ -751,7 +750,7 @@ const Header = () => {
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('token');
                         sessionStorage.removeItem('isLoggedIn');
-                        socketService.disconnect();
+                        disconnectSocket(); // Use disconnectSocket from useSocket
                       } catch {}
                       setShowProfileMenu(false);
                       navigate('/login', { replace: true });

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useCallback } from 'react';
 import socketService from './socketService';
 
 /**
@@ -37,9 +37,9 @@ export const useSocket = () => {
     socketService.emitChatMessage(messageData);
   }, []);
 
-  const onChatMessage = useCallback((callback) => {
+  const onChatMessage = useCallback((callback, adId) => {
     console.log('Setting up chat message listener');
-    return socketService.onChatMessage(callback);
+    return socketService.onChatMessage(callback, adId);
   }, []);
 
   return {

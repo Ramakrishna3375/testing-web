@@ -111,6 +111,12 @@ export const getChatMessagesByUserId = async (userId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chats/messages/${userId}`, null, { Authorization: `Bearer ${token}` });
 };
 
+// Delete a chat message
+export const deleteMessage = async (messageId, token) => {
+  console.log('API: Deleting chat message with ID:', messageId, 'with token:', token ? 'Present' : 'Missing');
+  return await commonRequest("DELETE", `${BASE_URL}/api/chats/messages/${messageId}`, null, { Authorization: `Bearer ${token}` });
+};
+
 //User Login
 export const userLogin = async (email, password) => {
   return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/authenticate`, { email, password });

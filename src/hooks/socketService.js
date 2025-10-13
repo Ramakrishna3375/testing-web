@@ -111,6 +111,31 @@ class SocketService {
         detail: { notification }
       }));
     });
+
+    // Setup chat message listener once
+    const messageHandler = (message) => {
+      console.log('Received chat message:', message);
+
+      // If message contains ad info, ensure we're in the right room
+      const adId = message?.adId || (typeof message?.ad === 'object'
+        ? (message?.ad?._id || message?.ad?.id)
+        : message?.ad);
+      if (adId) {
+        const roomId = `${adId}:chat`;
+        if (!this.activeRooms.has(roomId)) {
+          this.joinChatRoom(adId);
+        }
+      }
+
+      // Dispatch a global event for this message
+      window.dispatchEvent(new CustomEvent('chat_message_received', {
+        detail: { message }
+      }));
+    };
+
+    this.socket.on('chatMessage', messageHandler);
+    this.socket.on('newChatMessage', messageHandler);
+    this.socket.on('message', messageHandler);
   }
   
   // Rejoin all active chat rooms after reconnection
@@ -331,62 +356,23 @@ class SocketService {
   }
 
   // Listen for chat messages
-  onChatMessage(callback) {
+  onChatMessage(callback, adId) {
     if (!this.socket) {
       console.error('Cannot listen for messages: Socket not initialized');
       return () => {};
     }
-
-    // Remove any existing listeners to prevent duplicates
-    this.socket.off('chatMessage');
-    this.socket.off('newChatMessage');
-    this.socket.off('message');
-
-    // Set up listeners for different possible event names
-    const messageHandler = (message) => {
-      console.log('Received chat message:', message);
-      
-      // If message contains ad info, ensure we're in the right room
-      const adId = message?.adId || (typeof message?.ad === 'object'
-        ? (message?.ad?._id || message?.ad?.id)
-        : message?.ad);
-      if (adId) {
-        const roomId = `${adId}:chat`;
-        if (!this.activeRooms.has(roomId)) {
-          this.joinChatRoom(adId);
-        }
-      }
-      
-      // Dispatch a global event for this message
-      window.dispatchEvent(new CustomEvent('chat_message_received', { 
-        detail: { message }
-      }));
-      
-      callback(message);
-    };
-
-    this.socket.on('chatMessage', messageHandler);
-    this.socket.on('newChatMessage', messageHandler);
-    this.socket.on('message', messageHandler);
-
-    // Set up reconnect handler to re-register these listeners
-    const reconnectHandler = () => {
-      console.log('Reconnected, re-registering chat message listeners');
-      this.socket.on('chatMessage', messageHandler);
-      this.socket.on('newChatMessage', messageHandler);
-      this.socket.on('message', messageHandler);
-    };
     
-    this.socket.on('reconnect', reconnectHandler);
-
-    // Return cleanup function
-    return () => {
-      if (this.socket) {
-        this.socket.off('chatMessage', messageHandler);
-        this.socket.off('newChatMessage', messageHandler);
-        this.socket.off('message', messageHandler);
-        this.socket.off('reconnect', reconnectHandler);
+    const handler = ({ detail }) => {
+      const message = detail.message;
+      const messageAdId = message?.adId || message?.ad?._id || message?.ad?.id || message?.ad;
+      // If an adId is provided, only fire callback for that chat.
+      if (!adId || adId === messageAdId) {
+        callback(message);
       }
+    };
+    window.addEventListener('chat_message_received', handler);
+    return () => {
+      window.removeEventListener('chat_message_received', handler);
     };
   }
 

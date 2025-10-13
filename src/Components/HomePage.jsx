@@ -273,11 +273,21 @@ const HomePage = () => {
                 style={{ transform: `translateX(-${current * 100}%)` }}>
               {banners.map((banner, index) => (
                 <div key={banner._id || index} className="w-full flex-shrink-0">
-                  <img
-                    src={banner.image}
-                    alt={banner.title || `Banner ${index + 1}`}
-                    className="w-full h-38 sm:h-44 md:h-50 lg:h-72 object-cover rounded-lg"
-                  />
+                  {banner.link ? (
+                    <a href={banner.link} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      <img
+                        src={banner.image}
+                        alt={banner.title || `Banner ${index + 1}`}
+                        className="w-full h-38 sm:h-44 md:h-50 lg:h-72 object-cover rounded-lg"
+                      />
+                    </a>
+                  ) : (
+                    <img
+                      src={banner.image}
+                      alt={banner.title || `Banner ${index + 1}`}
+                      className="w-full h-38 sm:h-44 md:h-50 lg:h-72 object-cover rounded-lg"
+                    />
+                  )}
                 </div>
               ))}
             </div> 

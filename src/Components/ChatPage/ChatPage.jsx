@@ -3,9 +3,10 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
 import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
-import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage } from '../../Services/api';
+import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage, deleteMessage } from '../../Services/api';
 import { useSocket } from '../../hooks/useSocket.js';
 import socketService from '../../hooks/socketService';
+import { FaTrash, FaCheckDouble } from 'react-icons/fa';
  
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -335,7 +336,7 @@ const ChatPage = () => {
   
   // Set up socket message listener
   const setupMessageListener = (userId) => {
-    console.log('Setting up message listener for userId:', userId);
+    console.log(`Setting up message listener for userId: ${userId} and adId: ${currentAdId}`);
     
     // First, remove any existing listeners to prevent duplicates
     if (typeof socketService.offChatMessage === 'function') {
@@ -479,7 +480,7 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error fetching chat messages:', error);
     } });
-    return () => offChatMessage();
+    return offChatMessage;
   }
 
   // Separate function to fetch participant details
@@ -523,7 +524,7 @@ const ChatPage = () => {
     
     // Use the combined function to fetch and listen for messages
     fetchAndListenForChatMessages(paramUserId, user.token, currentAdId)
-      .then(adId => {
+      .then((adId) => {
         if (adId) {
           console.log(`Successfully connected to chat room for ad: ${adId}`);
         }
@@ -619,16 +620,25 @@ const ChatPage = () => {
   useEffect(() => {
     if (!(user?.id && currentAdId)) return;
  
-    const tryJoin = () => {
-      if (isConnected()) joinChatRoom(currentAdId);
-    };
-  
     // Attempt immediately if connected
-    tryJoin();
+    if (isConnected()) {
+      joinChatRoom(currentAdId);
+    }
 
     const offConnect = onConnect(() => {
       if (currentAdId) joinChatRoom(currentAdId);
     });
+
+    // This is the new, filtered listener
+    const offMsg = onChatMessage((newMessage) => {
+      // This callback will only be fired for messages matching currentAdId
+      setMessages(prev => {
+        if (prev.some(msg => msg._id === newMessage._id)) return prev;
+        const updated = [...prev, newMessage];
+        updated.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        return updated;
+      });
+    }, currentAdId);
 
     return () => {
       if (typeof offMsg === 'function') offMsg();
@@ -649,20 +659,15 @@ const ChatPage = () => {
     if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // Ensure currentAdId is present
     
     // Create message object
-    const messageData = {
-      senderId: user.id, // Backend might expect senderId from socket context, but good to have
-      receiver: receiverId,
-      adId: currentAdId,
-      message: message.trim(),
-    };
-    
     // Optimistically add message to UI
     const optimisticMessage = {
-      ...messageData,
       _id: `temp-${Date.now()}`, // Temporary ID until server confirms
+      message: message.trim(),
+      timestamp: new Date().toISOString(),
       sender: {
         _id: user.id,
-        profilePicture: user?.profilePicture || null
+        id: user.id, // Add 'id' for consistency with rendering logic
+        profilePicture: user.profilePicture || null
       },
       receiver: {
         _id: receiverId
@@ -671,6 +676,14 @@ const ChatPage = () => {
         _id: currentAdId
       },
       pending: true // Mark as pending until confirmed
+    };
+
+    // This is the data that will be sent to the backend
+    const messageDataForBackend = {
+      senderId: user.id,
+      receiver: receiverId,
+      adId: currentAdId,
+      message: message.trim(),
     };
     
     // Add message to UI and sort by timestamp
@@ -693,9 +706,9 @@ const ChatPage = () => {
       if (isConnected()) {
         joinChatRoom(currentAdId);
 
-        // Send via socket using the 'sendMessage' event
-        console.log('Emitting chat message via socket service:', messageData);
-        socketService.emitChatMessage(messageData);
+        // Send via socket using the 'emitChatMessage' method from the service
+        console.log('Emitting chat message via socket service:', messageDataForBackend);
+        socketService.emitChatMessage(messageDataForBackend);
 
       } else {
         console.warn('Socket not connected, falling back to API only');
@@ -739,6 +752,28 @@ const ChatPage = () => {
     }
   };
  
+  const handleDeleteMessage = async (messageId) => {
+    if (!messageId || !user?.token) return;
+
+    // Optimistically remove the message from the UI for a responsive feel
+    setMessages(prev => prev.filter(msg => msg._id !== messageId));
+
+    try {
+      const res = await deleteMessage(messageId, user.token);
+      // Check for a successful HTTP status code (e.g., 200 OK, 204 No Content)
+      if (!res || res.status < 200 || res.status >= 300) {
+        // If deletion fails on the server, log it.
+        // For a more robust UI, you could add the message back to the list here.
+        console.error('Failed to delete message on server:', res?.data?.message || `Server responded with status ${res?.status}`);
+        // To revert: You would need to temporarily store the deleted message and add it back on failure.
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      // Handle API call error, e.g., show a notification and add the message back.
+    }
+  };
+
+
   // UI
   if (!isLoggedIn) {
     return (
@@ -932,9 +967,19 @@ const ChatPage = () => {
                                     )}
                                   </div>
                                 )}
-                                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) ? 'bg-blue-100 rounded-br-sm text-gray-800' : 'bg-gray-200 rounded-bl-sm text-gray-800'}`}>
+                                <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm group relative flex flex-col ${(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) ? 'bg-blue-100 rounded-br-sm text-gray-800' : 'bg-gray-200 rounded-bl-sm text-gray-800'}`}>
                                   <p className="mb-1">{item.content.message}</p>
-                                  <span className="text-xs text-gray-500">{new Date(item.content.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  <div className="flex items-center justify-end gap-1.5 self-end">
+                                    <span className="text-xs text-gray-500">{new Date(item.content.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    {(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) && (
+                                      <FaCheckDouble size={12} className={`${(item.content.readBy && item.content.readBy.includes(paramUserId)) || item.content.status === 'read' ? 'text-blue-500' : 'text-gray-400'}`} />
+                                    )}
+                                  </div>
+                                  {(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) && (
+                                    <button onClick={() => handleDeleteMessage(item.content._id)} className="absolute top-1 right-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete message">
+                                      <FaTrash size={10} />
+                                    </button>
+                                  )}
                                 </div>
                                 {(item.content?.sender?._id === user.id || item.content?.sender?.id === user.id || item.content?.sender === user.id) && (
                                   <div className="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">

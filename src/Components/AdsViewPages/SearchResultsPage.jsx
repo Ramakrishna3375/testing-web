@@ -15,7 +15,7 @@ const SearchResultsPage = () => {
   const [adsError, setAdsError] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
-  // Function to apply location filter
+  // =================== (FUNCTION TO APPLY LOCATION FILTER)===================
   const applyLocationFilter = (allAds) => {
     try {
       const storedLocation = sessionStorage.getItem('selectedLocation');

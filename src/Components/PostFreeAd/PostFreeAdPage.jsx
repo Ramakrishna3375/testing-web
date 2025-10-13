@@ -52,13 +52,13 @@ const subcategoriesMap = {
   "Others": ["Miscellaneous Items", "Lost & Found", "Community"]
 };
 
-// Subcategory icon mapping
+// =================== (SUBCATEGORY ICON MAPPING)===================
 const subCategoryIcons = {
-  // Mobiles
+  // =================== (MOBILES)===================
   "Mobile Phones": <FaMobileAlt />,
   "Accessories": <FaHeadphones />,
   "Tablets": <FaTabletAlt />,
-  // Electronics & Appliances
+  // =================== (ELECTRONICS & APPLIANCES)===================
   "TVs,Video - Audio": <FaTv />,
   "Computers & Laptops": <FaLaptop />,
   "Computer Accessories": <FaTools2 />,
@@ -66,20 +66,20 @@ const subCategoryIcons = {
   "Cameras & Lenses": <FaCamera />,
   "Kitchen & Other Appliances": <FaLeaf />,
   "Games & Entertainment": <FaGamepad />,
-  // Vehicles
+  // =================== (VEHICLES)===================
   "Cars": <FaCar />,
   "Motorcycles": <FaMotorcycle />,
   "Scooters": <FaBicycle />,
   "Commercial Vehicles": <FaTruck />,
   "Spare Parts": <FaTools2 />,
   " Bicycles ": <FaBicycle />,
-  // Real Estate
+  // =================== (REAL ESTATE)===================
   "Houses & Apartments For Sale": <FaHome />,
   "Houses & Apartments For Rent": <FaHome />,
   "Land & Plots": <FaLandmark />,
   "Shops & Offices": <FaStore />,
   "Paying Guest(PG) & Roommates": <FaUserFriends />,
-  // Jobs
+  // =================== (JOBS)===================
   "Data Entry & Back Office": <FaUserTie />,
   "Sales & Marketing": <FaUserCheck />,
   "BPO & Call Center": <FaUserClock />,

@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import loginImage from '../../assets/Website logos/loginImage.jpg';
 import LocalMartIcon from '../../assets/Website logos/LocalMartIcon.png';
 import Footer from "../Header&Footer/Footer";
-import { BsMegaphoneFill } from "react-icons/bs"; // For Advertise
-import { IoMdLogIn, IoIosArrowBack } from "react-icons/io"; // For Login and Back Arrow
-import { RxHamburgerMenu } from "react-icons/rx"; // For Hamburger Menu
-import { FaEnvelope, FaMobileAlt, FaLock, FaEye, FaEyeSlash } from "react-icons/fa"; // For input fields and password visibility
+// =================== (FOR ADVERTISE)===================
+import { BsMegaphoneFill } from "react-icons/bs";
+// =================== (FOR LOGIN AND BACK ARROW)===================
+import { IoMdLogIn, IoIosArrowBack } from "react-icons/io";
+// =================== (FOR HAMBURGER MENU)===================
+import { RxHamburgerMenu } from "react-icons/rx";
+// =================== (FOR INPUT FIELDS AND PASSWORD VISIBILITY)===================
+import { FaEnvelope, FaMobileAlt, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { userLogin } from "../../Services/api";
 
 const UserLogin = () => {
@@ -22,7 +26,7 @@ const UserLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [triggerLogin, setTriggerLogin] = useState(false);
 
-  // Marquee: continuous scroll using requestAnimationFrame
+  // =================== (MARQUEE: CONTINUOUS SCROLL USING REQUESTANIMATIONFRAME)===================
   const marqueeContainerRef = useRef(null);
   const marqueeContentRef = useRef(null);
   const [marqueeOffsetX, setMarqueeOffsetX] = useState(0);
@@ -82,7 +86,7 @@ const UserLogin = () => {
             // Import and use socketService directly to ensure immediate connection
             import('../../hooks/socketService').then(module => {
               const socketService = module.default;
-              // Connect socket immediately after successful login
+              // =================== (CONNECT SOCKET IMMEDIATELY AFTER SUCCESSFUL LOGIN)===================
               if (userId && token) {
                 console.log('Connecting socket after login success');
                 socketService.connect(userId, token);
@@ -131,8 +135,7 @@ const UserLogin = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerLogin]);
 
-  // If already logged in, prevent accessing login page (and back navigation to it)
-  
+  // =================== (IF ALREADY LOGGED IN, PREVENT ACCESSING LOGIN PAGE (AND BACK NAVIGATION TO IT))===================
 
   return (
     <>
@@ -140,12 +143,12 @@ const UserLogin = () => {
       {/* Header Section */}
       <header className="bg-white shadow-md w-full absolute top-0 left-0">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Logo */}
+          {/* =================== (LOGO)=================== */}
           <div className="flex items-center">
             <img src={LocalMartIcon} alt="Local Mart Logo" className="h-10 mr-2" />
           </div>
 
-          {/* Navigation / Actions */}
+          {/* =================== (NAVIGATION / ACTIONS)=================== */}
           <nav className="hidden md:flex items-center space-x-6">
             <a href="#" className="text-gray-700 hover:text-gray-900 flex items-center">
               <BsMegaphoneFill className="mr-1 w-6 h-6" />
@@ -157,14 +160,14 @@ const UserLogin = () => {
             </button>
           </nav>
 
-          {/* Hamburger Menu Icon for Mobile */}
+          // =================== (HAMBURGER MENU ICON FOR MOBILE)===================
           <div className="md:hidden flex items-center">
             <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-700 focus:outline-none">
               <RxHamburgerMenu className="w-8 h-8" />
             </button>
           </div>
         </div>
-        {/* Blue Marquee Section */}
+        // =================== (BLUE MARQUEE SECTION)===================
         <div className="bg-blue-600 py-2 overflow-hidden" ref={marqueeContainerRef}>
           <div
             className="flex whitespace-nowrap"
@@ -174,13 +177,7 @@ const UserLogin = () => {
             <span className="text-white text-sm mx-4">
               Development At INCROSYS IT SOLUTIONS PVT LTD • All In One Super Mobile App Launching Soon • Website and App Development fee 50% off • Exclusive Deals Every Day • Free Shipping on All Orders
             </span>
-            <span className="text-white text-sm mx-4">
-              Development At INCROSYS IT SOLUTIONS PVT LTD • All In One Super Mobile App Launching Soon • Website and App Development fee 50% off • Exclusive Deals Every Day • Free Shipping on All Orders
-            </span>
-            {/* duplicate content for seamless loop */}
-            <span className="text-white text-sm mx-4">
-              Development At INCROSYS IT SOLUTIONS PVT LTD • All In One Super Mobile App Launching Soon • Website and App Development fee 50% off • Exclusive Deals Every Day • Free Shipping on All Orders
-            </span>
+            {/* =================== (DUPLICATE CONTENT FOR SEAMLESS LOOP)=================== */}
             <span className="text-white text-sm mx-4">
               Development At INCROSYS IT SOLUTIONS PVT LTD • All In One Super Mobile App Launching Soon • Website and App Development fee 50% off • Exclusive Deals Every Day • Free Shipping on All Orders
             </span>
@@ -188,7 +185,7 @@ const UserLogin = () => {
         </div>
       </header>
 
-      {/* Mobile Menu Sidebar */}
+      // =================== (MOBILE MENU SIDEBAR)===================
       <div
         className={`fixed inset-0 bg-white z-50 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:hidden`}
       >
@@ -216,11 +213,11 @@ const UserLogin = () => {
           </button>
         </nav>
       </div>
-      {/* Main Content Start */}
+      // =================== (MAIN CONTENT START)===================
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-[20px] overflow-hidden shadow-lg max-w-6xl mx-auto w-full">
           <div className="grid grid-cols-12 gap-0 md:gap-6">
-            {/* Left Image Section */}
+            // =================== (LEFT IMAGE SECTION)===================
             <div className="col-span-12 md:order-first md:col-span-6 left-login-page-image-section">
               <div className="h-full">
                 <img
@@ -230,7 +227,7 @@ const UserLogin = () => {
                 />
               </div>
             </div>
-            {/* Right Form Section */}
+            // =================== (RIGHT FORM SECTION)===================
             <div className="col-span-12 md:col-span-6 right-login-page-form-changer">
               <div className="px-6 md:px-12 py-10 right-side-user-login-form-section max-w-md mx-auto md:max-w-none">
                 <div className="mb-10">
@@ -239,7 +236,7 @@ const UserLogin = () => {
                     fill details and login to explore more on localmart
                   </p>
                 </div>
-                {/* Switchable Input Form */}
+                // =================== (SWITCHABLE INPUT FORM)===================
                 <form className="w-full flex flex-col gap-6" onSubmit={async e => {
                   e.preventDefault();
                   setError(''); // Clear previous errors
@@ -283,12 +280,12 @@ const UserLogin = () => {
                     navigate('/homepage', { replace: true });
                   }
                 }}>
-                  {/* Email or Mobile Field */}
+                  // =================== (EMAIL OR MOBILE FIELD)===================
                   <div className="flex items-center border border-gray-300 rounded-2xl px-5 py-4 bg-white text-black">
                     {emailLogin ? (
                       <>
                         <span className="mr-3 flex-shrink-0">
-                          {/* Envelope Icon */}
+                          // =================== (ENVELOPE ICON)===================
                           <FaEnvelope className="text-gray-600" />
                         </span>
                         <input
@@ -316,7 +313,7 @@ const UserLogin = () => {
                       </>
                     )}
                   </div>
-                  {/* Password Field */}
+                  // =================== (PASSWORD FIELD)===================
                   <div className="flex items-center border border-gray-300 rounded-2xl px-5 py-4 bg-white text-black relative">
                     <span className="mr-3 flex-shrink-0">
                       <FaLock className="text-gray-600" />
@@ -336,17 +333,17 @@ const UserLogin = () => {
                       tabIndex={-1}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {/* Eye Icon */}
+                      // =================== (EYE ICON)===================
                       {showPassword ? <FaEye className="stroke-gray-500 md:w-6 md:h-6" /> : <FaEyeSlash className="stroke-gray-500 md:w-6 md:h-6" />}
                     </button>
                   </div>
-                  {/* Forgot Password Link */}
+                  // =================== (FORGOT PASSWORD LINK)===================
                   <div className="w-full text-left">
                     <a href="#" className="text-blue-500 text-base font-normal hover:underline block">
                       Forgot Password?
                     </a>
                   </div>
-                  {/* reCAPTCHA Placeholder */}
+                  // =================== (RECAPTCHA PLACEHOLDER)===================
                   <div className="w-full flex justify-center">
                     <div className="rounded-xl border border-gray-300 bg-white py-3 px-4 flex items-center min-h-[56px] w-full max-w-[380px]">
                       <input type="checkbox" className="w-5 h-5 accent-blue-600" id="recaptcha-checkbox" 
@@ -373,10 +370,10 @@ const UserLogin = () => {
                       </span>
                     </div>
                   </div>
-                  {/* Error Message */}
+                  // =================== (ERROR MESSAGE)===================
                   {error && <p className="text-red-500 text-center font-medium">{error}</p>}
 
-                  {/* Login Button */}
+                  // =================== (LOGIN BUTTON)===================
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -385,7 +382,7 @@ const UserLogin = () => {
                     {isLoading ? 'Logging in...' : 'Login'}
                   </button>
                 </form>
-                {/* OR Separator */}
+                // =================== (OR SEPARATOR)===================
                 <div className="pt-6">
                   <div className="relative my-5">
                     <div className="bg-gray-300 w-full h-[1px]"></div>
@@ -393,7 +390,7 @@ const UserLogin = () => {
                       Or
                     </div>
                   </div>
-                  {/* Login with Number/Email Switch */}
+                  // =================== (LOGIN WITH NUMBER/EMAIL SWITCH)===================
                   <div className="pt-3 login-withnumber-section">
                     {emailLogin ? (
                       <button
@@ -402,7 +399,7 @@ const UserLogin = () => {
                         onClick={() => setEmailLogin(false)}
                         aria-label="Switch to mobile number login"
                       >
-                        {/* Phone icon */}
+                        // =================== (PHONE ICON)===================
                         <FaMobileAlt className="text-blue-600 text-xl group-hover:text-blue-400" />
                         <p className="text-blue-600 font-semibold text-xl duration-500 group-hover:text-blue-400">
                           Login With Mobile Number
@@ -415,7 +412,7 @@ const UserLogin = () => {
                         onClick={() => setEmailLogin(true)}
                         aria-label="Switch to email login"
                       >
-                        {/* Envelope icon */}
+                        // =================== (ENVELOPE ICON)===================
                         <FaEnvelope className="text-blue-600 text-xl group-hover:text-blue-400" />
                         <p className="text-blue-600 font-semibold text-xl duration-500 group-hover:text-blue-400">
                           Login With Email Address

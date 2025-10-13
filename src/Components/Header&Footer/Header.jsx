@@ -5,8 +5,8 @@ import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 import { FaMapMarkerAlt, FaBell } from "react-icons/fa";
 import { VscAccount } from "react-icons/vsc";
 import { getAllCategories, searchAdsByTitle, getNotifications, markNotificationsAsRead, getUserDetails, searchCities } from "../../Services/api";
-import socketService from "../../Services/socketService";
 import { useSocket } from '../../hooks/useSocket.js';
+import socketService from "../../hooks/socketService";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -36,11 +36,12 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
-  
-  // Use useSocket hook
-  const { connectSocket, disconnectSocket, isConnected, onConnect, subscribeToNotifications, subscribeToNotificationUpdates, subscribeToNotificationCount } = useSocket(isLoggedIn, user?.id);
-  
-  // Location search states
+ 
+  // =================== (Use useSocket hook)===================
+  const { connectSocket, disconnectSocket, isConnected, onConnect, subscribeToNotifications, subscribeToNotificationUpdates, subscribeToNotificationCount } = useSocket(isLoggedIn, user ? user.id : null);
+  // =================== (Ensure user.id is stable)===================
+ 
+  // =================== (Location search states)===================
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
@@ -57,6 +58,29 @@ const Header = () => {
   const locationDropdownRef = useRef(null);
   const [highlightLocation, setHighlightLocation] = useState(false);
  
+  // =================== (SOCKET.IO: Connect socket on login)===================
+  useEffect(() => {
+    if (isLoggedIn && user?.id && !isConnected() && !socketService.isConnecting) {
+      connectSocket();
+    }
+  }, [isLoggedIn, user?.id, connectSocket, isConnected]);
+ 
+  // =================== (SOCKET.IO: Disconnect socket on logout)===================
+  useEffect(() => {
+    let disconnectTimer;
+    if (!isLoggedIn && isConnected()) {
+      disconnectTimer = setTimeout(() => {
+        disconnectSocket();
+      }, 500);
+      // =================== (500ms delay)===================
+    }
+    return () => {
+      if (disconnectTimer) {
+        clearTimeout(disconnectTimer);
+      }
+    };
+  }, [isLoggedIn, isConnected, disconnectSocket]);
+ 
   useEffect(() => {
     const onDocClick = (e) => {
       if (!profileMenuRef.current || !mobileProfileButtonRef.current || !desktopProfileButtonRef.current) return;
@@ -69,7 +93,7 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showProfileMenu]);
 
-  // Fetch user details if logged in
+  // =================== (Fetch user details if logged in)===================
   useEffect(() => {
     if (isLoggedIn) {
       const fetchUser = async () => {
@@ -79,7 +103,7 @@ const Header = () => {
             const resp = await getUserDetails(token);
             const u = resp?.data?.data || resp?.data;
             if (u) {
-              // Ensure the user object has an _id for socket initialization
+              // =================== (Ensure the user object has an _id for socket initialization)===================
               if (!u._id && u.id) {
                 u._id = u.id;
               }
@@ -94,7 +118,7 @@ const Header = () => {
     }
   }, [isLoggedIn]);
 
-  // Fetch categories
+  // =================== (Fetch categories)===================
   useEffect(() => {
     (async () => {
       setLoadingCategories(true);
@@ -117,7 +141,7 @@ const Header = () => {
     })();
   }, []);
 
-  // Debounced search
+  // =================== (Debounced search)===================
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -144,7 +168,7 @@ const Header = () => {
     return () => clearTimeout(delay);
   }, [searchQuery]);
 
-  // Fetch notifications from API
+  // =================== (Fetch notifications from API)===================
   const fetchNotifications = async () => {
     if (!isLoggedIn) {
       setNotifications([]); setUnreadCount(0); return;
@@ -164,10 +188,10 @@ const Header = () => {
     setLoadingNotifications(false);
   };
 
-  // Fetch notifications on login
+  // =================== (Fetch notifications on login)===================
   useEffect(() => { isLoggedIn ? fetchNotifications() : (setNotifications([]), setUnreadCount(0)); }, [isLoggedIn]);
  
-  // Location search effect
+  // =================== (Location search effect)===================
   useEffect(() => {
     if (!locationQuery.trim()) {
       setLocationResults([]);
@@ -181,7 +205,7 @@ const Header = () => {
         const res = await searchCities(locationQuery.trim());
         let cityNames = [];
         
-        // Handle the API response format which returns an array of city names
+        // =================== (Handle the API response format which returns an array of city names)===================
         if (Array.isArray(res?.data?.cities)) {
           cityNames = res.data.cities.map(cityName => ({ name: cityName, id: cityName }));
         } else if (Array.isArray(res?.data)) {
@@ -199,7 +223,7 @@ const Header = () => {
     return () => clearTimeout(delay);
   }, [locationQuery]);
 
-  // Handle click outside location dropdown
+  // =================== (Handle click outside location dropdown)===================
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target)) {
@@ -211,7 +235,7 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Listen for external request to open location selector (e.g., from HomePage prompt)
+  // =================== (Listen for external request to open location selector (e.g., from HomePage prompt))===================
   useEffect(() => {
     const openSelector = () => {
       setShowLocationDropdown(true);
@@ -222,23 +246,16 @@ const Header = () => {
     return () => window.removeEventListener('openLocationSelector', openSelector);
   }, []);
 
-  // SOCKET.IO: Listen for notifications in real-time
+  // =================== (SOCKET.IO: Listen for notifications in real-time)===================
   useEffect(() => {
     if (!isLoggedIn || !user?.id) {
-      // Disconnect socket and clear header-specific listeners when logged out
-      disconnectSocket();
+      // =================== (Disconnect socket and clear header-specific listeners when logged out)===================
       return;
     }
 
-    // Re-connect socket if not already connected (useSocket handles primary connection)
-    if (isLoggedIn && user?.id && !isConnected()) {
-      connectSocket();
-    }
-
+    // =================== (Function to attach all notification listeners)===================
     const attachListeners = () => {
-      // Clear existing listeners to prevent duplicates (useSocket handles this internally)
-      
-      const unsubscribeNew = subscribeToNotifications(notification => {
+      const unsubscribeNew = subscribeToNotifications(async (notification) => {
         setNotifications(prev => [notification, ...prev]);
         if (!notification.read) {
           setUnreadCount(prev => {
@@ -249,7 +266,7 @@ const Header = () => {
         }
       });
 
-      const unsubscribeUpdate = subscribeToNotificationUpdates(data => {
+      const unsubscribeUpdate = subscribeToNotificationUpdates(async (data) => {
         if (Array.isArray(data.notificationIds)) {
           setNotifications(prev => prev.map(n => data.notificationIds.includes(n._id) ? { ...n, read: true } : n));
           setUnreadCount(prev => Math.max(0, prev - data.notificationIds.length));
@@ -259,6 +276,7 @@ const Header = () => {
       const unsubscribeCount = subscribeToNotificationCount(count => {
         setUnreadCount(count);
       });
+
       return () => {
         unsubscribeNew();
         unsubscribeUpdate();
@@ -267,27 +285,28 @@ const Header = () => {
     };
 
     let cleanUpListeners = () => {};
-    if (isConnected()) {
-      cleanUpListeners = attachListeners();
-      // Ensure joinUserRoom is called for the Header too if it's the first component to connect
-      // However, useSocket already handles joinUserRoom on connect, so this might be redundant here
-      // We should rely on the primary useSocket instance for joining the user room
-    }
-
-    // Ensure listeners are re-attached on reconnects
+ 
+    // =================== (Ensure listeners are re-attached on reconnects)===================
     const unsubscribeOnConnect = onConnect(() => {
-      cleanUpListeners(); // Clean up old listeners before re-attaching
-      cleanUpListeners = attachListeners();
+      // =================== (After a reconnect, the socket is connected, so re-attach listeners)===================
+      if (isLoggedIn && user?.id) {
+        cleanUpListeners();
+        // =================== (Clean up old listeners before re-attaching)===================
+        console.log('Header: Socket reconnected, re-attaching notification listeners.');
+        // =================== (Note: socketService.connect already handles joinUserRoom, no need to call it here)===================
+        cleanUpListeners = attachListeners();
+      }
     });
-
+ 
     return () => {
       cleanUpListeners();
       unsubscribeOnConnect();
+      console.log('Header: Cleaning up notification useEffect.');
     };
-  }, [isLoggedIn, user?.id, connectSocket, disconnectSocket, isConnected, onConnect, subscribeToNotifications, subscribeToNotificationUpdates, subscribeToNotificationCount]);
+  }, [isLoggedIn, user?.id, subscribeToNotifications, subscribeToNotificationUpdates, subscribeToNotificationCount, fetchNotifications, onConnect, isConnected]);
  
-  // Mark notifications as read
-  const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
+  // =================== (Mark notifications as read)===================
+  const handleMarkAsRead = async (ids, skipUIUpdate = false, isSocketEvent = false) => {
     const token = sessionStorage.getItem('token');
     if (!token || !ids.length) return;
     setMarkingAsRead(prev => new Set([...prev, ...ids]));
@@ -300,9 +319,12 @@ const Header = () => {
           setNotifications(prev => prev.map(n => ids.includes(n._id) ? { ...n, read: true } : n));
           setUnreadCount(prev => { const c = Math.max(0, prev - unreadToReduce); if (prev !== c) { setCountChanged(true); setTimeout(() => setCountChanged(false), 1000); } return c; });
         }
-        clearTimeout(timeoutId);
-        setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
-        setTimeout(fetchNotifications, 2000);
+        if (!isSocketEvent) {
+          clearTimeout(timeoutId);
+          setMarkingAsRead(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
+          // =================== (Re-fetch notifications after a short delay to ensure consistency)===================
+          setTimeout(fetchNotifications, 2000);
+        }
       } else if (res?.status === 404) {
         const localRead = JSON.parse(localStorage.getItem('readNotifications') || '[]');
         const newRead = [...new Set([...localRead, ...ids])];
@@ -327,10 +349,10 @@ const Header = () => {
     }
   };
 
-  // Notification dropdown toggle
+  // =================== (Notification dropdown toggle)===================
   const toggleNotifications = () => setShowNotifications(v => !v);
 
-  // Close notifications dropdown on outside click
+  // =================== (Close notifications dropdown on outside click)===================
   useEffect(() => {
     const handleClick = e => { if (showNotifications && !e.target.closest('.notification-container')) setShowNotifications(false); };
     document.addEventListener('mousedown', handleClick);
@@ -341,7 +363,8 @@ const Header = () => {
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
       <div className="max-w-6xl mx-auto w-full px-2 md:px-4 relative">
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-6 lg:gap-8 items-center justify-between min-h-[70px]">
-          {/* Logo and mobile login */}
+          {/* =================== (Logo and mobile login)===================
+          */}
           <div className="flex items-center w-full sm:w-auto gap-3 sm:gap-4">
             <img src={LocalMartIcon} alt="Local Mart Logo" className="h-10 sm:h-12 w-auto min-w-[4rem] max-w-[8rem] flex-shrink-0 mr-2 cursor-pointer"
               onClick={() => navigate("/homepage")} />
@@ -476,7 +499,8 @@ const Header = () => {
                           sessionStorage.removeItem('user');
                           sessionStorage.removeItem('token');
                           sessionStorage.removeItem('isLoggedIn');
-                          disconnectSocket(); // Use disconnectSocket from useSocket
+                          // =================== (Add a small delay before disconnecting to allow any final events/ack to process)===================
+                          setTimeout(() => disconnectSocket(), 500);
                         } catch {}
                         setShowProfileMenu(false);
                         navigate('/login', { replace: true });
@@ -489,10 +513,12 @@ const Header = () => {
               </div>
             )}
           </div>
-          {/* Center controls */}
+          {/* =================== (Center controls)===================
+          */}
           <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-5 w-full sm:w-auto flex-1 min-w-0">
             <div className="flex flex-row gap-2 sm:gap-6 md:gap-8 justify-center min-w-0 w-full sm:w-auto">
-              {/* Location */}
+              {/* =================== (Location)===================
+              */}
               <div className="relative" ref={locationDropdownRef}>
                 <div
                   className={`flex items-center bg-white rounded h-10 pl-2 pr-3 gap-2 border cursor-pointer transition-shadow ${highlightLocation ? 'border-orange-400 ring-2 ring-orange-300' : 'border-gray-300'}`}
@@ -534,9 +560,9 @@ const Header = () => {
                                 setSelectedLocation(city);
                                 setShowLocationDropdown(false);
                                 setLocationQuery("");
-                                // Store selected location in sessionStorage for other components
+                                // =================== (Store selected location in sessionStorage for other components)===================
                                 sessionStorage.setItem('selectedLocation', JSON.stringify(city));
-                                // Broadcast change so other pages react instantly
+                                // =================== (Broadcast change so other pages react instantly)===================
                                 window.dispatchEvent(new CustomEvent('selectedLocationChanged', { detail: city }));
                               }}
                             >
@@ -556,7 +582,8 @@ const Header = () => {
                   </div>
                 )}
               </div>
-              {/* Categories */}
+              {/* =================== (Categories)===================
+              */}
               <div className="border border-gray-400 rounded-full flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 h-10 min-w-[150px] max-w-[180px]">
                 <select
                   className="w-full text-xs md:text-sm bg-transparent focus:outline-none p-1"
@@ -576,7 +603,8 @@ const Header = () => {
                 </select>
               </div>
             </div>
-            {/* Search Bar */}
+            {/* =================== (Search Bar)===================
+            */}
             <div className="flex items-center border border-gray-400 rounded-full h-10 w-full md:w-80 lg:w-[340px] max-w-full overflow-hidden ml-0 md:ml-6 relative">
               <input
                 type="text"
@@ -616,7 +644,8 @@ const Header = () => {
               )}
             </div>
           </div>
-          {/* Right side: desktop login/Profile area */}
+          {/* =================== (Right side: desktop login/Profile area)===================
+          */}
           <div className="hidden sm:flex items-center justify-end gap-2 mt-2 w-full sm:w-auto md:mt-0 sm:h-10 relative" >
             {!isLoggedIn && (
               <button
@@ -750,7 +779,8 @@ const Header = () => {
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('token');
                         sessionStorage.removeItem('isLoggedIn');
-                        disconnectSocket(); // Use disconnectSocket from useSocket
+                        // =================== (Add a small delay before disconnecting to allow any final events/ack to process)===================
+                        setTimeout(() => disconnectSocket(), 500);
                       } catch {}
                       setShowProfileMenu(false);
                       navigate('/login', { replace: true });

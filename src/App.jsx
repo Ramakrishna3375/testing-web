@@ -16,7 +16,7 @@ function App(){
 return(
     <>
       <Routes>
-        {/* Default route */}
+        // =================== (DEFAULT ROUTE)===================
         <Route path="/" element={<Navigate to="/homepage" replace />} />
 
         <Route path="/login" element={<UserLogin />} />
@@ -32,7 +32,8 @@ return(
         />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/inbox" element={<ChatPage />} />
-        <Route path="/chat/:userId" element={<ChatPage />} /> {/* userId of the seller */}
+        // =================== (USERID OF THE SELLER)===================
+        <Route path="/chat/:userId" element={<ChatPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/my-ads" element={<MyAdsPage />} />

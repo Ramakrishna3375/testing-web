@@ -7,7 +7,7 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 
 const MobilesPage = () => {
   const navigate = useNavigate();
-  // login detection
+  // =================== (LOGIN DETECTION)===================
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState("grid");
   const [categories, setCategories] = useState([]);
@@ -21,7 +21,7 @@ const MobilesPage = () => {
 
   const { categoryId } = useParams();
 
-  // Extract unique brands from ads data
+  // =================== (EXTRACT UNIQUE BRANDS FROM ADS DATA)===================
   const getBrandsFromAds = (ads) => {
     const brandsSet = new Set();
     ads.forEach(ad => {
@@ -32,22 +32,22 @@ const MobilesPage = () => {
     return Array.from(brandsSet).sort();
   };
 
-  // Filtering ads by brand name or categoryId (URL param)
+  // =================== (FILTERING ADS BY BRAND NAME OR CATEGORYID (URL PARAM))===================
   const productsPerPage = 15;
   let filteredAds = ads;
   if (categoryId) {
     filteredAds = filteredAds.filter(ad => ad.category && ad.category.id === categoryId);
   }
 
-  // Only show brands in current category
+  // =================== (ONLY SHOW BRANDS IN CURRENT CATEGORY)===================
   const brands = getBrandsFromAds(filteredAds);
 
-  // Now further filter ads if brandFilter is set
+  // =================== (NOW FURTHER FILTER ADS IF BRANDFILTER IS SET)===================
   if (brandFilter) {
     filteredAds = filteredAds.filter(ad => ad.categorySpecific && ad.categorySpecific.brand === brandFilter);
   }
 
-  // Sort logic
+  // =================== (SORT LOGIC)===================
   const parsePrice = price => {
     if (typeof price === 'number') return price;
     if (!price) return 0;
@@ -68,7 +68,7 @@ const MobilesPage = () => {
   const startIndex = (currentPage - 1) * productsPerPage;
   const visibleAds = filteredAds.slice(startIndex, startIndex + productsPerPage);
 
-  // Fetch categories on mount
+  // =================== (FETCH CATEGORIES ON MOUNT)===================
   useEffect(() => {
     const fetchCategories = async () => {
       setLoadingCategories(true);

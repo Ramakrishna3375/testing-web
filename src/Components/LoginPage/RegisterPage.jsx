@@ -6,7 +6,8 @@ import Footer from "../Header&Footer/Footer";
 import { BsMegaphoneFill } from "react-icons/bs";
 import { IoMdLogIn, IoIosArrowBack } from "react-icons/io";
 import { RxHamburgerMenu } from "react-icons/rx";
-import { FaEnvelope, FaMobileAlt, FaUser, FaCalendarAlt, FaLock, FaEye, FaEyeSlash } from "react-icons/fa"; // For input fields and new fields, and password visibility
+// =================== (FOR INPUT FIELDS AND NEW FIELDS, AND PASSWORD VISIBILITY)===================
+import { FaEnvelope, FaMobileAlt, FaUser, FaCalendarAlt, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { registerOtpWithEmail } from "../../Services/api";
 import { verifyOtpWithEmail } from "../../Services/api";
 import { registerUserDetails } from "../../Services/api";
@@ -37,7 +38,7 @@ const CompleteRegistration = () => {
   const [userDetailsPayload, setUserDetailsPayload] = useState(null);
   const [authToken, setAuthToken] = useState(null);
 
-  // New state variables for additional registration fields
+  // =================== (NEW STATE VARIABLES FOR ADDITIONAL REGISTRATION FIELDS)===================
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [birthDate, setBirthDate] = useState('');

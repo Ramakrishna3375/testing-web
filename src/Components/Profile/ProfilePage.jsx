@@ -16,7 +16,7 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [cityOptions, setCityOptions] = useState([]);
   const [success, setSuccess] = useState(null);
-  // Options
+  // =================== (OPTIONS)===================
   const [countryOptions, setCountryOptions] = useState([]);
   const [stateOptions, setStateOptions] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -353,7 +353,7 @@ const ProfilePage = () => {
           ) : (
             <div className="grid grid-cols-12 gap-6">
               
-              {/* Left summary */}
+              {/* =================== (LEFT SUMMARY)=================== */}
               <div className="col-span-12 md:col-span-4 flex flex-col items-center text-center">
                 <div className="relative w-28 h-28 rounded-full bg-gray-100 border overflow-hidden mb-3">
                   {user.profilePicture ? (
@@ -381,7 +381,8 @@ const ProfilePage = () => {
                 </label>
               </div>
 
-              {/* Right details */}
+              {/* =================== (RIGHT DETAILS)===================
+               */}
               <div className="col-span-12 md:col-span-8">
                 {!isEditing ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -460,7 +461,8 @@ const ProfilePage = () => {
                   </div>
                 )}
 
-                {/* Addresses */}
+                {/* =================== (ADDRESSES)===================
+                 */}
                 <div className="mt-6">
                   <h2 className="text-lg font-semibold text-black mb-3">Addresses</h2>
                   {Array.isArray(user.addresses) && user.addresses.length > 0 ? (
@@ -487,7 +489,8 @@ const ProfilePage = () => {
       </div>
       <Footer />
 
-      {/* Upload Profile Picture Modal */}
+      {/* =================== (UPLOAD PROFILE PICTURE MODAL)===================
+       */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full relative">

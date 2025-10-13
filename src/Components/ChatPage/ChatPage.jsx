@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
 import Header from '../Header&Footer/Header';
@@ -10,12 +10,13 @@ import socketService from '../../hooks/socketService';
 const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId: paramUserId } = useParams(); // seller's userId from route
+  const { userId: paramUserId } = useParams(); // =================== (Seller's userId from route)===================
 
   // Get adId from location state if available
   const initialAdId = location.state?.adId || null;
-
-  // useAuth logic moved here
+  // =================== (Get adId from location state if available)===================
+ 
+  // =================== (useAuth logic moved here)===================
   const [user, setUser] = useState(() => {
     const storedUser = sessionStorage.getItem('user');
     const storedToken = sessionStorage.getItem('token');
@@ -72,13 +73,13 @@ const ChatPage = () => {
   }, [user]);
 
   const isLoggedIn = !!user;
-  // End useAuth logic
+  // =================== (End useAuth logic)===================
  
-  // State
+  // =================== (State)===================
   const [activeFilter, setActiveFilter] = useState('all');
   const [chatUsers, setChatUsers] = useState([]);
   const [loadingInbox, setLoadingInbox] = useState(true);
-  const [adError, setAdError] = useState(null); // Added adError state
+  const [adError, setAdError] = useState(null); // =================== (Added adError state)===================
   const [lastMessages, setLastMessages] = useState({});
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -86,24 +87,25 @@ const ChatPage = () => {
   const [showUserInfo, setShowUserInfo] = useState(false);
   const chatMessagesEndRef = useRef(null);
   const [loadingAd, setLoadingAd] = useState(true);
+  const [chatError, setChatError] = useState(null); // =================== (CHAT ERROR STATE)===================
  
-  // State for receiver ID
+  // =================== (State for receiver ID)===================
   const [receiverId, setReceiverId] = useState(null);
-  const [adDetails, setAdDetails] = useState(null); // New state for ad details, initialized to null
-  const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
-  const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
+  const [adDetails, setAdDetails] = useState(null); // =================== (New state for ad details, initialized to null)===================
+  const [currentAdId, setCurrentAdId] = useState(initialAdId); // =================== (New state for current ad ID)===================
+  const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // =================== (Initialize with Home)===================
  
-  const { connectSocket, disconnectSocket, isConnected, onConnect, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage, subscribeToNotifications } = useSocket(!!user?.id, user?.id); // Pass login status and user ID
+  const { connectSocket, disconnectSocket, isConnected, onConnect, joinChatRoom, leaveChatRoom, emitChatMessage, onChatMessage, subscribeToNotifications, emitFetchChatHistory } = useSocket(!!user?.id, user?.id); // =================== (Pass login status and user ID)===================
  
-  // State for other participant's info
+  // =================== (State for other participant's info)===================
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
   const [otherDisplayEmail, setOtherDisplayEmail] = useState(null);
  
-  // Dummy info (replace with real data if available)
+  // =================== (Dummy info (replace with real data if available))===================
   const currentUserInfo = { name: 'Chat User', email: 'user@example.com', phone: '+1 (000) 000-0000', location: 'Location', joinDate: 'Recently', rating: 0, totalAds: 0, avatar: null };
   const currentProductInfo = { name: 'Product', category: 'Category', price: 'Price on request', location: 'Location' };
  
-  // Fetch chat users
+  // =================== (Fetch chat users)===================
   useEffect(() => {
     console.log('DEBUG: user object:', user);
     console.log('DEBUG: user.id:', user?.id);
@@ -111,7 +113,7 @@ const ChatPage = () => {
     console.log('DEBUG: sessionStorage token:', sessionStorage.getItem('token'));
     if (!user?.id) {
       console.log('DEBUG: user.id is missing, skipping chat user fetch.');
-      setLoadingInbox(false); // Stop loading if no user ID
+      setLoadingInbox(false); // =================== (Stop loading if no user ID)===================
       return;
     }
     setLoadingInbox(true);
@@ -122,10 +124,10 @@ const ChatPage = () => {
         console.log('DEBUG: getChatUsers response data:', res.data);
         // Assuming res.data.chatUsers is an array of user objects
         const formattedChatUsers = (res.data.chatUsers || []).map(userObj => ({
-          id: userObj._id, // Renamed adId to id as it's a user ID
+          id: userObj._id, // =================== (Renamed adId to id as it's a user ID)===================
           email: userObj.email,
           profilePicture: userObj.profilePicture,
-          displayName: userObj.email, // Using email for display, can be enhanced with actual name if available
+          displayName: userObj.email, // =================== (Using email for display, can be enhanced with actual name if available)===================
         }));
         setChatUsers(formattedChatUsers);
       })
@@ -136,7 +138,7 @@ const ChatPage = () => {
       .finally(() => setLoadingInbox(false));
   }, [user]);
 
-  // Fetch last message for each chat user
+  // =================== (Fetch last message for each chat user)===================
   useEffect(() => {
     if (!chatUsers.length || !user?.token) return;
     Promise.all(chatUsers.map(async chatUser => {
@@ -152,7 +154,7 @@ const ChatPage = () => {
     });
   }, [chatUsers, user]);
  
-  // Effect to set receiverId when paramUserId or chatUsers change
+  // =================== (Effect to set receiverId when paramUserId or chatUsers change)===================
   useEffect(() => {
     if (!paramUserId) return;
     if (chatUsers.length > 0) {
@@ -162,11 +164,11 @@ const ChatPage = () => {
         return;
       }
     }
-    // Fallback to URL seller id directly if not found in chatUsers yet
+    // =================== (Fallback to URL seller id directly if not found in chatUsers yet)===================
     setReceiverId(paramUserId);
   }, [paramUserId, chatUsers]);
  
-  // Fetch ad details based on currentAdId
+  // =================== (Fetch ad details based on currentAdId)===================
   useEffect(() => {
     const fetchAdDetails = async () => {
       setLoadingAd(true);
@@ -181,7 +183,7 @@ const ChatPage = () => {
         if (res && res.data && Array.isArray(res.data.postAds)) {
           const foundAd = res.data.postAds.find(item => (item.id || item._id) === currentAdId);
           setAdDetails(foundAd || null);
-          console.log("DEBUG: Ad Details fetched:", foundAd); // Debug log to inspect adDetails
+          console.log("DEBUG: Ad Details fetched:", foundAd); // =================== (Debug log to inspect adDetails)===================
 
           if (foundAd) {
             let newHistoryStack = [{ name: "Home", path: "/homepage" }];
@@ -217,12 +219,12 @@ const ChatPage = () => {
   }, [currentAdId, location.state]);
  
  
-  // Filter chat users
+  // =================== (Filter chat users)===================
   const filteredMessages = chatUsers.filter(u =>
     activeFilter === 'unread' ? !u.isRead :
     activeFilter === 'important' ? u.isImportant : true
   );
-  // Sort by latest message timestamp (desc)
+  // =================== (Sort by latest message timestamp (desc))===================
   const sortedFilteredMessages = [...filteredMessages].sort((a, b) => {
     const taRaw = lastMessages[a.id]?.timestamp || lastMessages[a.id]?.createdAt;
     const tbRaw = lastMessages[b.id]?.timestamp || lastMessages[b.id]?.createdAt;
@@ -231,308 +233,287 @@ const ChatPage = () => {
     return tb - ta;
   });
  
-  // Function to fetch chat messages from API
+  // =================== (Function to fetch chat messages from API)===================
   const fetchChatMessages = async (userId, token) => {
     console.log('Fetching chat messages with userId:', userId);
     
-    if (!token || !user?.id) {
+    if (!user?.id) {
       console.error('Cannot fetch messages: No token or user ID available');
       return null;
     }
     
     try {
-    setLoadingChat(true);
-      const res = await getChatMessagesByUserId(userId, token);
-      console.log('API messages received:', res.data);
-      
-      if (!res.data || !res.data.chatMessages) {
-        console.error('Invalid response format from getChatMessagesByUserId:', res);
+      setLoadingChat(true);
+      setChatError(null); // =================== (Clear previous errors)===================
+      console.log('DEBUG: setLoadingChat(true) at start of fetchChatMessages'); // =================== (DEBUG LOG)===================
+      const historyCallback = (history) => {
+        console.log('Socket chat history received:', history);
+ 
+        const normalizedMessages = history.map(msg => ({
+          ...msg,
+          _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
+          sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
+          receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
+          ad: msg.ad && typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId }, // =================== (FIX AD NORMALIZATION)===================
+          message: msg.message || msg.content,
+          timestamp: msg.timestamp || msg.createdAt || new Date().toISOString()
+        })).sort((a, b) => {
+          const timeA = new Date(a.timestamp || a.createdAt).getTime();
+          const timeB = new Date(b.timestamp || b.createdAt).getTime();
+          return timeA - timeB; // Ascending order - oldest first
+        });
+ 
+        setMessages(normalizedMessages);
         setLoadingChat(false);
-        return null;
-      }
-      
-      // Sort messages by timestamp to ensure oldest messages are at the top
-      const sortedMessages = (res.data.chatMessages || []).sort((a, b) => {
-        const timeA = new Date(a.timestamp || a.createdAt).getTime();
-        const timeB = new Date(b.timestamp || b.createdAt).getTime();
-        return timeA - timeB; // Ascending order - oldest first
-      });
-      
-      // Ensure we have all message data properly formatted
-      const normalizedMessages = sortedMessages.map(msg => ({
-        ...msg,
-        _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
-        sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
-        receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
-        ad: typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId },
-        message: msg.message || msg.content,
-        timestamp: msg.timestamp || msg.createdAt || new Date().toISOString()
-      }));
-      
-      console.log('Normalized messages:', normalizedMessages);
-      
-      // Check if we have both sent and received messages
-      const sentMessages = normalizedMessages.filter(msg => 
-        msg.sender?._id === user?.id || msg.sender?.id === user?.id);
-      const receivedMessages = normalizedMessages.filter(msg => 
-        msg.receiver?._id === user?.id || msg.receiver?.id === user?.id);
-      
-      console.log(`Found ${sentMessages.length} sent messages and ${receivedMessages.length} received messages`);
-      
-      // Set all messages
-      setMessages(normalizedMessages);
-      
-      // Extract adId from messages if not provided
-      let chatAdId = null;
-      if (normalizedMessages.length > 0) {
-        chatAdId = normalizedMessages[0].ad?._id || normalizedMessages[0].ad?.id || normalizedMessages[0].adId;
-      }
-      
-      setLoadingChat(false);
-      return { messages: normalizedMessages, chatAdId };
+        console.log('DEBUG: setLoadingChat(false) in historyCallback (fetchChatMessages).'); // =================== (DEBUG LOG)===================
+ 
+        let chatAdId = null;
+        if (normalizedMessages.length > 0) {
+          chatAdId = normalizedMessages[0].ad?._id || normalizedMessages[0].ad?.id || normalizedMessages[0].adId;
+        }
+        // =================== (No need to return from here as this is a callback for a subscription)===================
+      };
+ 
+      const unsubscribeHistory = emitFetchChatHistory(user.id, userId, currentAdId, historyCallback);
+ 
+      return unsubscribeHistory; // =================== (Return the unsubscribe function directly)===================
     } catch (error) {
       console.error('Error fetching chat messages:', error);
+      setChatError('Failed to load chat messages.'); // =================== (Set error message)===================
       setLoadingChat(false);
-      return null;
-    }
-  };
-  
-  // Function to fetch and listen for chat messages
-  const fetchAndListenForChatMessages = async (userId, token, adId) => {
+      console.log('DEBUG: setLoadingChat(false) in error (fetchChatMessages).'); // =================== (DEBUG LOG)===================
+       return null;
+     }
+   };
+ 
+  // =================== (Function to fetch and listen for chat messages)===================
+  const fetchAndListenForChatMessages = (userId, token, adId) => {
     console.log('Fetching and listening for chat messages with userId:', userId);
     
-    if (!token || !user?.id) {
+    if (!user?.id) {
       console.error('Cannot fetch messages: No token or user ID available');
       setLoadingChat(false);
+      setChatError('User not logged in or token missing.'); // =================== (Set error message)===================
+      console.log('DEBUG: setLoadingChat(false) - user not logged in in fetchAndListenForChatMessages'); // =================== (DEBUG LOG)===================
       return null;
     }
     
     try {
-      // First, fetch messages from API
-      const result = await fetchChatMessages(userId, token);
-      
-      if (!result) {
-        console.error('Failed to fetch chat messages');
-        return null;
-      }
-      
-      const { messages, chatAdId: extractedAdId } = result;
-      
-      // Use provided adId or extracted one
-      const finalAdId = adId || extractedAdId;
-      if (finalAdId) {
-        setCurrentAdId(finalAdId);
-        // The useSocket hook will handle joining the room
-      }
-      
-      return finalAdId;
+      setLoadingChat(true);
+      setChatError(null); // =================== (Clear previous errors)===================
+      console.log('DEBUG: setLoadingChat(true) at start of fetchAndListenForChatMessages'); // =================== (DEBUG LOG)===================
+      // =================== (Fetch messages via socket)===================
+      const unsubscribe = emitFetchChatHistory(user.id, userId, adId, (history) => {
+        const normalizedMessages = history.map(msg => ({
+          ...msg,
+          _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
+          sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
+          receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
+          ad: msg.ad && typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId }, // =================== (FIX AD NORMALIZATION)===================
+          message: msg.message || msg.content,
+          timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
+        })).sort((a, b) => {
+          const timeA = new Date(a.timestamp || a.createdAt).getTime();
+          const timeB = new Date(b.timestamp || b.createdAt).getTime();
+          return timeA - timeB; // Ascending order - oldest first
+        });
+        setMessages(normalizedMessages);
+        setLoadingChat(false);
+        console.log('DEBUG: setLoadingChat(false) in historyCallback (fetchAndListenForChatMessages).'); // =================== (DEBUG LOG)===================
+ 
+        let chatAdId = null;
+        if (normalizedMessages.length > 0) {
+          chatAdId = normalizedMessages[0].ad?._id || normalizedMessages[0].ad?.id || normalizedMessages[0].adId;
+        }
+        if (chatAdId) {
+          setCurrentAdId(chatAdId);
+        }
+      });
+      return unsubscribe; // =================== (Return unsubscribe function)===================
     } catch (error) {
       console.error('Error in fetchAndListenForChatMessages:', error);
-      return null;
-    }
-  };
-  
-  // Set up socket message listener
-  const setupMessageListener = (userId) => {
+      setChatError('Failed to load chat messages.'); // =================== (Set error message)===================
+      setLoadingChat(false);
+      console.log('DEBUG: setLoadingChat(false) in error (fetchAndListenForChatMessages).'); // =================== (DEBUG LOG)===================
+       return null;
+     }
+   };
+ 
+  // =================== (Set up socket message listener)===================
+  const setupMessageListener = useCallback((userId) => { // =================== (MEMOIZE setupMessageListener)===================
     console.log('Setting up message listener for userId:', userId);
     
-    // First, remove any existing listeners to prevent duplicates
-    if (typeof socketService.offChatMessage === 'function') {
-      socketService.offChatMessage();
-    }
-    
-    // Then, add a new listener
-    const offChatMessage = onChatMessage((newMessage) => {
-      console.log('Received new chat message via socket:', newMessage);
-      
-      try {
-        // Skip if message is not for current chat
-        if (userId) {
-          const senderId = newMessage.sender?._id || newMessage.sender?.id || newMessage.sender;
-          const receiverId = newMessage.receiver?._id || newMessage.receiver?.id || newMessage.receiver;
-          const messageAdId = newMessage.ad?._id || newMessage.ad?.id || newMessage.adId || newMessage.ad;
-          
-          // Check if this message is relevant to the current chat
-          const isRelevantUser = senderId === userId || receiverId === userId || 
-                                senderId === user?.id || receiverId === user?.id;
-          
-          // More flexible ad relevance check - if currentAdId is set, check it, otherwise accept any ad
-          const isRelevantAd = !currentAdId || messageAdId === currentAdId;
-          
-          console.log('Message relevance check:', { 
-            isRelevantUser, 
-            isRelevantAd,
-            senderId,
-            receiverId,
-            userId,
-            currentUserId: user?.id,
-            messageAdId,
-            currentAdId
-          });
-          
-          // Only process messages relevant to this chat
-          // Check both user and ad relevance
-          if (!isRelevantUser || !isRelevantAd) {
-            console.log('Message not relevant to current chat, skipping');
-            return;
-          }
-          
-          // Log successful message match for debugging
-          console.log('Message is relevant to current chat, processing...');
-        }
-      
-      // Normalize message format
+    // =================== (First, remove any existing listeners to prevent duplicates)===================
+    const unsubscribe = onChatMessage((newMessage) => {
+      console.log('Received new chat message via socket (setupMessageListener):', newMessage);
+ 
+      const senderId = newMessage.sender?._id || newMessage.sender?.id || newMessage.sender;
+      const receiverId = newMessage.receiver?._id || newMessage.receiver?.id || newMessage.receiver;
+      const messageAdId = newMessage.ad?._id || newMessage.ad?.id || newMessage.adId || newMessage.ad;
+ 
+      const isRelevantUser = senderId === userId || receiverId === userId ||
+                            senderId === user?.id || receiverId === user?.id;
+      const isRelevantAd = !currentAdId || messageAdId === currentAdId;
+ 
+      if (!isRelevantUser || !isRelevantAd) {
+        console.log('Message not relevant to current chat, skipping');
+        return;
+      }
+ 
       const normalized = {
         ...newMessage,
         _id: newMessage._id || newMessage.id || `temp-${Date.now()}`,
-        sender: typeof newMessage.sender === 'object' 
-          ? newMessage.sender 
-          : { _id: newMessage.sender },
-        receiver: typeof newMessage.receiver === 'object'
-          ? newMessage.receiver
-          : { _id: newMessage.receiver },
-        ad: typeof newMessage.ad === 'object'
-          ? newMessage.ad
-          : { _id: newMessage.ad || newMessage.adId || currentAdId }, // Fallback to currentAdId if needed
+        sender: typeof newMessage.sender === 'object' ? newMessage.sender : { _id: newMessage.sender },
+        receiver: typeof newMessage.receiver === 'object' ? newMessage.receiver : { _id: newMessage.receiver },
+        ad: typeof newMessage.ad === 'object' ? newMessage.ad : { _id: newMessage.ad || newMessage.adId || currentAdId },
         message: newMessage.message || newMessage.content,
-        timestamp: newMessage.timestamp || newMessage.createdAt || new Date().toISOString()
+        timestamp: newMessage.timestamp || newMessage.createdAt || new Date().toISOString(),
+        status: newMessage.status || (senderId === user?.id ? 'sent' : 'received'),
       };
-      
-      console.log('Processing normalized message:', normalized);
-      
-      // Add to messages if not already present
+ 
       setMessages(prev => {
-        // Check if message already exists
-        const exists = prev.some(msg => 
-          msg._id === normalized._id || 
-          (msg.message === normalized.message && 
-           msg.sender?._id === normalized.sender?._id &&
-           msg.receiver?._id === normalized.receiver?._id &&
-           Math.abs(new Date(msg.timestamp) - new Date(normalized.timestamp)) < 1000)
-        );
-        
-        if (exists) {
-          console.log('Message already exists, skipping');
-          return prev;
-        }
-        
-        console.log('Adding new message to chat');
-        // Add new message and sort by timestamp
         const updated = [...prev, normalized].sort((a, b) => {
           const timeA = new Date(a.timestamp || a.createdAt).getTime();
           const timeB = new Date(b.timestamp || b.createdAt).getTime();
           return timeA - timeB; // Ascending order - oldest first
         });
-        
+        console.log('DEBUG: New message processed, total messages:', updated.length); // =================== (DEBUG LOG)===================
         return updated;
       });
-      
-      // Update last message for this chat
+ 
       if (paramUserId) {
-      setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
+        setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
       }
-      
-      // We've already added the message to the state, so no need to refresh from API immediately
-      // This reduces unnecessary API calls and prevents race conditions
-      // Only refresh from API if it's been more than 5 seconds since the last refresh
-      if (user?.token && paramUserId) {
-        const now = Date.now();
-        const lastRefreshTime = window.lastMessageRefreshTime || 0;
-        const timeSinceLastRefresh = now - lastRefreshTime;
-        
-        // Reduced refresh frequency to 2 seconds to ensure more timely updates
-        if (timeSinceLastRefresh > 2000) { 
-          console.log('Refreshing messages from API after receiving socket message');
-          window.lastMessageRefreshTime = now;
-          
-          getChatMessagesByUserId(paramUserId, user.token)
-            .then(res => {
-              if (!res.data || !res.data.chatMessages) {
-                console.error('Invalid response format from getChatMessagesByUserId:', res);
-                return;
-              }
-              
-              // Normalize and sort messages
-              const normalizedMessages = (res.data.chatMessages || []).map(msg => ({
-                ...msg,
-                _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
-                sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
-                receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
-                ad: typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId },
-                message: msg.message || msg.content,
-                timestamp: msg.timestamp || msg.createdAt || new Date().toISOString()
-              })).sort((a, b) => {
-                const timeA = new Date(a.timestamp || a.createdAt).getTime();
-                const timeB = new Date(b.timestamp || b.createdAt).getTime();
-                return timeA - timeB; // Ascending order - oldest first
-              });
-              
-              // Update messages with the latest from API
-              setMessages(normalizedMessages);
-            })
-            .catch(err => console.error('Error refreshing messages:', err));
-        } else {
-          console.log(`Skipping API refresh, last refresh was ${timeSinceLastRefresh}ms ago`);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching chat messages:', error);
-    } });
-    return () => offChatMessage();
-  }
-
-  // Separate function to fetch participant details
+      console.log('ChatPage: New chat message processed and state updated.');
+     });
+ 
+    return unsubscribe; // =================== (Return the unsubscribe function)===================
+  }, [user?.id, paramUserId, currentAdId, onChatMessage]); // =================== (MEMOIZE setupMessageListener)===================
+ 
+  // =================== (Separate function to fetch participant details)===================
   const fetchParticipantDetails = async () => {
     if (!paramUserId || !user?.token) return;
     
     try {
-      const res = await getChatMessagesByUserId(paramUserId, user.token);
-      if (res?.data?.chatMessages && res.data.chatMessages.length > 0) {
-        const firstMessage = res.data.chatMessages[0];
-        const otherId = firstMessage.sender._id === user.id ? firstMessage.receiver._id : firstMessage.sender._id;
-        if (otherId) {
-          const participantRes = await getUserDetails(user.token, otherId);
-          console.log('DEBUG: other participant details:', participantRes.data);
-          setOtherParticipantInfo(participantRes.data.data);
-          // Update currentUserInfo for display purposes
-          currentUserInfo.name = participantRes.data.data.firstName || 'Unknown User';
-          currentUserInfo.email = participantRes.data.data.email || 'N/A';
-          currentUserInfo.phone = participantRes.data.data.mobileNumber || 'Not provided';
-          currentUserInfo.location = `${participantRes.data.data.city?.name || ''}, ${participantRes.data.data.state?.name || ''}`.trim().replace(/^, |^ /, '') || 'N/A';
-          currentUserInfo.joinDate = participantRes.data.data.createdAt ? new Date(participantRes.data.data.createdAt).toLocaleDateString() : 'N/A';
-          currentUserInfo.avatar = participantRes.data.data.profilePicture || null;
-        }
+      const participantRes = await getUserDetails(user.token, paramUserId);
+      console.log('DEBUG: other participant details:', participantRes.data);
+      const participantData = participantRes.data.data || participantRes.data;
+      if (participantData) {
+        setOtherParticipantInfo(participantData);
+        // =================== (Update currentUserInfo for display purposes)===================
+        currentUserInfo.name = participantData.firstName || 'Unknown User';
+        currentUserInfo.email = participantData.email || 'N/A';
+        currentUserInfo.phone = participantData.mobileNumber || 'Not provided';
+        currentUserInfo.location = `${participantData.city?.name || ''}, ${participantData.state?.name || ''}`.trim().replace(/^, |^ /, '') || 'N/A';
+        currentUserInfo.joinDate = participantData.createdAt ? new Date(participantData.createdAt).toLocaleDateString() : 'N/A';
+        currentUserInfo.avatar = participantData.profilePicture || null;
+        setOtherDisplayEmail(participantData.email); // =================== (Set the display email here)===================
       }
     } catch (error) {
       console.error('Error fetching participant details:', error);
     }
   };
+ 
+  const handleConnectAndFetch = useCallback(() => {
+    if (isConnected() && user?.id) {
+      setLoadingChat(true);
+      console.log('DEBUG: setLoadingChat(true) at start of handleConnectAndFetch (socket connected).'); // =================== (DEBUG LOG)===================
+      console.log('ChatPage: Socket connected, attempting to fetch chat history.');
+      // =================== (LOGGING PARAMS BEFORE EMITTING FETCH CHAT HISTORY)===================
+      console.log('DEBUG: Emitting fetchChatHistory with -> currentUserId:', user.id, 'otherUserId:', paramUserId, 'currentAdId:', currentAdId);
+      // =================== (ADD TIMEOUT MECHANISM FOR FETCHING CHAT HISTORY)===================
+      const timeoutId = setTimeout(() => {
+        console.warn('Chat history fetch timed out. Forcing setLoadingChat(false) and setting chatError.');
+        setLoadingChat(false);
+        setChatError('Failed to load chat history: Timeout.');
+        setMessages([]); // =================== (ALSO ENSURE MESSAGES ARE CLEARED IF TIMEOUT OCCURS)===================
+      }, 5000); // =================== (5 SECONDS TIMEOUT)===================
 
-  // Fetch messages for selected ad - using socket for real-time updates
+      const unsubscribeChatHistory = emitFetchChatHistory(user.id, paramUserId, currentAdId, (history) => {
+        clearTimeout(timeoutId); // =================== (CLEAR THE TIMEOUT IF A RESPONSE IS RECEIVED)===================
+        console.log('DEBUG: Raw chat history received in handleConnectAndFetch:', history); // =================== (DEBUG LOG)===================
+        console.log('Initial chat history received in useEffect:', history);
+        const normalizedMessages = history.map(msg => ({
+          ...msg,
+          _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
+          sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
+          receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
+          ad: typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId },
+          message: msg.message || msg.content,
+          timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
+        })).sort((a, b) => {
+          const timeA = new Date(a.timestamp || a.createdAt).getTime();
+          const timeB = new Date(b.timestamp || b.createdAt).getTime();
+          return timeA - timeB; // Ascending order - oldest first
+        });
+        console.log('DEBUG: Normalized messages after processing in handleConnectAndFetch:', normalizedMessages); // =================== (DEBUG LOG)===================
+        setMessages(normalizedMessages);
+        setLoadingChat(false);
+        console.log('DEBUG: setLoadingChat(false) in handleConnectAndFetch history callback.'); // =================== (DEBUG LOG)===================
+
+        let chatAdId = null;
+        if (normalizedMessages.length > 0) {
+          chatAdId = normalizedMessages[0].ad?._id || normalizedMessages[0].ad?.id || normalizedMessages[0].adId;
+        }
+        if (chatAdId) {
+          setCurrentAdId(chatAdId);
+        }
+      });
+
+      const unsubscribeNewMessages = setupMessageListener(paramUserId);
+
+      fetchParticipantDetails();
+
+      // =================== (Return a cleanup function for these subscriptions)===================
+      return () => {
+        clearTimeout(timeoutId); // =================== (ENSURE TIMEOUT IS CLEARED ON CLEANUP AS WELL)===================
+        unsubscribeChatHistory();
+        unsubscribeNewMessages();
+      };
+    } else {
+      setLoadingChat(false); // =================== (Explicitly stop loading if not connected)===================
+      console.log('DEBUG: setLoadingChat(false) - socket not connected in handleConnectAndFetch.'); // =================== (DEBUG LOG)===================
+      setMessages([]);
+      console.log('ChatPage: Socket not connected, clearing messages and waiting.');
+      return () => {}; // =================== (Return a no-op cleanup function)===================
+    }
+  }, [isConnected, user?.id, paramUserId, emitFetchChatHistory, setupMessageListener, fetchParticipantDetails, setLoadingChat, setMessages, setCurrentAdId]);
+
+
+  // =================== (Fetch messages for selected ad - using socket for real-time updates)===================
   useEffect(() => {
     console.log('DEBUG: user object (for messages):', user);
     console.log('DEBUG: paramAdId (for messages):', paramUserId);
     console.log('DEBUG: user.token (for messages):', user?.token);
-    if (!paramUserId || !user?.token) {
-      console.log('DEBUG: paramUserId or user.token is missing, skipping chat message fetch.');
-      setMessages([]);
-      setLoadingChat(false);
-      return;
-    } 
-    
-    // Use the combined function to fetch and listen for messages
-    fetchAndListenForChatMessages(paramUserId, user.token, currentAdId)
-      .then(adId => {
-        if (adId) {
-          console.log(`Successfully connected to chat room for ad: ${adId}`);
-        }
-      });
-      
-    // Fetch participant details separately
-    fetchParticipantDetails();
-  }, [paramUserId, user?.token]);
-  
-  // Join chat room and listen for messages
+    if (!paramUserId || !user?.id) {
+       console.log('DEBUG: paramUserId or user.id is missing, skipping chat message fetch.');
+       setMessages([]);
+       setLoadingChat(false);
+       console.log('DEBUG: setLoadingChat(false) - missing params in main useEffect.'); // =================== (DEBUG LOG)===================
+       return;
+     }
+ 
+    let unsubscribeOnConnectListener = () => {};
+ 
+    // =================== (Attempt to connect and fetch immediately if already connected)===================
+    const cleanupHandleConnect = handleConnectAndFetch();
+ 
+    // =================== (Also set up a listener to retry fetching on connect event (for initial connection or reconnects))===================
+    unsubscribeOnConnectListener = onConnect(() => {
+      console.log('ChatPage: Socket reconnected in ChatPage, attempting to fetch chat history...');
+      handleConnectAndFetch(); // =================== (Call the memoized function)===================
+    });
+ 
+    return () => {
+      if (typeof cleanupHandleConnect === 'function') {
+        cleanupHandleConnect();
+      }
+      unsubscribeOnConnectListener();
+      console.log('ChatPage: Cleaning up chat useEffect.'); // =================== (Cleaning up chat useEffect)===================
+     };
+   }, [paramUserId, user?.id, onConnect, handleConnectAndFetch, emitFetchChatHistory, isConnected, setupMessageListener]);
+
+  // =================== (Join chat room and listen for messages)===================
   useEffect(() => {
     if (!(user?.id && currentAdId)) return;
 
@@ -540,7 +521,7 @@ const ChatPage = () => {
       if (isConnected()) joinChatRoom(currentAdId);
     };
   
-    // Attempt immediately if connected
+    // =================== (Attempt immediately if connected)===================
     tryJoin();
 
     const offConnect = onConnect(() => {
@@ -553,7 +534,7 @@ const ChatPage = () => {
     };
   }, [user?.id, currentAdId, paramUserId, isConnected, joinChatRoom, onConnect, onChatMessage]);
 
-  // Subscribe to notifications
+  // =================== (Subscribe to notifications)===================
   useEffect(() => {
     if (!user?.id) return;
     const unsubscribe = subscribeToNotifications((notification) => {
@@ -568,29 +549,30 @@ const ChatPage = () => {
     };
   }, [user?.id, subscribeToNotifications]);
 
-  // Send message
+  // =================== (Send message)===================
   const handleSendMessage = async () => {
-    // Prevent sending a message to yourself
+    // =================== (Prevent sending a message to yourself)===================
     if (user?.id && (receiverId === user.id || paramUserId === user.id)) {
       const err = "Cannot send message to yourself.";
       console.warn('Send blocked:', err);
       alert(JSON.stringify(err, null, 2));
       return;
     }
-    if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // Ensure currentAdId is present
+    if (!message.trim() || !user?.id || !paramUserId || !receiverId || !currentAdId) return; // =================== (Ensure currentAdId is present)===================
     
-    // Create message object
+    // =================== (Create message object)===================
     const messageData = {
-      senderId: user.id, // Backend might expect senderId from socket context, but good to have
+      senderId: user.id,
+      // =================== (Backend might expect senderId from socket context, but good to have)===================
       receiver: receiverId,
       adId: currentAdId,
       message: message.trim(),
     };
     
-    // Optimistically add message to UI
+    // =================== (Optimistically add message to UI)===================
     const optimisticMessage = {
       ...messageData,
-      _id: `temp-${Date.now()}`, // Temporary ID until server confirms
+      _id: `temp-${Date.now()}`, // =================== (Temporary ID until server confirms)===================
       sender: {
         _id: user.id,
         profilePicture: user?.profilePicture || null
@@ -601,10 +583,10 @@ const ChatPage = () => {
       ad: {
         _id: currentAdId
       },
-      pending: true // Mark as pending until confirmed
+      pending: true // =================== (Mark as pending until confirmed)===================
     };
     
-    // Add message to UI and sort by timestamp
+    // =================== (Add message to UI and sort by timestamp)===================
     setMessages(prev => {
       const updated = [...prev, optimisticMessage].sort((a, b) => {
         const timeA = new Date(a.timestamp || a.createdAt).getTime();
@@ -614,17 +596,17 @@ const ChatPage = () => {
       return updated;
     });
     
-    // Update last message for this chat
+    // =================== (Update last message for this chat)===================
     setLastMessages(prev => ({ ...prev, [paramUserId]: optimisticMessage }));
     
-    setMessage(''); // Clear input field immediately
+    setMessage(''); // =================== (Clear input field immediately)===================
     
     try {
-      // Ensure we're in the chat room before sending
+      // =================== (Ensure we're in the chat room before sending)===================
       if (isConnected()) {
         joinChatRoom(currentAdId);
 
-        // Send via socket using the 'sendMessage' event
+        // =================== (Send via socket using the 'sendMessage' event)===================
         console.log('Emitting chat message via socket service:', messageData);
         socketService.emitChatMessage(messageData);
 
@@ -632,7 +614,7 @@ const ChatPage = () => {
         console.warn('Socket not connected, falling back to API only');
       }
       
-      // Also send via API as backup and to ensure persistence
+      // =================== (Also send via API as backup and to ensure persistence)===================
       console.log('Sending message via API:', {
         receiverId,
         adId: currentAdId,
@@ -652,7 +634,7 @@ const ChatPage = () => {
           }
         };
         
-        // Replace the optimistic message with the confirmed one
+        // =================== (Replace the optimistic message with the confirmed one)===================
         setMessages(prev => prev.map(msg => 
           msg._id === optimisticMessage._id ? normalized : msg
         ));
@@ -663,14 +645,14 @@ const ChatPage = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      // Mark the optimistic message as failed
+      // =================== (Mark the optimistic message as failed)===================
       setMessages(prev => prev.map(msg => 
         msg._id === optimisticMessage._id ? {...msg, failed: true, pending: false} : msg
       ));
     }
   };
  
-  // UI
+  // =================== (UI)===================
   if (!isLoggedIn) {
     return (
       <div className="font-sans min-h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -711,7 +693,8 @@ const ChatPage = () => {
           </div>
         </div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-4 h-[calc(100vh-120px)] bg-white rounded-lg overflow-hidden shadow-lg">
-          {/* Inbox List */}
+          {/* =================== (Inbox List)===================
+          */}
           <div className={`${paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
             <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-100">
               <h2 className="text-xl font-bold text-pink-600 m-0">Inbox</h2>
@@ -779,7 +762,8 @@ const ChatPage = () => {
               )}
             </div>
           </div>
-          {/* Chat Interface */}
+          {/* =================== (Chat Interface)===================
+          */}
           <div className={`${paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
             {paramUserId ? (
               <>
@@ -810,6 +794,10 @@ const ChatPage = () => {
                     <div className="min-h-full flex flex-col">
                       {loadingChat ? (
                         <div className="flex items-center justify-center h-full text-gray-500">Loading chat...</div>
+                      ) : chatError ? ( // =================== (DISPLAY CHAT ERROR)===================
+                        <div className="flex items-center justify-center h-full text-red-500 font-semibold">
+                          Error: {chatError}
+                        </div>
                       ) : messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full text-gray-500">
                           <div className="text-center">
@@ -823,7 +811,8 @@ const ChatPage = () => {
                         </div>
                       ) : (
                         <>
-                          {/* Group messages by date */}
+                          {/* =================== (Group messages by date)===================
+                          */}
                           {messages.reduce((acc, msg, index) => {
                             const msgDate = new Date(msg.timestamp);
                             const today = new Date();
@@ -839,11 +828,11 @@ const ChatPage = () => {
                               dateLabel = msgDate.toLocaleDateString();
                             }
 
-                            // Determine the last date label that was explicitly added as a date separator
+                            // =================== (Determine the last date label that was explicitly added as a date separator)===================
                             const lastDateSeparator = acc.findLast(item => item.type === 'date');
                             const lastRenderedDateLabel = lastDateSeparator ? lastDateSeparator.label : null;
 
-                            // Add date separator if it's a new day or the first message
+                            // =================== (Add date separator if it's a new day or the first message)===================
                             if (index === 0 || dateLabel !== lastRenderedDateLabel) {
                               acc.push({ type: 'date', label: dateLabel, key: `date-${dateLabel}` });
                             }
@@ -923,7 +912,8 @@ const ChatPage = () => {
               </div>
             )}
           </div>
-          {/* User Info Modal */}
+          {/* =================== (User Info Modal)===================
+          */}
           {showUserInfo && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">

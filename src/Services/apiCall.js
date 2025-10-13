@@ -2,19 +2,19 @@ import axios from "axios";
 
 export const commonRequest = async (methods, url, body, header) => {
   const authToken = sessionStorage.getItem("token");
-  // Base headers: if caller provided headers, clone; else default to JSON for non-FormData
+  // =================== (BASE HEADERS: IF CALLER PROVIDED HEADERS, CLONE; ELSE DEFAULT TO JSON FOR NON-FORMDATA)===================
   const headers = header ? { ...header } : { "Content-Type": body instanceof FormData ? undefined : "application/json" };
-  // If body is FormData, let the browser set Content-Type
+  // =================== (IF BODY IS FORMDATA, LET THE BROWSER SET CONTENT-TYPE)===================
   if (body instanceof FormData && headers["Content-Type"]) delete headers["Content-Type"];
-  // If caller did NOT pass Authorization, attach from sessionStorage
+  // =================== (IF CALLER DID NOT PASS AUTHORIZATION, ATTACH FROM SESSIONSTORAGE)===================
   if (!headers.Authorization && authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }
-  // If caller DID pass Authorization without Bearer, normalize it
+  // =================== (IF CALLER DID PASS AUTHORIZATION WITHOUT BEARER, NORMALIZE IT)===================
   if (headers.Authorization && typeof headers.Authorization === 'string' && !headers.Authorization.toLowerCase().startsWith('bearer ')) {
     headers.Authorization = `Bearer ${headers.Authorization}`;
   }
-  // Remove undefined headers to avoid sending "Authorization: undefined"
+  // =================== (REMOVE UNDEFINED HEADERS TO AVOID SENDING "AUTHORIZATION: UNDEFINED")===================
   Object.keys(headers).forEach((k) => headers[k] === undefined && delete headers[k]);
 
   let config = {

@@ -8,7 +8,8 @@ import { IoIosShareAlt } from "react-icons/io";
 const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation(); // Added useLocation hook
+  // =================== (ADDED USELOCATION HOOK)===================
+  const location = useLocation();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -17,7 +18,8 @@ const ProductDetailPage = () => {
   const [ad, setAd] = useState(null);
   const [adError, setAdError] = useState(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
+  // =================== (INITIALIZE WITH HOME)===================
+  const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -37,7 +39,7 @@ const ProductDetailPage = () => {
     }
   };
 
-  // Fetch categories on mount
+  // =================== (FETCH CATEGORIES ON MOUNT)===================
   useEffect(() => {
     const fetchCategories = async () => {
       setLoadingCategories(true);
@@ -61,7 +63,7 @@ const ProductDetailPage = () => {
     fetchCategories();
   }, []);
 
-  // Fetch ad by id and set history stack
+  // =================== (FETCH AD BY ID AND SET HISTORY STACK)===================
   useEffect(() => {
     const fetchAd = async () => {
       setLoadingAd(true);
@@ -108,7 +110,7 @@ const ProductDetailPage = () => {
 
   const adImages = Array.isArray(ad?.images) && ad.images.length > 0 ? ad.images : [];
 
-  // Keyboard navigation for lightbox
+  // =================== (KEYBOARD NAVIGATION FOR LIGHTBOX)===================
   useEffect(() => {
     if (!isLightboxOpen) return;
     const onKey = (e) => {
@@ -120,7 +122,7 @@ const ProductDetailPage = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [isLightboxOpen, adImages.length]);
 
-  // Handle browser back button while lightbox is open
+  // =================== (HANDLE BROWSER BACK BUTTON WHILE LIGHTBOX IS OPEN)===================
   useEffect(() => {
     if (!isLightboxOpen) return;
     const onPopState = () => {
@@ -178,10 +180,10 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
 
   return (
     <div className="text-sm">
-{/* Header */}
+// =================== (HEADER)===================
     <Header />
 
-      {/* Breadcrumb */}
+      // =================== (BREADCRUMB)===================
       <div className="flex flex-row sm:flex-row items-start sm:items-center text-sm sm:text-xl font-semibold max-w-6xl mx-auto py-3 px-4 sm:px-0">
         <div className="flex flex-wrap gap-1 sm:gap-2 ml-2 sm:ml-9">
           {historyStack.map((item, index) => (
@@ -205,7 +207,7 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
         </div>
       </div>
 
-      {/* Product Section */}
+      // =================== (PRODUCT SECTION)===================
       <div className="max-w-7xl px-2 md:px-6 lg:px-8 pb-5 sm:pb-10 mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-stretch gap-8 xl:gap-14">
 

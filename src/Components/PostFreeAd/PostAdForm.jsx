@@ -6,7 +6,8 @@ import {postNewAd, updateAd, getAllCategories, getAllSubCategories, getStatesByC
 
 export default function PostAdForm() {
   const navigate = useNavigate();
-  const { category, subcategory } = useParams(); // These are still used to render the correct form fields
+  // =================== (These are still used to render the correct form fields)===================
+  const { category, subcategory } = useParams();
   const [searchParams] = useSearchParams();
   const adId = searchParams.get('edit');
   const isEditMode = !!adId;
@@ -153,24 +154,24 @@ export default function PostAdForm() {
         formData.append("termsAccepted", data.termsAccepted ? "true" : "false");
       }
 
-    // Use category/subcategory IDs if available
+    // =================== (USE CATEGORY/SUBCATEGORY IDS IF AVAILABLE)===================
     // Example mapping (replace with your actual mapping logic)
-const categoryId = categories.find(cat => cat.name === category)?._id;
-const subcategoryId = subcategories.find(sub => sub.name === subcategory)?._id;
+    const categoryId = categories.find(cat => cat.name === category)?._id;
+    const subcategoryId = subcategories.find(sub => sub.name === subcategory)?._id;
 
-formData.append("category", categoryId);
-formData.append("subcategory", subcategoryId);
+    formData.append("category", categoryId);
+    formData.append("subcategory", subcategoryId);
 
-    // Seller (optional)
+    // =================== (SELLER (OPTIONAL))===================
     if (data.seller) formData.append("seller", data.seller);
 
-    // Location fields (bracket notation)
+    // =================== (LOCATION FIELDS (BRACKET NOTATION))===================
     formData.append("location[city]", data.city || "");
     formData.append("location[state]", data.state || "");
     formData.append("location[pincode]", data.pincode || "");
     formData.append("location[address]", data.address || "");
 
-    // Contact info fields (bracket notation)
+    // =================== (CONTACT INFO FIELDS (BRACKET NOTATION))===================
     formData.append("contactInfo[name]", data.name || "");
     formData.append("contactInfo[phone]", data.phone || "");
     formData.append("contactInfo[email]", data.email || "");
@@ -184,10 +185,11 @@ formData.append("subcategory", subcategoryId);
       formData.append("categorySpecific[condition]", data.condition || "");
       if (data.color) formData.append("categorySpecific[color]", data.color);
       if (data.features) {
-      data.features.split(',').map(f => f.trim()).filter(Boolean).forEach(f =>
-      formData.append('categorySpecific[features][]', f)
-      );
-    }}
+        // =================== (FEATURES AS ARRAY, MATCHING YOUR DB)===================
+        data.features.split(',').map(f => f.trim()).filter(Boolean).forEach(f =>
+        formData.append('categorySpecific[features][]', f)
+        );
+      }}
     if (category === "Furniture") {
       formData.append("categorySpecific[type]", data.type || "");
       formData.append("categorySpecific[features]", data.features || "");
@@ -201,7 +203,7 @@ formData.append("subcategory", subcategoryId);
       formData.append("categorySpecific[year]", data.year || "");
       formData.append("categorySpecific[kmDriven]", data.kmDriven || "");
 
-     // Only append these fields if NOT "Spare Parts"
+     // =================== (ONLY APPEND THESE FIELDS IF NOT "SPARE PARTS")===================
     if (subcategory !== "Spare Parts") {
     if (data.fuelType) formData.append("categorySpecific[fuelType]", data.fuelType);
     if (data.transmission) formData.append("categorySpecific[transmission]", data.transmission);
@@ -314,10 +316,10 @@ formData.append("subcategory", subcategoryId);
           formData.append("categorySpecific[capacity]", data.capacity || "");
           formData.append("categorySpecific[airFryerType]", data.airFryerType || "");
 
-         // Features as array, matching your DB
+         // =================== (FEATURES AS ARRAY, MATCHING YOUR DB)===================
          const airFryerFeatures = data.airFryerFeatures
          ? data.airFryerFeatures.split(",").map(f => f.trim()).filter(Boolean) : [];
-         // Only append if features exist
+         // =================== (ONLY APPEND IF FEATURES EXIST)===================
          if (airFryerFeatures.length > 0) {
          airFryerFeatures.forEach(f =>
         formData.append("categorySpecific[airFryerFeatures][]", f)

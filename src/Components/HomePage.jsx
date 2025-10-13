@@ -9,7 +9,7 @@ import { getAllCategories, getAllActiveAds, getBanners } from "../Services/api";
 import Header from './Header&Footer/Header';
 import Footer from "./Header&Footer/Footer";
 
-// Helper: map category names to icons from API
+// =================== (HELPER: MAP CATEGORY NAMES TO ICONS FROM API)===================
 const categoryIcons = {
   "Mobiles": <FaMobileAlt />, 
   "Electronics & Appliances": <FaTv />, 
@@ -31,7 +31,7 @@ const adImages = [
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // login detection
+  // =================== (LOGIN DETECTION)===================
   const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
   const [current, setCurrent] = useState(0);
   const [showAllPremium, setShowAllPremium] = useState(false);
@@ -174,10 +174,10 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen text-sm">
-      {/* Header */}
-       <Header />
+      // =================== (HEADER)===================
+      <Header />
 
-      {/* Categories Top Bar (Mobile Only) */}
+      // =================== (CATEGORIES TOP BAR (MOBILE ONLY))===================
       <div className="sm:hidden top-14 bg-white z-10 p-1 pb-1 shadow">
         <div className="flex overflow-x-auto w-full gap-2 pb-1.5 scrollbar-hide">
           {loadingCategories ? (
@@ -196,24 +196,24 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Mobile Advertisement below categories bar */}
-<div className="sm:hidden w-full px-2 py-3 flex flex-col items-center">
-  <span className="font-semibold text-xs text-gray-600 mb-2">Advertisements</span>
-  <div className="flex flex-nowrap gap-3 justify-start w-full overflow-x-auto scrollbar-hide">
-    {adImages.map((src, idx) => (
-      <img
-        key={idx}
-        src={src}
-        alt={`Ad Banner ${idx + 1}`}
-        className="h-24 object-cover rounded-lg shadow border min-w-[220px] max-w-[400px]"
-      />
-    ))}
-  </div>
-</div>
+      // =================== (MOBILE ADVERTISEMENT BELOW CATEGORIES BAR)===================
+      <div className="sm:hidden w-full px-2 py-3 flex flex-col items-center">
+        <span className="font-semibold text-xs text-gray-600 mb-2">Advertisements</span>
+        <div className="flex flex-nowrap gap-3 justify-start w-full overflow-x-auto scrollbar-hide">
+          {adImages.map((src, idx) => (
+            <img
+              key={idx}
+              src={src}
+              alt={`Ad Banner ${idx + 1}`}
+              className="h-24 object-cover rounded-lg shadow border min-w-[220px] max-w-[400px]"
+            />
+          ))}
+        </div>
+      </div>
 
-      {/* Main Layout: Sidebar (desktop/tablet) */}
+      // =================== (MAIN LAYOUT: SIDEBAR (DESKTOP/TABLET))===================
       <div className="flex flex-col sm:flex-row gap-5 px-2 items-start max-w-7xl mx-auto">
-  {/* Sidebar: hidden on mobile, visible on sm+ */}
+  // =================== (SIDEBAR: HIDDEN ON MOBILE, VISIBLE ON SM+ )===================
   <aside className="sticky">
     <div className="hidden sm:block top-20 h-120 w-58 md:w-44 lg:w-60 min-w-[160px] max-w-[250px] bg-white rounded-lg p-3 shadow overflow-y-auto">
       <h3 className="text-lg font-semibold mb-1 text-center">All Categories</h3>
@@ -236,7 +236,7 @@ const HomePage = () => {
       )}
     </div>
 
-  {/* Advertisement images below sidebar (desktop/tablet only) */}
+  // =================== (ADVERTISEMENT IMAGES BELOW SIDEBAR (DESKTOP/TABLET ONLY))===================
 <div className="hidden sm:flex flex-col items-center w-58 md:w-44 lg:w-60 min-w-[160px] max-w-[250px] mt-2 mb-4">
   <span className="font-semibold text-sm text-gray-600 mb-2">Advertisements</span>
   <div className="flex flex-col gap-3 w-full">
@@ -252,16 +252,16 @@ const HomePage = () => {
 </div>
   </aside>
 
-        {/* Main Section */}
+        // =================== (MAIN SECTION)===================
         <main className="flex-1 mt-0 sm:mt-3 ml-0">
 
-          {/* Post Ad Button */}
+          // =================== (POST AD BUTTON)===================
           <div className="bg-yellow-200 rounded-lg py-2 sm:py-4 text-center font-bold text-sm sm:text-xl mb-5 cursor-pointer hover:bg-yellow-400"
             onClick={() => navigate("/post-free-ad")} >
             Post Free AD
           </div>
 
-          {/* Banner Section */}
+          // =================== (BANNER SECTION)===================
           {loadingBanners ? (
             <div className="py-8 text-center text-xl text-blue-600 font-semibold">Loading . . .</div>
           ) : bannerError ? (
@@ -281,7 +281,7 @@ const HomePage = () => {
                 </div>
               ))}
             </div> 
-            {/* Dots */}
+            // =================== (DOTS)===================
             <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
               {banners.map((banner, index) => (
                 <button
@@ -297,7 +297,7 @@ const HomePage = () => {
           </div>
         )}
 
-           {/* LocalMart Recommended */}
+           // =================== (LOCALMART RECOMMENDED)===================
           <h2 className="text-lg sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
         {loadingAds ? (
           <div className="py-8 text-center text-xl text-blue-600 font-semibold">
@@ -351,7 +351,7 @@ const HomePage = () => {
           </div>
         )}
 
-          {/* Recently Ad Grid */}
+          // =================== (RECENTLY AD GRID)===================
          <h2 className="text-lg sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
         {loadingAds ? (
           <div className="py-8 text-center text-xl text-blue-600 font-semibold">
@@ -407,7 +407,7 @@ const HomePage = () => {
         </main>
       </div>
 
-      {/* Footer */}
+      // =================== (FOOTER)===================
       <Footer />
     </div>
   );

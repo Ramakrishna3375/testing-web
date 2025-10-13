@@ -8,18 +8,30 @@ class SocketService {
     this.token = null;
     this.isConnected = false;
     this.activeRooms = new Set(); // Track active chat rooms
+    // =================== (Track active chat rooms)===================
+    this.isConnecting = false;
+    // =================== (New state to track if a connection attempt is in progress)===================
   }
   
-  // Check if already in a specific room
+  // =================== (Check if already in a specific room)===================
   isInRoom(roomId) {
     return this.activeRooms.has(roomId);
   }
 
-  // Connect to socket server
+  // =================== (Connect to socket server)===================
   connect(userId, token) {
-    if (this.socket) {
-      console.log('Socket already connected, disconnecting first');
+    if (this.socket && this.socket.connected) {
+      console.log('Socket already connected and active, skipping new connection.');
+      return;
+    } else if (this.socket && !this.socket.connected) {
+      console.log('Socket exists but is not connected, attempting to reconnect/reuse.');
       this.disconnect();
+      // =================== (Clean up any stale/disconnected socket instance)===================
+    }
+
+    if (this.isConnecting) {
+      console.log('Already attempting to connect, skipping new connection request.');
+      return;
     }
 
     this.userId = userId;
@@ -27,54 +39,67 @@ class SocketService {
 
     console.log('Connecting to socket server with userId:', userId);
     
-    // Create socket connection with improved configuration
+    // =================== (Create socket connection with improved configuration)===================
     this.socket = io(BASE_URL, {
       auth: { token },
       query: { userId },
-      reconnection: true, // Enable automatic reconnection
-      reconnectionAttempts: 5, // Default is Infinity, but 5 is reasonable
-      reconnectionDelay: 1000, // Start with 1s, will increase automatically
+      reconnection: true,
+      // =================== (Enable automatic reconnection)===================
+      reconnectionAttempts: 5,
+      // =================== (Default is Infinity, but 5 is reasonable)===================
+      reconnectionDelay: 1000,
+      // =================== (Start with 1s, will increase automatically)===================
       timeout: 10000,
-      transports: ['websocket', 'polling'] // Prefer WebSocket, fallback to polling
+      transports: ['websocket', 'polling']
+      // =================== (Prefer WebSocket, fallback to polling)===================
     });
 
-    // Handle connection events
+    this.isConnecting = true;
+    // =================== (Set connecting state)===================
+
+    // =================== (Handle connection events)===================
     this.socket.on('connect', () => {
       console.log('Socket connected successfully:', this.socket.id);
       this.isConnected = true;
+      this.isConnecting = false;
+      // =================== (Reset connecting state on successful connection)===================
       
-      // Dispatch custom event for components to listen to
+      // =================== (Dispatch custom event for components to listen to)===================
       window.dispatchEvent(new CustomEvent('socket_connected', { 
         detail: { socketId: this.socket.id }
       }));
       
-      // Join user-specific room immediately after connection
+      // =================== (Join user-specific room immediately after connection)===================
       if (this.userId) {
         this.joinUserRoom(this.userId);
       }
       
-      // Rejoin all active chat rooms after reconnection
+      // =================== (Rejoin all active chat rooms after reconnection)===================
       this.rejoinActiveRooms();
     });
 
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error.message);
       
-      // Check if error is related to authentication
+      // =================== (Check if error is related to authentication)===================
       if (error.message.includes('auth') || error.message.includes('token')) {
         window.dispatchEvent(new CustomEvent('socket_auth_error', { 
           detail: { error }
         }));
-        // Do not attempt to reconnect on auth errors, as it's a credential issue
+        // =================== (Do not attempt to reconnect on auth errors, as it's a credential issue)===================
         if (this.socket) {
           this.socket.disconnect();
         }
+        this.isConnecting = false;
+        // =================== (Reset connecting state on connection error)===================
       }
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
       this.isConnected = false;
+      this.isConnecting = false;
+      // =================== (Reset connecting state on disconnect)===================
       
       window.dispatchEvent(new CustomEvent('socket_disconnected', { 
         detail: { reason }
@@ -85,7 +110,7 @@ class SocketService {
       console.log('Socket reconnected after', attemptNumber, 'attempts');
       this.isConnected = true;
       
-      // Re-join user room after reconnection
+      // =================== (Re-join user room after reconnection)===================
       if (this.userId) {
         this.joinUserRoom(this.userId);
       }
@@ -94,7 +119,8 @@ class SocketService {
     });
 
     this.socket.on('reconnect_error', (error) => {
-      console.error('Socket reconnection error:', error); // Library handles this
+      console.error('Socket reconnection error:', error);
+      // =================== (Library handles this)===================
     });
     
     this.socket.on('reconnect_failed', () => {
@@ -102,9 +128,11 @@ class SocketService {
       window.dispatchEvent(new CustomEvent('socket_reconnect_failed', { 
         detail: { maxAttempts: this.maxReconnectAttempts }
       }));
+      this.isConnecting = false;
+      // =================== (Reset connecting state on reconnect failed)===================
     });
     
-    // Setup notification listener
+    // =================== (Setup notification listener)===================
     this.socket.on('notification', (notification) => {
       console.log('Received notification:', notification);
       window.dispatchEvent(new CustomEvent('notification_received', { 
@@ -113,7 +141,7 @@ class SocketService {
     });
   }
   
-  // Rejoin all active chat rooms after reconnection
+  // =================== (Rejoin all active chat rooms after reconnection)===================
   rejoinActiveRooms() {
     if (!this.isConnected || !this.socket) return;
     
@@ -126,104 +154,118 @@ class SocketService {
     });
   }
   
-  // Disconnect socket
+  // =================== (Disconnect socket)===================
   disconnect() {
     if (this.socket) {
       console.log('Disconnecting socket...');
-      // Remove all listeners before disconnecting to prevent memory leaks
-      this.socket.removeAllListeners();
+      // =================== (Disconnect the socket first, then remove listeners to allow graceful shutdown)===================
       this.socket.disconnect();
+      this.socket.removeAllListeners();
       this.isConnected = false;
+      this.isConnecting = false;
+      // =================== (Ensure connecting state is false on disconnect)===================
       
-      // Dispatch a global event that socket is disconnected
+      // =================== (Dispatch a global event that socket is disconnected)===================
       window.dispatchEvent(new CustomEvent('socket_disconnected', { detail: { reason: 'manual_disconnect' } }));
     }
   }
 
-  // Listen for new notifications (returns unsubscribe function)
+  // =================== (Listen for new notifications (returns unsubscribe function))===================
   onNewNotification(callback) {
     if (this.socket) {
-      // Remove any existing listeners to prevent duplicates
-      this.socket.off('newNotification');
+      // =================== (Remove any existing listeners to prevent duplicates)===================
+      this.socket.off('notification');
       
       const handler = (notification) => {
-        console.log('Received new notification:', notification);
+        console.log('SocketService: Received new notification event', notification);
         callback(notification);
       };
       
-      this.socket.on('newNotification', handler);
+      this.socket.on('notification', handler);
       
-      // Return unsubscribe function
+      console.log('SocketService: Subscribed to new notification event.');
+ 
+      // =================== (Return unsubscribe function)===================
       return () => {
         if (this.socket) {
-          this.socket.off('newNotification', handler);
+          this.socket.off('notification', handler);
+          console.log('SocketService: Unsubscribed from new notification event.');
         }
       };
     }
+    console.log('SocketService: Not subscribed to new notification (socket not available).');
     return () => {};
   }
-
-  // Listen for notification updates (when marked as read)
+ 
+  // =================== (Listen for notification updates (when marked as read))===================
   onNotificationUpdate(callback) {
     if (this.socket) {
-      // Remove any existing listeners to prevent duplicates
+      // =================== (Remove any existing listeners to prevent duplicates)===================
       this.socket.off('notificationUpdate');
       
       const handler = (data) => {
-        console.log('Received notification update:', data);
+        console.log('SocketService: Received notification update event', data);
         callback(data);
       };
       
       this.socket.on('notificationUpdate', handler);
       
-      // Return unsubscribe function
+      console.log('SocketService: Subscribed to notification update event.');
+
+      // =================== (Return unsubscribe function)===================
       return () => {
         if (this.socket) {
           this.socket.off('notificationUpdate', handler);
+          console.log('SocketService: Unsubscribed from notification update event.');
         }
       };
     }
+    console.log('SocketService: Not subscribed to notification update (socket not available).');
     return () => {};
   }
-
-  // Listen for notification count updates
+ 
+  // =================== (Listen for notification count updates)===================
   onNotificationCount(callback) {
     if (this.socket) {
-      // Remove any existing listeners to prevent duplicates
+      // =================== (Remove any existing listeners to prevent duplicates)===================
       this.socket.off('notificationCount');
       
       const handler = (count) => {
-        console.log('Received notification count update:', count);
+        console.log('SocketService: Received notification count event', count);
         callback(count);
       };
       
       this.socket.on('notificationCount', handler);
       
-      // Return unsubscribe function
+      console.log('SocketService: Subscribed to notification count event.');
+ 
+      // =================== (Return unsubscribe function)===================
       return () => {
         if (this.socket) {
           this.socket.off('notificationCount', handler);
+          console.log('SocketService: Unsubscribed from notification count event.');
         }
       };
     }
+    console.log('SocketService: Not subscribed to notification count (socket not available).');
     return () => {};
   }
-
-  // Remove specific event listeners
+ 
+  // =================== (Remove specific event listeners)===================
   off(event) {
     if (this.socket) {
       this.socket.off(event);
     }
   }
 
-  // Remove all listeners
+  // =================== (Remove all listeners)===================
   removeAllListeners() {
     if (this.socket) {
       this.socket.removeAllListeners();
     }
   }
 
-  // Join user-specific room
+  // =================== (Join user-specific room)===================
   joinUserRoom(userId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('joinUserRoom', userId);
@@ -231,7 +273,7 @@ class SocketService {
     }
   }
 
-  // Join a chat room for a specific ad
+  // =================== (Join a chat room for a specific ad)===================
   joinChatRoom(adId) {
     if (!this.socket || !this.isConnected) {
       console.error('Cannot join chat room: Socket not connected');
@@ -246,11 +288,11 @@ class SocketService {
     console.log('Joining chat room for ad:', adId);
     this.socket.emit('joinRoom', { adId, token: this.token });
     
-    // Track this room as active
+    // =================== (Track this room as active)===================
     const roomId = `${adId}:chat`;
     this.activeRooms.add(roomId);
     
-    // Listen for room join confirmation
+    // =================== (Listen for room join confirmation)===================
     this.socket.once('roomJoined', (data) => {
       console.log('Successfully joined chat room:', data);
       window.dispatchEvent(new CustomEvent('chat_room_joined', { 
@@ -258,10 +300,10 @@ class SocketService {
       }));
     });
     
-    // Listen for room join errors
+    // =================== (Listen for room join errors)===================
     this.socket.once('roomJoinError', (error) => {
       console.error('Error joining chat room:', error);
-      // Remove from active rooms if join failed
+      // =================== (Remove from active rooms if join failed)===================
       this.activeRooms.delete(roomId);
       window.dispatchEvent(new CustomEvent('chat_room_join_error', { 
         detail: { adId, error }
@@ -271,7 +313,7 @@ class SocketService {
     return true;
   }
 
-  // Leave a chat room
+  // =================== (Leave a chat room)===================
   leaveChatRoom(adId) {
     if (!this.socket || !this.isConnected) {
       console.error('Cannot leave chat room: Socket not connected');
@@ -286,21 +328,21 @@ class SocketService {
     console.log('Leaving chat room for ad:', adId);
     this.socket.emit('leaveRoom', { adId, token: this.token });
     
-    // Remove from active rooms
+    // =================== (Remove from active rooms)===================
     const roomId = `${adId}:chat`;
     this.activeRooms.delete(roomId);
     
     return true;
   }
 
-  // Emit a chat message
+  // =================== (Emit a chat message)===================
   emitChatMessage(messageData) {
     if (!this.socket || !this.isConnected) {
       console.error('Cannot send message: Socket not connected');
       return false;
     }
 
-    // Normalize adId from different possible payload shapes
+    // =================== (Normalize adId from different possible payload shapes)===================
     const adId = messageData?.adId || (typeof messageData?.ad === 'object' 
       ? (messageData?.ad?._id || messageData?.ad?.id)
       : messageData?.ad);
@@ -310,14 +352,14 @@ class SocketService {
       return false;
     }
 
-    // Ensure we're in the chat room before sending
+    // =================== (Ensure we're in the chat room before sending)===================
     const roomId = `${adId}:chat`;
     if (!this.activeRooms.has(roomId)) {
       console.log('Not in chat room, joining before sending message');
       this.joinChatRoom(adId);
     }
 
-    // Add token to message data and ensure adId is present for server compatibility
+    // =================== (Add token to message data and ensure adId is present for server compatibility)===================
     const messageWithToken = {
       ...messageData,
       adId,
@@ -325,28 +367,33 @@ class SocketService {
     };
 
     console.log('Emitting chat message:', messageWithToken);
-    this.socket.emit('chatMessage', messageWithToken);
+    this.socket.emit('sendMessage', messageWithToken);
+    // =================== (Changed event name to match backend)===================
     
     return true;
   }
 
-  // Listen for chat messages
+  // =================== (Listen for chat messages)===================
   onChatMessage(callback) {
     if (!this.socket) {
       console.error('Cannot listen for messages: Socket not initialized');
       return () => {};
     }
 
-    // Remove any existing listeners to prevent duplicates
+    // =================== (Remove any existing listeners to prevent duplicates)===================
     this.socket.off('chatMessage');
     this.socket.off('newChatMessage');
     this.socket.off('message');
+    this.socket.off('chat message');
+    // =================== (Also remove for 'chat message' (with space))===================
+    this.socket.off('sendMessageAck');
+    // =================== (Remove for sendMessageAck)===================
 
-    // Set up listeners for different possible event names
+    // =================== (Set up listeners for different possible event names)===================
     const messageHandler = (message) => {
-      console.log('Received chat message:', message);
+      console.log('SocketService: Received chat message event', message);
       
-      // If message contains ad info, ensure we're in the right room
+      // =================== (If message contains ad info, ensure we're in the right room)===================
       const adId = message?.adId || (typeof message?.ad === 'object'
         ? (message?.ad?._id || message?.ad?.id)
         : message?.ad);
@@ -357,7 +404,7 @@ class SocketService {
         }
       }
       
-      // Dispatch a global event for this message
+      // =================== (Dispatch a global event for this message)===================
       window.dispatchEvent(new CustomEvent('chat_message_received', { 
         detail: { message }
       }));
@@ -368,39 +415,64 @@ class SocketService {
     this.socket.on('chatMessage', messageHandler);
     this.socket.on('newChatMessage', messageHandler);
     this.socket.on('message', messageHandler);
+    this.socket.on('chat message', messageHandler);
+    // =================== (Listen for 'chat message' with space)===================
 
-    // Set up reconnect handler to re-register these listeners
+    // =================== (Set up reconnect handler to re-register these listeners)===================
+    const sendMessageAckHandler = (ackData) => {
+      console.log('SocketService: Received sendMessageAck event', ackData);
+      // =================== (You can implement specific logic here to update UI for message sent confirmation)===================
+      // =================== (For now, we will just log it and the ChatPage component will handle the state update.)===================
+      // =================== (Dispatch a global event for this acknowledgment)===================
+      window.dispatchEvent(new CustomEvent('chat_message_sent_ack', {
+        detail: { ackData }
+      }));
+    };
+
+    this.socket.on('sendMessageAck', sendMessageAckHandler);
+    // =================== (Listen for sendMessageAck)===================
+
     const reconnectHandler = () => {
-      console.log('Reconnected, re-registering chat message listeners');
+      console.log('SocketService: Reconnected, re-registering chat message listeners');
       this.socket.on('chatMessage', messageHandler);
       this.socket.on('newChatMessage', messageHandler);
       this.socket.on('message', messageHandler);
+      this.socket.on('chat message', messageHandler);
+      // =================== (Re-register for 'chat message' with space)===================
+      this.socket.on('sendMessageAck', sendMessageAckHandler);
+      // =================== (Re-register for sendMessageAck)===================
     };
-    
+       
     this.socket.on('reconnect', reconnectHandler);
 
-    // Return cleanup function
+    // =================== (Return cleanup function)===================
     return () => {
       if (this.socket) {
         this.socket.off('chatMessage', messageHandler);
         this.socket.off('newChatMessage', messageHandler);
         this.socket.off('message', messageHandler);
+        this.socket.off('chat message', messageHandler);
+        // =================== (Clean up for 'chat message' with space)===================
+        this.socket.off('sendMessageAck', sendMessageAckHandler);
+        // =================== (Clean up for sendMessageAck)===================
         this.socket.off('reconnect', reconnectHandler);
       }
     };
   }
-
-  // Check if socket is connected
+ 
+  // =================== (Check if socket is connected)===================
   isSocketConnected() {
-    return this.socket && this.isConnected;
+    const isConnectedStatus = this.socket && this.socket.connected && this.isConnected;
+    console.log('SocketService: isSocketConnected called, status:', isConnectedStatus);
+    return isConnectedStatus;
   }
-
-  // Get socket instance
+ 
+  // =================== (Get socket instance)===================
   getSocket() {
     return this.socket;
   }
 
-  // Subscribe to connect event (returns unsubscribe)
+  // =================== (Subscribe to connect event (returns unsubscribe))===================
   onConnect(callback) {
     if (this.socket) {
       this.socket.on('connect', callback);
@@ -410,9 +482,34 @@ class SocketService {
     }
     return () => {};
   }
+ 
+  // =================== (Emit fetchChatHistory event and listen for chat history)===================
+  emitFetchChatHistory(senderId, receiverId, adId, callback) {
+    if (!this.socket || !this.isConnected) {
+      console.error('Cannot fetch chat history: Socket not connected');
+      return () => {};
+    }
+
+    console.log('SocketService: Emitting fetchChatHistory:', { senderId, receiverId, adId });
+    this.socket.emit('fetchChatHistory', { senderId, receiverId, adId });
+
+    const handler = (history) => {
+      console.log('SocketService: Received chat history event', history);
+      callback(history);
+    };
+
+    this.socket.on('chat history', handler);
+
+    return () => {
+      if (this.socket) {
+        this.socket.off('chat history', handler);
+        console.log('SocketService: Unsubscribed from chat history event.');
+      }
+    };
+  }
 }
 
-// Create singleton instance
+// =================== (Create singleton instance)===================
 const socketService = new SocketService();
 
 export default socketService;

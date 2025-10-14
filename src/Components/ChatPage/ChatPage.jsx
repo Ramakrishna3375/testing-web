@@ -3,8 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import chatBG from '../../assets/Website logos/chatBG.png';
 import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
-import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage, deleteMessage } from '../../Services/api';
+import { getChatUsers, getChatMessagesByUserId,  getUserDetails , getAllActiveAds, sendChatMessage, deleteMessage, deleteChat } from '../../Services/api';
 import { useSocket } from '../../hooks/useSocket.js';
+import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 import socketService from '../../hooks/socketService';
 import { FaTrash, FaCheckDouble } from 'react-icons/fa';
  
@@ -87,21 +88,23 @@ const ChatPage = () => {
   const [showUserInfo, setShowUserInfo] = useState(false);
   const chatMessagesEndRef = useRef(null);
   const [loadingAd, setLoadingAd] = useState(true);
- 
+  const [deletingChatId, setDeletingChatId] = useState(null);
+
   // State for receiver ID
   const [receiverId, setReceiverId] = useState(null);
   const [adDetails, setAdDetails] = useState(null); // New state for ad details, initialized to null
   const [currentAdId, setCurrentAdId] = useState(initialAdId); // New state for current ad ID
   const [historyStack, setHistoryStack] = useState([{ name: "Home", path: "/homepage" }]); // Initialize with Home
- 
+
   // Use the simplified socket hook. Connection is managed by Header.
   const { isConnected, onConnect, joinChatRoom, leaveChatRoom, onChatMessage } = useSocket();
  
   // State for other participant's info
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
   const [otherDisplayEmail, setOtherDisplayEmail] = useState(null);
+  const [otherProfilePicture, setOtherProfilePicture] = useState(null);
  
-  // Dummy info (replace with real data if available)
+  // Placeholder info (replace with real data if available)
   const currentUserInfo = { name: 'Chat User', email: 'user@example.com', phone: '+1 (000) 000-0000', location: 'Location', joinDate: 'Recently', rating: 0, totalAds: 0, avatar: null };
   const currentProductInfo = { name: 'Product', category: 'Category', price: 'Price on request', location: 'Location' };
  
@@ -127,7 +130,7 @@ const ChatPage = () => {
           id: userObj._id, // Renamed adId to id as it's a user ID
           email: userObj.email,
           profilePicture: userObj.profilePicture,
-          displayName: userObj.email, // Using email for display, can be enhanced with actual name if available
+          displayName: `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email,
         }));
         setChatUsers(formattedChatUsers);
       })
@@ -554,20 +557,33 @@ const ChatPage = () => {
  
   // Derive and show seller email in header when entering from product page or when messages/users load
   useEffect(() => {
-    let email = null;
- 
-    // 1) Prioritize email from navigation state (most direct)
-    if (location.state?.sellerEmail) {
-      email = location.state.sellerEmail;
+    let displayName = null;
+    let profilePicture = null;
+    setOtherProfilePicture(null); // Reset on change
+    
+    // 1) Prioritize name from navigation state (most direct)
+    if (location.state?.sellerName) {
+      displayName = location.state.sellerName;
+      profilePicture = location.state?.sellerProfilePicture || null;
+    } else if (location.state?.sellerEmail) {
+      displayName = location.state.sellerEmail; // Fallback to email if only that is passed
     }
  
     // 2) Fallback to chatUsers list
     const match = chatUsers.find(u => u.id === paramUserId);
-    if (!email && match?.email) {
-      email = match.email;
+    if (!displayName && match) {
+      displayName = match.displayName;
+      profilePicture = match.profilePicture;
+    }
+
+    // 3) If this is a new chat (user not in chatUsers list), add them optimistically
+    if (paramUserId && displayName && !match) {
+      const newChatUser = { id: paramUserId, displayName, profilePicture, email: location.state?.sellerEmail || '' };
+      setChatUsers(prev => [newChatUser, ...prev.filter(u => u.id !== paramUserId)]);
     }
  
-    setOtherDisplayEmail(email || null);
+    setOtherDisplayEmail(displayName || null);
+    setOtherProfilePicture(profilePicture || null);
   }, [chatUsers, paramUserId, messages, user, location.state]);
 
   // Fallback: if we still don't have the seller email, fetch it directly by seller (param) userId
@@ -581,6 +597,7 @@ const ChatPage = () => {
         const email = data?.email;
         if (email) {
           setOtherDisplayEmail(email);
+          setOtherProfilePicture(data?.profilePicture || null);
           setOtherParticipantInfo((prev) => prev || data);
           // Ensure the desktop inbox (left side) shows this seller even if not part of chat list yet
           setChatUsers((prev) => {
@@ -773,6 +790,31 @@ const ChatPage = () => {
     }
   };
 
+  const handleDeleteChat = async (chatUserId, e) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+    if (!chatUserId || !user?.token) return;
+
+    if (window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.')) {
+      setDeletingChatId(chatUserId);
+      try {
+        // Assuming chatUserId is the other participant's ID, which acts as the chatId for this context.
+        const res = await deleteChat(chatUserId, user.token);
+        if (res && (res.status === 200 || res.status === 204)) {
+          // Optimistically remove from UI
+          setChatUsers(prev => prev.filter(u => u.id !== chatUserId));
+          // If the deleted chat was the active one, navigate away
+          if (paramUserId === chatUserId) {
+            navigate('/inbox');
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting chat:', error);
+      } finally {
+        setDeletingChatId(null);
+      }
+    }
+  };
+
 
   // UI
   if (!isLoggedIn) {
@@ -865,13 +907,19 @@ const ChatPage = () => {
                       onClick={() => navigate(`/chat/${chatUser.id}`)}
                     >
                       <div className="flex items-start gap-2">
-                        <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <div className="w-7 h-5 bg-gray-700 rounded-sm relative"></div>
-                        </div>
+                        <img
+                          src={chatUser.profilePicture || UserProfile}
+                          alt={chatUser.displayName}
+                          className="w-10 h-10 rounded-full object-cover border border-gray-300 flex-shrink-0"
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-1">
                             <span className={`text-sm font-bold ${chatUser.id === paramUserId ? 'text-blue-700' : 'text-black'}`}>{chatUser.displayName}</span>
-                            <div className="flex items-center gap-1 text-gray-500 text-xs"><span>📎</span><span>⋮</span></div>
+                            <div className="flex items-center gap-2 text-gray-500 text-xs">
+                              <button onClick={(e) => handleDeleteChat(chatUser.id, e)} disabled={deletingChatId === chatUser.id} className="hover:text-red-500 disabled:opacity-50" title="Delete Chat">
+                                <FaTrash size={12} />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-black text-sm mb-1">{lastMsg?.message || 'No messages yet.'}</p>
                           <p className="text-gray-500 text-xs mt-1">{(lastMsg?.timestamp || lastMsg?.createdAt) ? new Date(lastMsg.timestamp || lastMsg.createdAt).toLocaleString() : ''}</p>
@@ -890,7 +938,11 @@ const ChatPage = () => {
                 <div className="bg-blue-600 p-3 flex justify-between items-center text-white flex-shrink-0 relative z-20">
                   <div className="flex items-center gap-3">
                     <button onClick={() => navigate('/inbox')} className="text-white hover:text-gray-200 mr-2">←</button>
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"><span className="text-gray-600 text-sm">👤</span></div>
+                    <img
+                      src={otherProfilePicture || UserProfile}
+                      alt={otherDisplayEmail || 'Chat User'}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white"
+                    />
                     <div>
                       <span className="font-semibold text-sm">{otherDisplayEmail || 'Chat User'}</span>
                     </div>

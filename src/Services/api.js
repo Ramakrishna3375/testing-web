@@ -111,10 +111,14 @@ export const getChatMessagesByUserId = async (userId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chats/messages/${userId}`, null, { Authorization: `Bearer ${token}` });
 };
 
-// Delete a chat message
+// Delete a chat single message
 export const deleteMessage = async (messageId, token) => {
-  console.log('API: Deleting chat message with ID:', messageId, 'with token:', token ? 'Present' : 'Missing');
   return await commonRequest("DELETE", `${BASE_URL}/api/chats/messages/${messageId}`, null, { Authorization: `Bearer ${token}` });
+};
+
+//Delete chat
+export const deleteChat = async (chatId, token) => {
+  return await commonRequest("DELETE", `${BASE_URL}/api/chats/history/${chatId}`, null, { Authorization: `Bearer ${token}` });
 };
 
 //User Login

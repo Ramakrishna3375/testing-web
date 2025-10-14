@@ -256,7 +256,13 @@ const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getM
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                 <button
-                  type="submit" onClick={() => navigate(`/chat/${ad?.seller?.id || ad?.seller?._id}`, { state: { adId: ad._id || ad.id } })}
+                  type="submit" onClick={() => navigate(`/chat/${ad?.seller?.id || ad?.seller?._id}`, { 
+                    state: { 
+                      adId: ad._id || ad.id,
+                      sellerName: `${ad?.seller?.firstName || ''} ${ad?.seller?.lastName || ''}`.trim() || ad?.contactInfo?.name,
+                      sellerProfilePicture: ad?.seller?.profilePicture
+                    } 
+                  })}
                   className="border border-gray-200 shadow bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition cursor-pointer w-full font-semibold"
                 >
                   💬 Chat with seller

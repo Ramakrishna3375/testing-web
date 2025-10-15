@@ -69,8 +69,13 @@ const ChatPage = () => {
   });
 
   useEffect(() => {
-    sessionStorage.setItem('user', JSON.stringify(user));
-    sessionStorage.setItem('token', user?.token || null);
+    if (user && user.token) {
+      sessionStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('token', user.token);
+    } else {
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+    }
   }, [user]);
 
   const isLoggedIn = !!user;
@@ -340,51 +345,16 @@ const ChatPage = () => {
   // Set up socket message listener
   const setupMessageListener = (userId) => {
     console.log(`Setting up message listener for userId: ${userId} and adId: ${currentAdId}`);
-    
-    // First, remove any existing listeners to prevent duplicates
-    if (typeof socketService.offChatMessage === 'function') {
-      socketService.offChatMessage();
-    }
-    
+
     // Then, add a new listener
     const offChatMessage = onChatMessage((newMessage) => {
       console.log('Received new chat message via socket:', newMessage);
-      
-      try {
-        // Skip if message is not for current chat
-        if (userId) {
-          const senderId = newMessage.sender?._id || newMessage.sender?.id || newMessage.sender;
-          const receiverId = newMessage.receiver?._id || newMessage.receiver?.id || newMessage.receiver;
-          const messageAdId = newMessage.ad?._id || newMessage.ad?.id || newMessage.adId || newMessage.ad;
-          
-          // Check if this message is relevant to the current chat
-          const isRelevantUser = senderId === userId || receiverId === userId || 
-                                senderId === user?.id || receiverId === user?.id;
-          
-          // More flexible ad relevance check - if currentAdId is set, check it, otherwise accept any ad
-          const isRelevantAd = !currentAdId || messageAdId === currentAdId;
-          
-          console.log('Message relevance check:', { 
-            isRelevantUser, 
-            isRelevantAd,
-            senderId,
-            receiverId,
-            userId,
-            currentUserId: user?.id,
-            messageAdId,
-            currentAdId
-          });
-          
-          // Only process messages relevant to this chat
-          // Check both user and ad relevance
-          if (!isRelevantUser || !isRelevantAd) {
-            console.log('Message not relevant to current chat, skipping');
-            return;
-          }
-          
-          // Log successful message match for debugging
-          console.log('Message is relevant to current chat, processing...');
-        }
+
+      // The new onChatMessage implementation in socketService already filters by adId.
+      // We just need to check if the message is relevant to the current conversation partners.
+      const senderId = newMessage.sender?._id || newMessage.sender;
+      const isFromCurrentChatPartner = senderId === userId;
+      if (!isFromCurrentChatPartner) return;
       
       // Normalize message format
       const normalized = {
@@ -423,66 +393,12 @@ const ChatPage = () => {
         
         console.log('Adding new message to chat');
         // Add new message and sort by timestamp
-        const updated = [...prev, normalized].sort((a, b) => {
-          const timeA = new Date(a.timestamp || a.createdAt).getTime();
-          const timeB = new Date(b.timestamp || b.createdAt).getTime();
-          return timeA - timeB; // Ascending order - oldest first
-        });
-        
-        return updated;
+        return [...prev, normalized].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       });
       
       // Update last message for this chat
-      if (paramUserId) {
-        setLastMessages(prev => ({ ...prev, [paramUserId]: normalized }));
-      }
-      
-      // We've already added the message to the state, so no need to refresh from API immediately
-      // This reduces unnecessary API calls and prevents race conditions
-      // Only refresh from API if it's been more than 5 seconds since the last refresh
-      if (user?.token && paramUserId) {
-        const now = Date.now();
-        const lastRefreshTime = window.lastMessageRefreshTime || 0;
-        const timeSinceLastRefresh = now - lastRefreshTime;
-        
-        // Reduced refresh frequency to 2 seconds to ensure more timely updates
-        if (timeSinceLastRefresh > 2000) { 
-          console.log('Refreshing messages from API after receiving socket message');
-          window.lastMessageRefreshTime = now;
-          
-          getChatMessagesByUserId(paramUserId, user.token)
-            .then(res => {
-              if (!res.data || !res.data.chatMessages) {
-                console.error('Invalid response format from getChatMessagesByUserId:', res);
-                return;
-              }
-              
-              // Normalize and sort messages
-              const normalizedMessages = (res.data.chatMessages || []).map(msg => ({
-                ...msg,
-                _id: msg._id || msg.id || `temp-${Date.now()}-${Math.random()}`,
-                sender: typeof msg.sender === 'object' ? msg.sender : { _id: msg.sender },
-                receiver: typeof msg.receiver === 'object' ? msg.receiver : { _id: msg.receiver },
-                ad: typeof msg.ad === 'object' ? msg.ad : { _id: msg.ad || msg.adId },
-                message: msg.message || msg.content,
-                timestamp: msg.timestamp || msg.createdAt || new Date().toISOString()
-              })).sort((a, b) => {
-                const timeA = new Date(a.timestamp || a.createdAt).getTime();
-                const timeB = new Date(b.timestamp || b.createdAt).getTime();
-                return timeA - timeB; // Ascending order - oldest first
-              });
-              
-              // Update messages with the latest from API
-              setMessages(normalizedMessages);
-            })
-            .catch(err => console.error('Error refreshing messages:', err));
-        } else {
-          console.log(`Skipping API refresh, last refresh was ${timeSinceLastRefresh}ms ago`);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching chat messages:', error);
-    } });
+      setLastMessages(prev => ({ ...prev, [userId]: normalized }));
+    }, currentAdId); // Pass currentAdId to filter messages for this chat room
     return offChatMessage;
   }
 
@@ -515,15 +431,7 @@ const ChatPage = () => {
 
   // Fetch messages for selected ad - using socket for real-time updates
   useEffect(() => {
-    console.log('DEBUG: user object (for messages):', user);
-    console.log('DEBUG: paramAdId (for messages):', paramUserId);
-    console.log('DEBUG: user.token (for messages):', user?.token);
-    if (!paramUserId || !user?.token) {
-      console.log('DEBUG: paramUserId or user.token is missing, skipping chat message fetch.');
-      setMessages([]);
-      setLoadingChat(false);
-      return;
-    } 
+    
     
     // Use the combined function to fetch and listen for messages
     fetchAndListenForChatMessages(paramUserId, user.token, currentAdId)
@@ -636,34 +544,53 @@ const ChatPage = () => {
   // Join chat room and listen for messages
   useEffect(() => {
     if (!(user?.id && currentAdId)) return;
- 
-    // Attempt immediately if connected
+
     if (isConnected()) {
       joinChatRoom(currentAdId);
     }
-
+ 
     const offConnect = onConnect(() => {
       if (currentAdId) joinChatRoom(currentAdId);
     });
-
-    // This is the new, filtered listener
-    const offMsg = onChatMessage((newMessage) => {
-      // This callback will only be fired for messages matching currentAdId
-      setMessages(prev => {
-        if (prev.some(msg => msg._id === newMessage._id)) return prev;
-        const updated = [...prev, newMessage];
-        updated.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        return updated;
-      });
-    }, currentAdId);
-
+ 
+    // Use the more robust message listener setup
+    const offMsg = setupMessageListener(paramUserId);
+ 
     return () => {
       if (typeof offMsg === 'function') offMsg();
       if (typeof offConnect === 'function') offConnect();
     };
-  }, [user?.id, currentAdId, isConnected, joinChatRoom, onConnect]);
+  }, [user?.id, currentAdId, isConnected, joinChatRoom, onConnect, onChatMessage, paramUserId]);
   
- {/* ---------------------------------------------------------------------------------------------------------------------- */}
+  const [socketReady, setSocketReady] = useState(socketService.isSocketConnected());
+  useEffect(() => {
+    const handleConnect = () => setSocketReady(true);
+    const handleDisconnect = () => setSocketReady(false);
+    socketService.getSocket()?.on('connect', handleConnect);
+    socketService.getSocket()?.on('disconnect', handleDisconnect);
+    // Initial debug
+    console.log('ChatPage: useEffect - initial socketReady:', socketService.isSocketConnected());
+    return () => {
+      socketService.getSocket()?.off('connect', handleConnect);
+      socketService.getSocket()?.off('disconnect', handleDisconnect);
+    };
+  }, []);
+  useEffect(() => { console.log('socketReady changed:', socketReady); }, [socketReady]);
+ 
+  // Auto-connect socket if not connected when ChatPage has user and token
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    const socket = socketService.getSocket();
+    if (user?.id && token && (!socket || !socket.connected)) {
+      try {
+        console.log('[ChatPage] Socket not connected, attempting connect...');
+        socketService.connect(user.id, token);
+      } catch (e) {
+        console.warn('[ChatPage] Failed to initiate socket connect:', e);
+      }
+    }
+  }, [user?.id]);
+ 
   // Send message using socket for instant delivery
   const handleSendMessage = async () => {
     // Prevent sending a message to yourself
@@ -719,15 +646,37 @@ const ChatPage = () => {
     setMessage(''); // Clear input field immediately
     
     try {
-      // Ensure we're in the chat room before sending
-      if (isConnected()) {
-        joinChatRoom(currentAdId);
-
+      console.log("SocketReady state at send:", socketReady, { userId: user?.id });
+      if (socketReady) {
+        // Ensure we're in the room
+        try { socketService.joinChatRoom(currentAdId); } catch {}
         // Send via socket using the 'emitChatMessage' method from the service
         console.log('Emitting chat message via socket service:', messageDataForBackend);
-        socketService.emitChatMessage(messageDataForBackend);
+        socketService.emitChatMessage({
+          message: message.trim(),
+          adId: currentAdId,
+          receiverId
+        });
 
       } else {
+        // Attempt to connect and send once connected
+        const token = sessionStorage.getItem('token');
+        const sock = socketService.getSocket();
+        if (!sock || !sock.connected) {
+          console.log('[ChatPage] Attempting socket connect before send...');
+          socketService.connect(user.id, token);
+          const onceConnect = () => {
+            try { socketService.joinChatRoom(currentAdId); } catch {}
+            console.log('Emitting chat message via socket service (post-connect):', messageDataForBackend);
+            socketService.emitChatMessage({
+              message: message.trim(),
+              adId: currentAdId,
+              receiverId
+            });
+            socketService.getSocket()?.off('connect', onceConnect);
+          };
+          socketService.getSocket()?.on('connect', onceConnect);
+        }
         console.warn('Socket not connected, falling back to API only');
       }
       
@@ -1064,10 +1013,13 @@ const ChatPage = () => {
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || !socketReady}
                     className="p-2 text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                     title="Send message"
                   >➤</button>
+                  {!socketReady && (
+                    <span className="text-sm text-gray-500 ml-2">Connecting...</span>
+                  )}
                 </div>
               </>
             ) : (

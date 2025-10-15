@@ -8,6 +8,8 @@ class SocketService {
     this.token = null;
     this.isConnected = false;
     this.activeRooms = new Set(); // Track active chat rooms
+    this.onConnectCallback = null; // Callback for post-connection logic
+    this.chatMessageSubscribers = new Set(); // Use a Set for direct subscribers
   }
   
   // Check if already in a specific room
@@ -15,70 +17,55 @@ class SocketService {
     return this.activeRooms.has(roomId);
   }
 
+  // Set a callback to be executed upon successful connection
+  setOnConnect(callback) {
+    this.onConnectCallback = callback;
+  }
+
   // Connect to socket server
   connect(userId, token) {
-    if (this.socket) {
-      console.log('Socket already connected, disconnecting first');
-      this.disconnect();
-    }
-
+    if (this.isSocketConnected()) return;
     this.userId = userId;
     this.token = token;
-
-    console.log('Connecting to socket server with userId:', userId);
-    
-    // Create socket connection with improved configuration
+    console.log('Connecting to socket server with token:', token); // debug
     this.socket = io(BASE_URL, {
-      auth: { token },
-      query: { userId },
-      reconnection: true, // Enable automatic reconnection
-      reconnectionAttempts: 5, // Default is Infinity, but 5 is reasonable
-      reconnectionDelay: 1000, // Start with 1s, will increase automatically
+      auth: { token }, // userId is inside the JWT only, not sent as a direct field for backend handshake
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
       timeout: 10000,
-      transports: ['websocket', 'polling'] // Prefer WebSocket, fallback to polling
     });
-
-    // Handle connection events
     this.socket.on('connect', () => {
       console.log('Socket connected successfully:', this.socket.id);
       this.isConnected = true;
-      
-      // Dispatch custom event for components to listen to
-      window.dispatchEvent(new CustomEvent('socket_connected', { 
-        detail: { socketId: this.socket.id }
-      }));
-      
-      // Join user-specific room immediately after connection
+      // Auto-join user room on initial connect to receive instant notifications
       if (this.userId) {
-        this.joinUserRoom(this.userId);
-      }
-      
-      // Rejoin all active chat rooms after reconnection
-      this.rejoinActiveRooms();
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message);
-      
-      // Check if error is related to authentication
-      if (error.message.includes('auth') || error.message.includes('token')) {
-        window.dispatchEvent(new CustomEvent('socket_auth_error', { 
-          detail: { error }
-        }));
-        // Do not attempt to reconnect on auth errors, as it's a credential issue
-        if (this.socket) {
-          this.socket.disconnect();
+        try {
+          // Some backends expect an explicit registration event
+          this.socket.emit('registerUser', this.userId);
+          console.log('Emitted registerUser with userId:', this.userId);
+          this.joinUserRoom(this.userId);
+        } catch (e) {
+          console.warn('Failed to register/join user room on connect:', e);
         }
+      } else {
+        console.warn('Socket connected but userId is missing; cannot join user room');
       }
     });
-
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
       this.isConnected = false;
-      
-      window.dispatchEvent(new CustomEvent('socket_disconnected', { 
-        detail: { reason }
-      }));
+    });
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message, error);
+    });
+
+    // Debug: log any incoming socket events (helps verify if 'notification' arrives)
+    this.socket.onAny((event, ...args) => {
+      try {
+        console.log('Socket incoming event:', event, args && args[0]);
+      } catch {}
     });
 
     this.socket.on('reconnect', (attemptNumber) => {
@@ -104,25 +91,38 @@ class SocketService {
       }));
     });
     
-    // Setup notification listener
-    this.socket.on('notification', (notification) => {
-      console.log('Received notification:', notification);
+    // Centralized handler for incoming notifications
+    const notificationHandler = (notification) => {
+      console.log('Received notification event from server:', notification);
       window.dispatchEvent(new CustomEvent('notification_received', { 
         detail: { notification }
       }));
-    });
+    };
+
+    // Setup notification listeners for different possible event names
+    // This makes the client more robust to potential server-side event name changes.
+    this.socket.on('notification', notificationHandler);
+    this.socket.on('newNotification', notificationHandler);
+
 
     // Setup chat message listener once
     const messageHandler = (message) => {
       console.log('Received chat message:', message);
 
-      // If message contains ad info, ensure we're in the right room
+      // If message contains ad info, and this user is the receiver, ensure we're in the right room
       const adId = message?.adId || (typeof message?.ad === 'object'
         ? (message?.ad?._id || message?.ad?.id)
         : message?.ad);
-      if (adId) {
+      
+      // Check if the current user is the intended receiver of the message
+      const receiverId = typeof message?.receiver === 'object' 
+        ? (message.receiver?._id || message.receiver?.id) 
+        : message?.receiver;
+
+      if (adId && receiverId === this.userId) {
         const roomId = `${adId}:chat`;
         if (!this.activeRooms.has(roomId)) {
+          console.log(`Received a message for a room I'm not in. Joining room for ad: ${adId}`);
           this.joinChatRoom(adId);
         }
       }
@@ -131,24 +131,33 @@ class SocketService {
       window.dispatchEvent(new CustomEvent('chat_message_received', {
         detail: { message }
       }));
+
+      // Also notify direct subscribers registered via onChatMessage
+      try { this.messageHandler(message); } catch (e) {}
     };
 
-    this.socket.on('chatMessage', messageHandler);
     this.socket.on('newChatMessage', messageHandler);
     this.socket.on('message', messageHandler);
+    this.socket.on('chat message', messageHandler);
   }
-  
-  // Rejoin all active chat rooms after reconnection
+
+  // Centralized message handler that notifies direct subscribers
+  messageHandler = (message) => {
+    console.log('Received chat message from server:', message);
+    this.chatMessageSubscribers.forEach(callback => callback(message));
+  };
+
   rejoinActiveRooms() {
-    if (!this.isConnected || !this.socket) return;
-    
-    console.log('Rejoining active chat rooms:', Array.from(this.activeRooms));
-    this.activeRooms.forEach(roomId => {
-      const [adId, roomType] = roomId.split(':');
-      if (roomType === 'chat' && adId) {
-        this.joinChatRoom(adId);
-      }
-    });
+    if (this.socket) {
+      console.log('Disconnecting socket...');
+      // Remove all listeners before disconnecting to prevent memory leaks
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.isConnected = false;
+      
+      // Dispatch a global event that socket is disconnected
+      window.dispatchEvent(new CustomEvent('socket_disconnected', { detail: { reason: 'manual_disconnect' } }));
+    }
   }
   
   // Disconnect socket
@@ -159,9 +168,7 @@ class SocketService {
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.isConnected = false;
-      
-      // Dispatch a global event that socket is disconnected
-      window.dispatchEvent(new CustomEvent('socket_disconnected', { detail: { reason: 'manual_disconnect' } }));
+      this.chatMessageSubscribers.clear(); // Clear subscribers on disconnect
     }
   }
 
@@ -268,12 +275,19 @@ class SocketService {
       return false;
     }
 
+    // Prevent re-joining a room we are already in
+    const roomId = `${adId}:chat`;
+    if (this.isInRoom(roomId)) {
+      // console.log('Already in chat room:', adId); // Optional: for debugging
+      return true;
+    }
+
     console.log('Joining chat room for ad:', adId);
     this.socket.emit('joinRoom', { adId, token: this.token });
     
-    // Track this room as active
-    const roomId = `${adId}:chat`;
+    // Add to active rooms immediately to prevent re-joining
     this.activeRooms.add(roomId);
+    
     
     // Listen for room join confirmation
     this.socket.once('roomJoined', (data) => {
@@ -330,55 +344,61 @@ class SocketService {
       ? (messageData?.ad?._id || messageData?.ad?.id)
       : messageData?.ad);
 
-    if (!messageData || !adId) {
-      console.error('Cannot send message: Invalid message data (missing ad or adId)');
+    if (!messageData) {
+      console.error('Cannot send message: Invalid message data');
       return false;
     }
 
-    // Ensure we're in the chat room before sending
-    const roomId = `${adId}:chat`;
-    if (!this.activeRooms.has(roomId)) {
-      console.log('Not in chat room, joining before sending message');
-      this.joinChatRoom(adId);
+    // Normalize receiverId as backend expects
+    const receiverId = messageData?.receiverId 
+      || (typeof messageData?.receiver === 'object' ? (messageData?.receiver?._id || messageData?.receiver?.id) : messageData?.receiver);
+
+    if (!receiverId) {
+      console.error('Cannot send message: Missing receiverId');
+      return false;
     }
 
-    // Add token to message data and ensure adId is present for server compatibility
+    // Ensure we're in the chat room before sending (optional)
+    if (adId) {
+      const roomId = `${adId}:chat`;
+      if (!this.activeRooms.has(roomId)) {
+        console.log('Not in chat room, joining before sending message');
+        this.joinChatRoom(adId);
+      }
+    }
+
+    // Add token to message data and ensure server-compatible fields
     const messageWithToken = {
-      ...messageData,
-      adId,
+      message: messageData.message,
+      adId: adId || null,
+      receiverId,
       token: this.token
     };
 
     console.log('Emitting chat message:', messageWithToken);
-    this.socket.emit('chatMessage', messageWithToken);
+    this.socket.emit('sendMessage', messageWithToken);
     
     return true;
   }
 
   // Listen for chat messages
   onChatMessage(callback, adId) {
-    if (!this.socket) {
-      console.error('Cannot listen for messages: Socket not initialized');
-      return () => {};
-    }
-    
-    const handler = ({ detail }) => {
-      const message = detail.message;
+    const subscriber = (message) => {
       const messageAdId = message?.adId || message?.ad?._id || message?.ad?.id || message?.ad;
-      // If an adId is provided, only fire callback for that chat.
-      if (!adId || adId === messageAdId) {
-        callback(message);
-      }
+      // If an adId is provided, only fire callback for that chat, otherwise fire for any chat message.
+      if (!adId || adId === messageAdId) callback(message);
     };
-    window.addEventListener('chat_message_received', handler);
+
+    this.chatMessageSubscribers.add(subscriber);
+
     return () => {
-      window.removeEventListener('chat_message_received', handler);
+      this.chatMessageSubscribers.delete(subscriber);
     };
   }
 
   // Check if socket is connected
   isSocketConnected() {
-    return this.socket && this.isConnected;
+    return !!(this.socket && this.isConnected);
   }
 
   // Get socket instance

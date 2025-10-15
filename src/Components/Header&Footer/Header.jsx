@@ -12,16 +12,8 @@ import socketService from "../../hooks/socketService";
  
 const Header = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(() => {
-    try {
-      const storedUser = sessionStorage.getItem('user');
-      return storedUser ? JSON.parse(storedUser) : null;
-    } catch (e) {
-      console.error("Header - Error parsing stored user in Header initialization:", e);
-      return null;
-    }
-  });
-  const isLoggedIn = !!user;
+  const [user, setUser] = useState(null);
+  const isLoggedIn = !!user && !!user.id;
 
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -40,6 +32,9 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const mobileProfileButtonRef = useRef(null);
   const desktopProfileButtonRef = useRef(null);
+  const notificationHandlerRef = useRef(null); // guard to avoid duplicate socket listeners
+  const notifSyncRef = useRef(0); // throttle REST sync after live push
+  const windowNotifHandlerRef = useRef(null); // guard for window event listener
   
   // Location search states
   const [locationQuery, setLocationQuery] = useState("");
@@ -80,27 +75,30 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showProfileMenu]);
  
+  // Always ensure user state includes the user id from API using the login token
   useEffect(() => {
-    if (isLoggedIn) {
-      const fetchUser = async () => {
-        try {
-          const token = sessionStorage.getItem('token');
-          if (token) {
-            const resp = await getUserDetails(token);
-            const u = resp?.data?.data || resp?.data;
-            if (u) {
-              setUser(u);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch user details in header:", e);
-        }
-      };
-      fetchUser();
-    } else {
+    let mounted = true;
+    const token = sessionStorage.getItem('token');
+    if (!token) {
       setUser(null);
+      return;
     }
-  }, [isLoggedIn]);
+    getUserDetails(token)
+      .then(resp => {
+        if (!mounted) return;
+        const u = resp?.data?.data || resp?.data;
+        if (u && (u.id || u._id)) {
+          setUser({ ...u, id: u.id || u._id });
+          sessionStorage.setItem('user', JSON.stringify({ ...u, id: u.id || u._id }));
+        } else {
+          setUser(null);
+        }
+      })
+      .catch(() => {
+        if (mounted) setUser(null);
+      });
+    return () => { mounted = false };
+  }, []);
  
   // Fetch categories
   useEffect(() => {
@@ -152,7 +150,11 @@ const Header = () => {
     return () => clearTimeout(delay);
   }, [searchQuery]);
  
-  // Fetch notifications (socket-first with HTTP fallback)
+  // --- Notification System (Socket-First, Real-Time) ---
+  // - Initial notification fetch: via socket emit 'getNotifications' with ack, fallback to REST if socket not ready
+  // - All new incoming notifications: handled live via 'notification' socket event
+  // - No REST polling after initial page load
+  //
   const fetchNotifications = async () => {
     if (!isLoggedIn) {
       setNotifications([]); setUnreadCount(0); return;
@@ -161,62 +163,18 @@ const Header = () => {
     if (!token) return;
     setLoadingNotifications(true);
     try {
-      // Ensure socket is connected using stored user
-      const rawUser = JSON.parse(sessionStorage.getItem('user') || '{}');
-      const userId = rawUser?.id || rawUser?._id;
-      if (!socketService.isSocketConnected() && userId) {
-        socketService.connect(userId, token);
-      }
-
-      let list = null;
-      const socket = socketService.getSocket();
-
-      if (socket && socket.connected) {
-        // Try to fetch notifications via socket with ack
-        list = await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('socket_timeout')), 4000);
-          try {
-            socket.emit('getNotifications', { token }, (resp) => {
-              clearTimeout(timer);
-              if (Array.isArray(resp)) {
-                resolve(resp);
-              } else if (resp && Array.isArray(resp.notifications)) {
-                resolve(resp.notifications);
-              } else if (resp && resp.data && Array.isArray(resp.data.notifications)) {
-                resolve(resp.data.notifications);
-              } else if (resp && resp.error) {
-                reject(new Error(resp.error));
-              } else {
-                reject(new Error('invalid_socket_response'));
-              }
-            });
-          } catch (err) {
-            clearTimeout(timer);
-            reject(err);
-          }
-        });
-      }
-
-      // Fallback to HTTP if socket not available or invalid response
-      if (!Array.isArray(list)) {
-        const res = await getNotifications(token);
-        list = res?.data?.notifications || [];
-      }
-
+      const res = await getNotifications(token);
+      const list = res?.data?.notifications || [];
       const localRead = JSON.parse(localStorage.getItem('readNotifications') || '[]');
       const updated = list.map(n => localRead.includes(n._id) ? { ...n, read: true } : n);
       setNotifications(updated);
       setUnreadCount(updated.filter(n => !n.read).length);
-    } catch (e) {
-      // Swallow error; UI retains previous state
-    } finally {
-      setLoadingNotifications(false);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
     }
+    setLoadingNotifications(false);
   };
- 
-  // Notifications effect
-  useEffect(() => { isLoggedIn ? fetchNotifications() : (setNotifications([]), setUnreadCount(0)); }, [isLoggedIn]);
-  useEffect(() => { if (isLoggedIn) fetchNotifications(); }, []); // eslint-disable-line
  
   // Location search effect
   useEffect(() => {
@@ -279,6 +237,7 @@ const Header = () => {
       const token = sessionStorage.getItem('token');
       if (token && !socketService.isSocketConnected()) {
         console.log("Header: User is logged in, connecting socket...");
+        console.log("Header: Setting up socket connection", { userId: user?.id, token });
         socketService.connect(user.id, token);
       }
     } else if (!isLoggedIn && socketService.isSocketConnected()) {
@@ -288,36 +247,104 @@ const Header = () => {
     // This effect handles the socket connection lifecycle based on login status.
   }, [isLoggedIn, user?.id]);
 
-  // Listen for instant notifications and connection events
+  // --- useEffect to listen for live socket 'notification' events directly (no window event) ---
+  // This useEffect is now redundant as the handler is registered directly in the useEffect below.
+  // useEffect(() => {
+  //   const socket = socketService.getSocket();
+  //   if (!socket) return;
+  //   const handleNotif = (notification) => {
+  //     if (!notification) return;
+  //     setNotifications(prev => [notification, ...prev]);
+  //     if (!notification.read) {
+  //       setUnreadCount(prev => prev + 1);
+  //       setCountChanged(true);
+  //       setTimeout(() => setCountChanged(false), 1000);
+  //     }
+  //   };
+  //   socket.on('notification', handleNotif);
+  //   return () => socket.off('notification', handleNotif);
+  // }, [isLoggedIn]);
+
+  // Ensure notifications are fetched immediately after socket connection is established
   useEffect(() => {
-    if (!isLoggedIn) return; // Do nothing if logged out
-    
-    const handleNewNotification = (event) => {
-      const { notification } = event.detail;
-      console.log("Header: Received instant notification via window event:", notification);
-      setNotifications(prev => [notification, ...prev]);
-      if (!notification.read) {
-        setUnreadCount(prev => prev + 1);
-        setCountChanged(true);
-        setTimeout(() => setCountChanged(false), 1000);
+    const socket = socketService.getSocket();
+    if (!isLoggedIn || !user?.id || !socket) {
+      console.log('[Header] Skipping socket connect effect:', 'isLoggedIn:', isLoggedIn, 'user?.id:', user?.id, 'socket:', socket);
+      return;
+    }
+    // Handler to trigger actions once socket is ready
+    const handleConnect = () => {
+      console.log('[Header] Socket connected:', socket.connected, 'socket.id:', socket.id, socket);
+      // JOIN user-specific room to receive instant notifications addressed to userId
+      try {
+        socketService.joinUserRoom(user.id);
+        console.log('[Header] Requested join to user room for notifications:', user.id);
+      } catch (e) {
+        console.warn('[Header] Failed to request join user room:', e);
       }
-    };
-  
-    const handleSocketConnected = () => {
-      console.log("Header: Socket connected event received, fetching notifications.");
+
+      // Register live notification handler once to update badge instantly
+      if (!notificationHandlerRef.current) {
+        const handleNotif = (notification) => {
+          console.log('[Header] Live notification received:', notification);
+          if (!notification) return;
+          setNotifications(prev => [notification, ...prev]);
+          if (!notification.read) {
+            setUnreadCount(prev => prev + 1);
+            setCountChanged(true);
+            setTimeout(() => setCountChanged(false), 800);
+          }
+          // Throttled sync to ensure admin-side notifications and server state are reflected
+          const now = Date.now();
+          if (now - notifSyncRef.current > 3000) {
+            notifSyncRef.current = now;
+            fetchNotifications();
+          }
+        };
+        notificationHandlerRef.current = handleNotif;
+        socket.on('notification', handleNotif);
+        socket.on('newNotification', handleNotif); // support alternate event name
+        console.log('[Header] Registered live notification handler');
+      }
+
+      // Fetch existing notifications (history) via REST
       fetchNotifications();
     };
-
-    // Add listeners when the user is logged in
-    window.addEventListener('notification_received', handleNewNotification);
-    window.addEventListener('socket_connected', handleSocketConnected);
-
-    // Cleanup function to remove listeners when the component unmounts or user logs out
+    console.log('[Header] Registering socket connect event, current state:', socket.connected, 'isLoggedIn:', isLoggedIn, 'user?.id:', user?.id);
+    socket.on('connect', handleConnect);
+    if (socket.connected) handleConnect();
     return () => {
-      window.removeEventListener('notification_received', handleNewNotification);
-      window.removeEventListener('socket_connected', handleSocketConnected);
+      socket.off('connect', handleConnect);
     };
-  }, [isLoggedIn]); // This effect depends only on the login status
+  }, [isLoggedIn, user?.id]);
+ 
+  // Also listen to window-level events dispatched by socketService as a secondary live channel
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (!windowNotifHandlerRef.current) {
+      const handleWindowNotif = (evt) => {
+        const notification = evt?.detail?.notification;
+        if (!notification) return;
+        console.log('[Header] Window event live notification:', notification);
+        setNotifications(prev => [notification, ...prev]);
+        if (!notification.read) {
+          setUnreadCount(prev => prev + 1);
+          setCountChanged(true);
+          setTimeout(() => setCountChanged(false), 800);
+        }
+      };
+      windowNotifHandlerRef.current = handleWindowNotif;
+      window.addEventListener('notification_received', handleWindowNotif);
+      window.addEventListener('newNotification', handleWindowNotif);
+    }
+    return () => {
+      if (windowNotifHandlerRef.current) {
+        window.removeEventListener('notification_received', windowNotifHandlerRef.current);
+        window.removeEventListener('newNotification', windowNotifHandlerRef.current);
+        windowNotifHandlerRef.current = null;
+      }
+    };
+  }, [isLoggedIn]);
  
   // Mark notifications as read
   const handleMarkAsRead = async (ids, skipUIUpdate = false) => {
@@ -378,6 +405,25 @@ const Header = () => {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showNotifications]);
+ 
+  // Ensure notifications are fetched immediately after socket connection is established
+  // useEffect(() => {
+  //   const socket = socketService.getSocket();
+  //   if (!isLoggedIn || !socket) {
+  //     console.log('[Header] Skipping socket connect effect: isLoggedIn:', isLoggedIn, 'socket:', socket);
+  //     return;
+  //   }
+  //   // Handler to trigger fetchNotifications once socket is ready
+  //   const handleConnect = () => {
+  //     console.log('[Header] Socket connected:', socket.connected, 'socket.id:', socket.id, socket);
+  //     fetchNotifications();
+  //   };
+  //   console.log('[Header] Registering socket connect event, current state:', socket.connected, 'isLoggedIn:', isLoggedIn);
+  //   socket.on('connect', handleConnect);
+  //   // In case socket is *already* connected (e.g. after a fast refresh)
+  //   if (socket.connected) handleConnect();
+  //   return () => socket.off('connect', handleConnect);
+  // }, [isLoggedIn]);
  
   return (
     <header className="sm:sticky top-0 z-50 bg-white p-2 md:p-3 border-b border-gray-200">
@@ -696,7 +742,7 @@ const Header = () => {
             {isLoggedIn && (
               <>
               <button
-                onClick={() => navigate('/inbox')}
+                onClick={() => navigate('/chat')}
                 className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:text-orange-600 transition-colors duration-200 focus:outline-none border border-gray-300 rounded-full bg-white shadow-sm"
                 aria-label="Chat"
               >

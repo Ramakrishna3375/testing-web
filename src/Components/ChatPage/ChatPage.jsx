@@ -431,8 +431,11 @@ const ChatPage = () => {
 
   // Fetch messages for selected ad - using socket for real-time updates
   useEffect(() => {
-    
-    
+    // Only fetch when a specific chat is selected
+    if (!paramUserId || !user?.token) {
+      setLoadingChat(false);
+      return;
+    }
     // Use the combined function to fetch and listen for messages
     fetchAndListenForChatMessages(paramUserId, user.token, currentAdId)
       .then((adId) => {
@@ -806,7 +809,7 @@ const ChatPage = () => {
           </div>
         </div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-4 h-[calc(100vh-120px)] bg-white rounded-lg overflow-hidden shadow-lg">
-          {/* Inbox List */}
+          {/* Chat List */}
           <div className={`${paramUserId ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white flex-col flex-shrink-0 h-full`}>
             <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-100">
               <h2 className="text-xl font-bold text-pink-600 m-0">Inbox</h2>
@@ -880,7 +883,7 @@ const ChatPage = () => {
               )}
             </div>
           </div>
-          {/* Chat Interface */}
+          {/* Inbox Interface */}
           <div className={`${paramUserId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white h-full`}>
             {paramUserId ? (
               <>

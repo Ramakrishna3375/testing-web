@@ -47,6 +47,12 @@ export const searchCities = async (query) => {
   return await commonRequest("GET", `${BASE_URL}/api/post-ads/cities?q=${query}`);
 };
 
+//Get All cities names given while posting an ad
+export const getCitiesNames = async () => {
+  return await commonRequest("GET", `${BASE_URL}/api/post-ads/cities`);
+};
+
+
 //Get Chat History
 export const getChatHistory = async (recipientId, token) => {
   return await commonRequest("GET", `${BASE_URL}/api/chats/history?recipientId=${recipientId}`, null, { Authorization: `Bearer ${token}` });
@@ -67,6 +73,11 @@ export const markNotificationsAsRead = async (notificationIds, token) => {
     token: token ? 'Present' : 'Missing'
   });
   return await commonRequest("PUT", `${BASE_URL}/api/notifications/mark-read`, requestBody, { Authorization: `Bearer ${token}` });
+};
+
+//Clear all read notifications
+export const clearAllReadNotifications = async (token) => {
+  return await commonRequest("DELETE", `${BASE_URL}/api/notifications/clear-read`, null, { Authorization: `Bearer ${token}` });
 };
 
 //Reply to Ad Availability Request

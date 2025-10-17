@@ -287,24 +287,6 @@ const Header = () => {
     // This effect handles the socket connection lifecycle based on login status.
   }, [isLoggedIn, user?.id]);
 
-  // --- useEffect to listen for live socket 'notification' events directly (no window event) ---
-  // This useEffect is now redundant as the handler is registered directly in the useEffect below.
-  // useEffect(() => {
-  //   const socket = socketService.getSocket();
-  //   if (!socket) return;
-  //   const handleNotif = (notification) => {
-  //     if (!notification) return;
-  //     setNotifications(prev => [notification, ...prev]);
-  //     if (!notification.read) {
-  //       setUnreadCount(prev => prev + 1);
-  //       setCountChanged(true);
-  //       setTimeout(() => setCountChanged(false), 1000);
-  //     }
-  //   };
-  //   socket.on('notification', handleNotif);
-  //   return () => socket.off('notification', handleNotif);
-  // }, [isLoggedIn]);
-
   // Ensure notifications are fetched immediately after socket connection is established
   useEffect(() => {
     const socket = socketService.getSocket();
@@ -461,7 +443,7 @@ const Header = () => {
 
   const openInquiryFormFromNotification = (notification) => {
     const reqId = notification.requestId || notification.payload?.requestId || notification.meta?.requestId;
-    const aId = notification.adId || notification.entityId || notification.payload?.adId || notification.meta?.adId;
+    const aId = notification.adId || notification.payload?.adId || notification.meta?.adId;
     setActiveInquiry({
       requestId: reqId || "",
       adId: aId || "",
@@ -969,7 +951,7 @@ const Header = () => {
                               if (['ad_pending_approval', 'ad_approved', 'ad_inquiry', 'ad_availability_request'].includes(notification.type)) {
                                 navigate(`/ad/${notification.entityId}`); setShowNotifications(false);
                               } else if (['message', 'chat_message'].includes(notification.type)) {
-                                navigate(`/chat/${notification.entityId}`); setShowNotifications(false);
+                                navigate(`/chat/${notification.senderId}`); setShowNotifications(false);
                               }
                             }
                           }}

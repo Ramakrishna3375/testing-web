@@ -1,135 +1,8 @@
 import { useState, useEffect } from "react";
 import { getAllCategories, getAllSubCategories } from "../../Services/api";
 import { useNavigate } from "react-router-dom";
-import { FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook, FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt,
-  FaTabletAlt, FaHeadphones, FaLaptop, FaCamera, FaGamepad, FaBicycle, FaMotorcycle, FaTruck, FaHome, FaLandmark, FaStore,
-  FaUserTie, FaChalkboardTeacher, FaDumbbell, FaGuitar, FaDog, FaCat, FaCrow, FaFish, FaTshirt as FaTshirt2, FaShoePrints,
-  FaWatchmanMonitoring, FaBookOpen, FaFootballBall, FaPuzzlePiece as FaPuzzle2, FaUserFriends, FaMoneyBillWave, FaTools as FaTools2,
-  FaCouch as FaCouch2, FaBed, FaChild, FaLeaf, FaBoxOpen, FaSearchLocation, FaUsers, FaUserAlt, FaUserNurse, FaUserCheck, FaUserClock, FaUserEdit
-} from "react-icons/fa";
-import { MdOutlineHomeRepairService } from "react-icons/md";
-import { GrRestroomWomen } from "react-icons/gr";
 import Header from '../Header&Footer/Header';
 import Footer from "../Header&Footer/Footer";
-
-const categoryIcons = {
-  "Mobiles": <FaMobileAlt />, 
-  "Electronics & Appliances": <FaTv />, 
-  "Vehicles": <FaCar />, 
-  "Real Estate": <FaCity />, 
-  "Jobs": <FaBriefcase />, 
-  "Services": <FaTools />, 
-  "Furniture": <FaCouch />, 
-  "Fashion": <FaTshirt />, 
-  "Books, Sports & Hobbies": <FaBook />, 
-  "Pets": <FaPaw />, 
-  "Others": <FaPuzzlePiece />
-};
-
-const subcategoriesMap = {
-  "Mobiles": ["Mobile Phones", "Accessories", "Tablets"],
-  "Electronics & Appliances": [
-    "TVs, Video - Audio", "Computers & Laptops", "Computer Accessories", "Home Appliances", "Cameras & Lenses",
-    "Kitchen & Other Appliances", "Games & Entertainment"
-  ],
-  "Vehicles": ["Cars", "Motorcycles", "Scooters", "Commercial Vehicles", "Spare Parts", " Bicycles "],
-  "Real Estate": [
-    "For Sale: Houses & Apartments", "For Rent: Houses & Apartments", "Land & Plots", "Shops & Offices",
-    "Paying Guest (PG) & Roommates"
-  ],
-  "Jobs": [
-    "Data Entry & Back Office", "Sales & Marketing", "BPO & Call Center", "Driver", "Delivery", "Hotel & Travel", "Office Assistant",
-    "IT & Software", "Accountant", "Teacher", "Other Jobs"
-  ],
-  "Services": [
-    "Home Services (Plumber, Electrician, etc.)", "Repair & Maintenance", "Packers & Movers", "Event Services", "Beauty & Wellness",
-    "Health & Fitness", "Financial Services", "Tuition & Coaching"
-  ],
-  "Furniture": ["Sofa & Dining", "Beds & Wardrobes", "Home Decor & Garden", "Kids Furniture", "Office Furniture "],
-  "Fashion": ["Men's Clothing", "Women's Clothing", "Men's Accessories", "Women's Accessories", "Watches", "Footwear"],
-  "Books, Sports & Hobbies": ["Books", "Gym & Fitness", "Musical Instruments", "Sports Equipment", "Hobbies"],
-  "Pets": ["Dogs", "Cats", "Birds", "Pet Food & Accessories", "Other Pets"],
-  "Others": ["Miscellaneous Items", "Lost & Found", "Community"]
-};
-
-// Subcategory icon mapping
-const subCategoryIcons = {
-  // Mobiles
-  "Mobile Phones": <FaMobileAlt />,
-  "Accessories": <FaHeadphones />,
-  "Tablets": <FaTabletAlt />,
-  // Electronics & Appliances
-  "TVs,Video - Audio": <FaTv />,
-  "Computers & Laptops": <FaLaptop />,
-  "Computer Accessories": <FaTools2 />,
-  "Home Appliances": <FaCouch2 />,
-  "Cameras & Lenses": <FaCamera />,
-  "Kitchen & Other Appliances": <FaLeaf />,
-  "Games & Entertainment": <FaGamepad />,
-  // Vehicles
-  "Cars": <FaCar />,
-  "Motorcycles": <FaMotorcycle />,
-  "Scooters": <FaBicycle />,
-  "Commercial Vehicles": <FaTruck />,
-  "Spare Parts": <FaTools2 />,
-  " Bicycles ": <FaBicycle />,
-  // Real Estate
-  "Houses & Apartments For Sale": <FaHome />,
-  "Houses & Apartments For Rent": <FaHome />,
-  "Land & Plots": <FaLandmark />,
-  "Shops & Offices": <FaStore />,
-  "Paying Guest(PG) & Roommates": <FaUserFriends />,
-  // Jobs
-  "Data Entry & Back Office": <FaUserTie />,
-  "Sales & Marketing": <FaUserCheck />,
-  "BPO & Call Center": <FaUserClock />,
-  "Driver": <FaCar />,
-  "Delivery": <FaTruck />,
-  "Hotel & Travel": <FaUserFriends />,
-  "Office Assistant": <FaUserEdit />,
-  "IT & Software": <FaLaptop />,
-  "Accountant": <FaMoneyBillWave />,
-  "Teacher": <FaChalkboardTeacher />,
-  "Other Jobs": <FaUserAlt />,
-  // Services
-  "Home Services": <MdOutlineHomeRepairService />,
-  "Repair & Maintenance": <FaTools2 />,
-  "Packers & Movers": <FaBoxOpen />,
-  "Event Services": <FaUsers />,
-  "Beauty & Wellness": <FaUserNurse />,
-  "Health & Fitness": <FaDumbbell />,
-  "Financial Services": <FaMoneyBillWave />,
-  "Tuition & Coaching": <FaChalkboardTeacher />,
-  // Furniture
-  "Sofa & Dining": <FaCouch2 />,
-  "Beds & Wardrobes": <FaBed />,
-  "Home Decor & Garden": <FaLeaf />,
-  "Kids Furniture": <FaChild />,
-  "Office Furniture": <FaCouch2 />,
-  // Fashion
-  "Men’s Clothing": <FaTshirt2 />,
-  "Women’s Clothing": <GrRestroomWomen />,
-  "Men’s Accessories": <FaWatchmanMonitoring />,
-  "Women’s Accessories": <FaWatchmanMonitoring />,
-  "Watches": <FaWatchmanMonitoring />,
-  "Footwear": <FaShoePrints />,
-  // Books, Sports & Hobbies
-  "Books": <FaBookOpen />,
-  "Gym & Fitness": <FaDumbbell />,
-  "Musical Instruments": <FaGuitar />,
-  "Sports Equipment": <FaFootballBall />,
-  "Hobbies": <FaPuzzle2 />,
-  // Pets
-  "Dogs": <FaDog />,
-  "Cats": <FaCat />,
-  "Birds": <FaCrow />,
-  "Pet Food & Accessories": <FaFish />,
-  "Other Pets": <FaPaw />,
-  // Others
-  "Miscellaneous Items": <FaPuzzlePiece />,
-  "Lost & Found": <FaSearchLocation />,
-  "Community": <FaUsers />,
-};
 
 export default function PostFreeAdPage() {
   const navigate = useNavigate();
@@ -229,7 +102,7 @@ export default function PostFreeAdPage() {
               ${selectedCategory === cat.name ? "bg-green-500 text-white" : "bg-white text-gray-800 hover:bg-green-100"}
               `}
               >
-             <img className="h-5 w-5 mb-1" src={cat.iconUrl || categoryIcons[cat.name]} />
+             <img className="h-5 w-5 mb-1" src={cat.iconUrl} />
              <span className="text-xs break-words">{cat.name}</span>
             </button>
           ))}
@@ -253,7 +126,7 @@ export default function PostFreeAdPage() {
                 className={`flex flex-col items-center gap-2 border border-gray-300 p-4 rounded-md cursor-pointer transition-colors duration-200 md:flex-row md:items-center
                   ${selectedCategory === cat.name ? "bg-green-500 text-white border-green-600" : "hover:bg-green-100"}`}
               >
-                <img className="h-6 w-6" src={cat.iconUrl || categoryIcons[cat.name]} />
+                <img className="h-6 w-6" src={cat.iconUrl} />
                 <span className="text-sm md:text-base">{cat.name}</span>
               </li>
             ))}
@@ -278,7 +151,7 @@ export default function PostFreeAdPage() {
                   <div key={sub._id} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-md p-2 sm:p-4 cursor-pointer hover:bg-blue-100 hover:shadow-lg transition-all duration-200 min-h-[120px] group"
                     onClick={() => navigate(`/post-free-ad/${encodeURIComponent(selectedCategory)}/${encodeURIComponent(sub.name)}`)}>
                     <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-blue-50 mb-1 sm:mb-2 group-hover:bg-blue-200 transition-all">
-                      <img className="text-blue-600 rounded-full" src={sub.icon || subCategoryIcons[sub.name] } />
+                      <img className="text-blue-600 rounded-full" src={sub.iconUrl} />
                     </div>
                     <span className="font-semibold text-xs sm:text-base text-gray-800 text-center break-words leading-tight">{sub.name}</span>
                   </div>

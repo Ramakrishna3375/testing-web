@@ -1,5 +1,4 @@
 import { Route, Routes, Navigate } from "react-router-dom";
-import "./App.css";
 import HomePage from "./Components/HomePage.jsx";
 import MobilesPage from "./Components/AdsViewPages/AdsPage.jsx";
 import ProductDetailPage from "./Components/AdsViewPages/AdDetailsPage.jsx";

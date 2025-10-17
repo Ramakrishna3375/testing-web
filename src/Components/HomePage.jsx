@@ -2,27 +2,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import advertise1 from '../assets/Website logos/advertise1.jpg';
 import advertise2 from '../assets/Website logos/advertise2.jpg';
-import {FaCar, FaMobileAlt, FaBriefcase, FaTv, FaCouch, FaTshirt, FaBook,
-  FaPaw, FaTools, FaPuzzlePiece, FaCity, FaMapMarkerAlt
-} from "react-icons/fa";
+import { FaMapMarkerAlt } from "react-icons/fa";
 import { getAllCategories, getAllActiveAds, getBanners } from "../Services/api";
 import Header from './Header&Footer/Header';
 import Footer from "./Header&Footer/Footer";
-
-// Helper: map category names to icons from API
-const categoryIcons = {
-  "Mobiles": <FaMobileAlt />, 
-  "Electronics & Appliances": <FaTv />, 
-  "Vehicles": <FaCar />, 
-  "Real Estate": <FaCity />, 
-  "Jobs": <FaBriefcase />, 
-  "Services": <FaTools />, 
-  "Furniture": <FaCouch />, 
-  "Fashion": <FaTshirt />, 
-  "Books, Sports & Hobbies": <FaBook />, 
-  "Pets": <FaPaw />, 
-  "Others": <FaPuzzlePiece />
-};
 
 const adImages = [
   advertise1, advertise2
@@ -31,8 +14,6 @@ const adImages = [
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // login detection
-  const isLoggedIn = !!sessionStorage.getItem('user') || !!sessionStorage.getItem('token');
   const [current, setCurrent] = useState(0);
   const [showAllPremium, setShowAllPremium] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
@@ -188,7 +169,7 @@ const HomePage = () => {
             categories.map((cat) => (
               <div key={cat._id} onClick={() => navigate(`/ads/${getCategoryId(cat)}`)}
                 className="flex-shrink-0 min-w-[60px] max-w-[90px] p-2 bg-white border border-gray-300 rounded-lg cursor-pointer flex flex-col items-center justify-center hover:bg-gray-100">
-                <img className="text-base mb-1 h-5 w-5" src={cat.iconUrl  || categoryIcons[cat.name]} alt={cat.name} />
+                <img className="text-base mb-1 h-5 w-5" src={cat.iconUrl} alt={cat.name} />
                 <span className="text-[10px] text-center">{cat.name}</span>
               </div>
             ))
@@ -227,7 +208,7 @@ const HomePage = () => {
             <li key={cat._id}
               className="px-2 py-3 border border-gray-300 rounded-xl mb-1 cursor-pointer flex items-center justify-between hover:bg-gray-100"
               onClick={() => navigate(`/ads/${getCategoryId(cat)}`)}>
-              <img src={cat.iconUrl || categoryIcons[cat.name]} alt={cat.name} className="h-5 w-5 text-xs font-semibold flex items-center" />
+              <img src={cat.iconUrl} alt={cat.name} className="h-5 w-5 text-xs font-semibold flex items-center" />
               <span className="mr-auto text-xs font-semibold sm:px-1.5">{cat.name}</span>
               <span>&gt;</span>
             </li>

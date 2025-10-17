@@ -255,16 +255,16 @@ const MobilesPage = () => {
     </div>
   </div>
   <div className="flex gap-2 sm:gap-4 items-center mt-2 sm:mt-0 ml-0 sm:ml-4">
-    <span className="text-3xl sm:text-4xl mr-2 cursor-pointer hover:text-orange-500">𖹭</span>
+    <span className="text-3xl sm:text-3xl mr-2 cursor-pointer hover:text-orange-500">𖹭</span>
     <button
       onClick={() => setViewMode("grid")}
-      className={`p-1 text-2xl sm:text-3xl rounded ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"}`}
+      className={`p-1 text-2xl sm:text-2xl rounded ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"}`}
       aria-label="Grid view">
       ▦
     </button>
     <button
       onClick={() => setViewMode("list")}
-      className={`p-1 text-2xl sm:text-3xl rounded ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"}`}
+      className={`p-1 text-2xl sm:text-2xl rounded ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-gray-200 text-black"}`}
       aria-label="List view"
     >
       ≡

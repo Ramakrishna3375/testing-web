@@ -91,35 +91,3 @@ You need to have Node.js and npm (or Yarn) installed on your machine.
     yarn install
     ```
 
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in development mode.<br />
-Open http://localhost:3000 to view it in the browser.
-
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## Contributing
-
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you would like to contribute, please fork the repository and create a pull request. You can also open an issue with the "enhancement" tag.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE.md` file for details.
-
-Copyright (c) 2025 LocalMartApp

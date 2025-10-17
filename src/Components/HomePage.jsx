@@ -22,6 +22,9 @@ const HomePage = () => {
   const [catError, setCatError] = useState(null);
   const [ads, setAds] = useState([]);
   const [loadingAds, setLoadingAds] = useState(true);
+  // Decoupled datasets for each grid when using backend pagination (All cities)
+  const [adsRecommended, setAdsRecommended] = useState([]);
+  const [adsRecent, setAdsRecent] = useState([]);
   // Section-specific loading for backend pagination
   const [loadingPremium, setLoadingPremium] = useState(false);
   const [loadingRecent, setLoadingRecent] = useState(false);
@@ -44,13 +47,13 @@ const HomePage = () => {
 
   // Keep pages in range when ads list changes
   useEffect(() => {
-    const totalPremiumPages = Math.max(1, Math.ceil((Array.isArray(filteredAds) ? filteredAds.length : 0) / PREMIUM_PAGE_SIZE));
+    const totalPremiumPages = Math.max(1, Math.ceil((Array.isArray(filteredAdsRecommended) ? filteredAdsRecommended.length : 0) / PREMIUM_PAGE_SIZE));
     if (premiumPage > totalPremiumPages) setPremiumPage(totalPremiumPages);
     if (premiumPage < 1) setPremiumPage(1);
-    const totalRecentPages = Math.max(1, Math.ceil((Array.isArray(filteredAds) ? filteredAds.length : 0) / RECENT_PAGE_SIZE));
+    const totalRecentPages = Math.max(1, Math.ceil((Array.isArray(filteredAdsRecent) ? filteredAdsRecent.length : 0) / RECENT_PAGE_SIZE));
     if (recentPage > totalRecentPages) setRecentPage(totalRecentPages);
     if (recentPage < 1) setRecentPage(1);
-  }, [/* filteredAds is defined below but stable each render */ ads, showAllPremium, showAllRecent]);
+  }, [/* decoupled filtered arrays */ adsRecommended, adsRecent, showAllPremium, showAllRecent]);
 
   const getCategoryId = (cat) => cat._id;
 
@@ -111,6 +114,8 @@ const HomePage = () => {
          const res = await searchAdsByCity(selectedLocation.name);
          if (res && res.data && Array.isArray(res.data.postAds)) {
            setAds(res.data.postAds);
+            setAdsRecommended(res.data.postAds);
+            setAdsRecent(res.data.postAds);
             setAllAdsTotalPages(null);
          } else {
            setAds([]);
@@ -122,6 +127,8 @@ const HomePage = () => {
           const res = await getAllActiveAds(initialPage);
          if (res && res.data && Array.isArray(res.data.postAds)) {
            setAds(res.data.postAds);
+            setAdsRecommended(res.data.postAds);
+            setAdsRecent(res.data.postAds);
             const total = res.data?.pagination?.totalPages || null;
             setAllAdsTotalPages(total);
             setAllAdsRecentTotalPages(total);
@@ -144,10 +151,12 @@ const HomePage = () => {
      setLoadingAds(true);
      setAdsError(null);
      try {
-       if (next && next.name) {
+      if (next && next.name) {
          const res = await searchAdsByCity(next.name);
          if (res && res.data && Array.isArray(res.data.postAds)) {
            setAds(res.data.postAds);
+          setAdsRecommended(res.data.postAds);
+          setAdsRecent(res.data.postAds);
           setSelectedLocationState(next);
           setAllAdsPage(1);
           setAllAdsTotalPages(null);
@@ -161,6 +170,8 @@ const HomePage = () => {
         const res = await getAllActiveAds(1);
          if (res && res.data && Array.isArray(res.data.postAds)) {
            setAds(res.data.postAds);
+          setAdsRecommended(res.data.postAds);
+          setAdsRecent(res.data.postAds);
           setSelectedLocationState(null);
           setAllAdsPage(1);
           const total = res.data?.pagination?.totalPages || null;
@@ -190,17 +201,17 @@ const HomePage = () => {
    setAdsError(null);
    (async () => {
      try {
-       const res = await getAllActiveAds(pageToFetch);
-       if (res && res.data && Array.isArray(res.data.postAds)) {
-         setAds(res.data.postAds);
+      const res = await getAllActiveAds(pageToFetch);
+      if (res && res.data && Array.isArray(res.data.postAds)) {
+        setAdsRecommended(res.data.postAds);
          const total = res.data?.pagination?.totalPages || null;
          setAllAdsTotalPages(total);
        } else {
-         setAds([]);
+        setAdsRecommended([]);
          setAdsError("Could not fetch ads");
        }
      } catch {
-       setAds([]);
+      setAdsRecommended([]);
        setAdsError("Could not fetch ads");
      }
      setLoadingPremium(false);
@@ -215,17 +226,17 @@ const HomePage = () => {
    setAdsError(null);
    (async () => {
      try {
-       const res = await getAllActiveAds(pageToFetch);
-       if (res && res.data && Array.isArray(res.data.postAds)) {
-         setAds(res.data.postAds);
+      const res = await getAllActiveAds(pageToFetch);
+      if (res && res.data && Array.isArray(res.data.postAds)) {
+        setAdsRecent(res.data.postAds);
          const total = res.data?.pagination?.totalPages || null;
          setAllAdsRecentTotalPages(total);
        } else {
-         setAds([]);
+        setAdsRecent([]);
          setAdsError("Could not fetch ads");
        }
      } catch {
-       setAds([]);
+      setAdsRecent([]);
        setAdsError("Could not fetch ads");
      }
      setLoadingRecent(false);
@@ -266,6 +277,12 @@ const HomePage = () => {
   const filteredAds = selectedCategory
     ? ads.filter((ad) => ad.category === selectedCategory)
     : ads;
+  const filteredAdsRecommended = selectedCategory
+    ? adsRecommended.filter((ad) => ad.category === selectedCategory)
+    : adsRecommended;
+  const filteredAdsRecent = selectedCategory
+    ? adsRecent.filter((ad) => ad.category === selectedCategory)
+    : adsRecent;
 
   return (
     <div className="min-h-screen text-sm">
@@ -416,8 +433,8 @@ const HomePage = () => {
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 p-2 sm:p-0 sm:gap-3 gap-3">
             {(
               showAllPremium
-                ? (selectedLocationState ? filteredAds.slice((premiumPage - 1) * PREMIUM_PAGE_SIZE, premiumPage * PREMIUM_PAGE_SIZE) : filteredAds)
-                : filteredAds.slice(0, 10)
+                ? (selectedLocationState ? filteredAdsRecommended.slice((premiumPage - 1) * PREMIUM_PAGE_SIZE, premiumPage * PREMIUM_PAGE_SIZE) : filteredAdsRecommended)
+                : filteredAdsRecommended.slice(0, 10)
             ).map((ad) => (
               <div
                 key={ad.id || ad._id}
@@ -450,7 +467,7 @@ const HomePage = () => {
             ))}
           </div>
         )}
-        {filteredAds.length > 10 && (
+        {filteredAdsRecommended.length > 10 && (
           <div className="flex justify-center items-center gap-3 mt-3">
             <button
               className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
@@ -467,7 +484,7 @@ const HomePage = () => {
               <div className="flex items-center gap-2">
                 {(() => { 
                   const totalPages = selectedLocationState
-                    ? Math.max(1, Math.ceil(filteredAds.length / PREMIUM_PAGE_SIZE))
+                    ? Math.max(1, Math.ceil(filteredAdsRecommended.length / PREMIUM_PAGE_SIZE))
                     : (allAdsTotalPages || Math.max(1, allAdsPage));
                   return (
                   <>
@@ -507,8 +524,8 @@ const HomePage = () => {
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3 gap-2">
             {(
               showAllRecent
-                ? (selectedLocationState ? filteredAds.slice((recentPage - 1) * RECENT_PAGE_SIZE, recentPage * RECENT_PAGE_SIZE) : filteredAds)
-                : filteredAds.slice(0, 10)
+                ? (selectedLocationState ? filteredAdsRecent.slice((recentPage - 1) * RECENT_PAGE_SIZE, recentPage * RECENT_PAGE_SIZE) : filteredAdsRecent)
+                : filteredAdsRecent.slice(0, 10)
             ).map((ad) => (
               <div
                 key={ad.id || ad._id}
@@ -540,7 +557,7 @@ const HomePage = () => {
             ))}
           </div>
         )}
-        {filteredAds.length > 10 && (
+        {filteredAdsRecent.length > 10 && (
           <div className="flex justify-center items-center gap-3 mt-3">
             <button
               className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
@@ -558,7 +575,7 @@ const HomePage = () => {
               <div className="flex items-center gap-2">
                 {(() => { 
                   const totalPages = selectedLocationState
-                    ? Math.max(1, Math.ceil(filteredAds.length / RECENT_PAGE_SIZE))
+                    ? Math.max(1, Math.ceil(filteredAdsRecent.length / RECENT_PAGE_SIZE))
                     : (allAdsRecentTotalPages || Math.max(1, allAdsRecentPage));
                   return (
                   <>

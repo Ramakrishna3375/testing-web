@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import advertise1 from '../assets/Website logos/advertise1.jpg';
 import advertise2 from '../assets/Website logos/advertise2.jpg';
 import { FaMapMarkerAlt } from "react-icons/fa";
-import { getAllCategories, getAllActiveAds, getBanners } from "../Services/api";
+import { getAllCategories, getAllActiveAds, getBanners, searchAdsByCity } from "../Services/api";
 import Header from './Header&Footer/Header';
 import Footer from "./Header&Footer/Footer";
 
@@ -22,10 +22,35 @@ const HomePage = () => {
   const [catError, setCatError] = useState(null);
   const [ads, setAds] = useState([]);
   const [loadingAds, setLoadingAds] = useState(true);
+  // Section-specific loading for backend pagination
+  const [loadingPremium, setLoadingPremium] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(false);
   const [adsError, setAdsError] = useState(null);
   const [banners, setBanners] = useState([]);
   const [loadingBanners, setLoadingBanners] = useState(true);
   const [bannerError, setBannerError] = useState(null);
+  // Pagination states
+  const [premiumPage, setPremiumPage] = useState(1);
+  const [recentPage, setRecentPage] = useState(1);
+  const PREMIUM_PAGE_SIZE = 20;
+  const RECENT_PAGE_SIZE = 20;
+  // Backend pagination when no city is selected (All cities)
+  const [selectedLocationState, setSelectedLocationState] = useState(null);
+  const [allAdsPage, setAllAdsPage] = useState(1);
+  const [allAdsTotalPages, setAllAdsTotalPages] = useState(null);
+  // Separate backend pagination for Recently grid when all cities
+  const [allAdsRecentPage, setAllAdsRecentPage] = useState(1);
+  const [allAdsRecentTotalPages, setAllAdsRecentTotalPages] = useState(null);
+
+  // Keep pages in range when ads list changes
+  useEffect(() => {
+    const totalPremiumPages = Math.max(1, Math.ceil((Array.isArray(filteredAds) ? filteredAds.length : 0) / PREMIUM_PAGE_SIZE));
+    if (premiumPage > totalPremiumPages) setPremiumPage(totalPremiumPages);
+    if (premiumPage < 1) setPremiumPage(1);
+    const totalRecentPages = Math.max(1, Math.ceil((Array.isArray(filteredAds) ? filteredAds.length : 0) / RECENT_PAGE_SIZE));
+    if (recentPage > totalRecentPages) setRecentPage(totalRecentPages);
+    if (recentPage < 1) setRecentPage(1);
+  }, [/* filteredAds is defined below but stable each render */ ads, showAllPremium, showAllRecent]);
 
   const getCategoryId = (cat) => cat._id;
 
@@ -68,55 +93,144 @@ const HomePage = () => {
     fetchCategories();
   }, []);
 
- useEffect(() => {
-    let allAds = [];
-    let selectedLocation = null;
+  useEffect(() => {
+   const fetchAds = async () => {
+     setLoadingAds(true);
+     setAdsError(null);
+     try {
+       let selectedLocation = null;
+       try {
+         const storedLocation = sessionStorage.getItem('selectedLocation');
+         selectedLocation = storedLocation ? JSON.parse(storedLocation) : null;
+       } catch {}
 
-    const applyFilter = () => {
-      if (!Array.isArray(allAds)) return;
-      try {
-        const storedLocation = sessionStorage.getItem('selectedLocation');
-        selectedLocation = storedLocation ? JSON.parse(storedLocation) : null;
-      } catch {}
-      if (selectedLocation && selectedLocation.name) {
-        const filtered = allAds.filter(ad => {
-          const city = ad?.location?.city || ad?.city;
-          return city && city.toLowerCase() === selectedLocation.name.toLowerCase();
-        });
-        setAds(filtered);
-      } else {
-        setAds(allAds);
-      }
-    };
+        setSelectedLocationState(selectedLocation);
 
-    const fetchAds = async () => {
-      setLoadingAds(true);
-      setAdsError(null);
-      try {
-        const res = await getAllActiveAds();
-        if (res && res.data && Array.isArray(res.data.postAds)) {
-          allAds = res.data.postAds;
-          applyFilter();
+        if (selectedLocation && selectedLocation.name) {
+         // Fetch ads by city via API
+         const res = await searchAdsByCity(selectedLocation.name);
+         if (res && res.data && Array.isArray(res.data.postAds)) {
+           setAds(res.data.postAds);
+            setAllAdsTotalPages(null);
+         } else {
+           setAds([]);
+           setAdsError("Could not fetch ads");
+         }
         } else {
-          setAds([]);
-          setAdsError("Could not fetch ads");
-        }
-      } catch (err) {
-        setAds([]);
-        setAdsError("Could not fetch ads");
-      }
-      setLoadingAds(false);
-    };
+         // No location selected: fetch all active ads
+          const initialPage = 1;
+          const res = await getAllActiveAds(initialPage);
+         if (res && res.data && Array.isArray(res.data.postAds)) {
+           setAds(res.data.postAds);
+            const total = res.data?.pagination?.totalPages || null;
+            setAllAdsTotalPages(total);
+            setAllAdsRecentTotalPages(total);
+         } else {
+           setAds([]);
+           setAdsError("Could not fetch ads");
+         }
+       }
+     } catch (err) {
+       setAds([]);
+       setAdsError("Could not fetch ads");
+     }
+     setLoadingAds(false);
+   };
 
-    fetchAds();
+   fetchAds();
 
-    const onLocChange = (e) => {
-      selectedLocation = e?.detail || null;
-      applyFilter();
-    };
-    window.addEventListener('selectedLocationChanged', onLocChange);
-    return () => window.removeEventListener('selectedLocationChanged', onLocChange);
-  }, []);
+  const onLocChange = async (e) => {
+     const next = e?.detail || null;
+     setLoadingAds(true);
+     setAdsError(null);
+     try {
+       if (next && next.name) {
+         const res = await searchAdsByCity(next.name);
+         if (res && res.data && Array.isArray(res.data.postAds)) {
+           setAds(res.data.postAds);
+          setSelectedLocationState(next);
+          setAllAdsPage(1);
+          setAllAdsTotalPages(null);
+          setAllAdsRecentPage(1);
+          setAllAdsRecentTotalPages(null);
+         } else {
+           setAds([]);
+           setAdsError("Could not fetch ads");
+         }
+       } else {
+        const res = await getAllActiveAds(1);
+         if (res && res.data && Array.isArray(res.data.postAds)) {
+           setAds(res.data.postAds);
+          setSelectedLocationState(null);
+          setAllAdsPage(1);
+          const total = res.data?.pagination?.totalPages || null;
+          setAllAdsTotalPages(total);
+          setAllAdsRecentPage(1);
+          setAllAdsRecentTotalPages(total);
+         } else {
+           setAds([]);
+           setAdsError("Could not fetch ads");
+         }
+       }
+     } catch (err) {
+       setAds([]);
+       setAdsError("Could not fetch ads");
+     }
+     setLoadingAds(false);
+   };
+   window.addEventListener('selectedLocationChanged', onLocChange);
+   return () => window.removeEventListener('selectedLocationChanged', onLocChange);
+ }, []);
+
+ // Backend pagination fetch for Recommended (when All cities + View All)
+ useEffect(() => {
+   if (selectedLocationState || !showAllPremium) return;
+   const pageToFetch = allAdsPage || 1;
+   setLoadingPremium(true);
+   setAdsError(null);
+   (async () => {
+     try {
+       const res = await getAllActiveAds(pageToFetch);
+       if (res && res.data && Array.isArray(res.data.postAds)) {
+         setAds(res.data.postAds);
+         const total = res.data?.pagination?.totalPages || null;
+         setAllAdsTotalPages(total);
+       } else {
+         setAds([]);
+         setAdsError("Could not fetch ads");
+       }
+     } catch {
+       setAds([]);
+       setAdsError("Could not fetch ads");
+     }
+     setLoadingPremium(false);
+   })();
+ }, [allAdsPage, selectedLocationState, showAllPremium]);
+
+ // Backend pagination fetch for Recent (when All cities + View All)
+ useEffect(() => {
+   if (selectedLocationState || !showAllRecent) return;
+   const pageToFetch = allAdsRecentPage || 1;
+   setLoadingRecent(true);
+   setAdsError(null);
+   (async () => {
+     try {
+       const res = await getAllActiveAds(pageToFetch);
+       if (res && res.data && Array.isArray(res.data.postAds)) {
+         setAds(res.data.postAds);
+         const total = res.data?.pagination?.totalPages || null;
+         setAllAdsRecentTotalPages(total);
+       } else {
+         setAds([]);
+         setAdsError("Could not fetch ads");
+       }
+     } catch {
+       setAds([]);
+       setAdsError("Could not fetch ads");
+     }
+     setLoadingRecent(false);
+   })();
+ }, [allAdsRecentPage, selectedLocationState, showAllRecent]);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -290,7 +404,7 @@ const HomePage = () => {
 
            {/* LocalMart Recommended */}
           <h2 className="text-lg sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
-        {loadingAds ? (
+        {(loadingAds || (!selectedLocationState && showAllPremium && loadingPremium)) ? (
           <div className="py-8 text-center text-xl text-blue-600 font-semibold">
             Loading . . .
           </div>
@@ -300,7 +414,11 @@ const HomePage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 p-2 sm:p-0 sm:gap-3 gap-3">
-            {(showAllPremium ? filteredAds : filteredAds.slice(0, 10)).map((ad) => (
+            {(
+              showAllPremium
+                ? (selectedLocationState ? filteredAds.slice((premiumPage - 1) * PREMIUM_PAGE_SIZE, premiumPage * PREMIUM_PAGE_SIZE) : filteredAds)
+                : filteredAds.slice(0, 10)
+            ).map((ad) => (
               <div
                 key={ad.id || ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2.5 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
@@ -333,18 +451,51 @@ const HomePage = () => {
           </div>
         )}
         {filteredAds.length > 10 && (
-          <div className="flex justify-center mt-3">
+          <div className="flex justify-center items-center gap-3 mt-3">
             <button
               className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
-              onClick={() => setShowAllPremium((prev) => !prev)}>
+              onClick={() => {
+                setShowAllPremium((prev) => {
+                  const next = !prev;
+                  if (next) setPremiumPage(1);
+                  return next;
+                });
+              }}>
               {showAllPremium ? "Show Less" : "View All"}
             </button>
+            {showAllPremium && (
+              <div className="flex items-center gap-2">
+                {(() => { 
+                  const totalPages = selectedLocationState
+                    ? Math.max(1, Math.ceil(filteredAds.length / PREMIUM_PAGE_SIZE))
+                    : (allAdsTotalPages || Math.max(1, allAdsPage));
+                  return (
+                  <>
+                    <button
+                      className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-xs"
+                      disabled={selectedLocationState ? premiumPage <= 1 : allAdsPage <= 1}
+                      onClick={() => selectedLocationState ? setPremiumPage((p) => Math.max(1, p - 1)) : setAllAdsPage((p) => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-xs text-gray-700">Page {selectedLocationState ? premiumPage : allAdsPage} of {totalPages}</span>
+                    <button
+                      className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-xs"
+                      disabled={selectedLocationState ? premiumPage >= totalPages : (allAdsTotalPages ? allAdsPage >= totalPages : false)}
+                      onClick={() => selectedLocationState ? setPremiumPage((p) => Math.min(totalPages, p + 1)) : setAllAdsPage((p) => p + 1)}
+                    >
+                      Next
+                    </button>
+                  </>
+                ); })()}
+              </div>
+            )}
           </div>
         )}
 
           {/* Recently Ad Grid */}
          <h2 className="text-lg sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
-        {loadingAds ? (
+        {(loadingAds || (!selectedLocationState && showAllRecent && loadingRecent)) ? (
           <div className="py-8 text-center text-xl text-blue-600 font-semibold">
             Loading . . .
           </div>
@@ -354,7 +505,11 @@ const HomePage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3 gap-2">
-            {(showAllRecent ? filteredAds : filteredAds.slice(0, 10)).map((ad) => (
+            {(
+              showAllRecent
+                ? (selectedLocationState ? filteredAds.slice((recentPage - 1) * RECENT_PAGE_SIZE, recentPage * RECENT_PAGE_SIZE) : filteredAds)
+                : filteredAds.slice(0, 10)
+            ).map((ad) => (
               <div
                 key={ad.id || ad._id}
                 className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-400 p-2 sm:p-3 hover:shadow-lg hover:scale-102 transition cursor-pointer flex flex-col justify-between"
@@ -386,13 +541,46 @@ const HomePage = () => {
           </div>
         )}
         {filteredAds.length > 10 && (
-          <div className="flex justify-center mt-3">
+          <div className="flex justify-center items-center gap-3 mt-3">
             <button
               className="px-2 py-1 sm:px-5 sm:py-2 rounded bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow"
-              onClick={() => setShowAllRecent((prev) => !prev)}
+              onClick={() => {
+                setShowAllRecent((prev) => {
+                  const next = !prev;
+                  if (next) setRecentPage(1);
+                  return next;
+                });
+              }}
             >
               {showAllRecent ? "Show Less" : "View All"}
             </button>
+            {showAllRecent && (
+              <div className="flex items-center gap-2">
+                {(() => { 
+                  const totalPages = selectedLocationState
+                    ? Math.max(1, Math.ceil(filteredAds.length / RECENT_PAGE_SIZE))
+                    : (allAdsRecentTotalPages || Math.max(1, allAdsRecentPage));
+                  return (
+                  <>
+                    <button
+                      className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-xs"
+                      disabled={selectedLocationState ? recentPage <= 1 : allAdsRecentPage <= 1}
+                      onClick={() => selectedLocationState ? setRecentPage((p) => Math.max(1, p - 1)) : setAllAdsRecentPage((p) => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-xs text-gray-700">Page {selectedLocationState ? recentPage : allAdsRecentPage} of {totalPages}</span>
+                    <button
+                      className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-xs"
+                      disabled={selectedLocationState ? recentPage >= totalPages : (allAdsRecentTotalPages ? allAdsRecentPage >= totalPages : false)}
+                      onClick={() => selectedLocationState ? setRecentPage((p) => Math.min(totalPages, p + 1)) : setAllAdsRecentPage((p) => p + 1)}
+                    >
+                      Next
+                    </button>
+                  </>
+                ); })()}
+              </div>
+            )}
           </div>
         )}
         </main>

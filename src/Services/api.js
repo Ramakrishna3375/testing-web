@@ -11,9 +11,16 @@ export const getAllSubCategories = async () => {
   return await commonRequest("GET", `${BASE_URL}/api/sub-categories`);
 };
 
-//Get All Posted Ads With Status Active
-export const getAllActiveAds = async () => {
-  return await commonRequest("GET", `${BASE_URL}/api/post-ads`);
+//Get All Posted Ads With Status Active (paginated)
+export const getAllActiveAds = async (page = 1) => {
+  const pageNum = Number(page) || 1;
+  return await commonRequest("GET", `${BASE_URL}/api/post-ads?page=${pageNum}`);
+};
+
+// Search Ads by City
+export const searchAdsByCity = async (city) => {
+  const encodedCity = encodeURIComponent(city);
+  return await commonRequest("GET", `${BASE_URL}/api/post-ads/search/city?city=${encodedCity}`);
 };
 
 //Get My Ads

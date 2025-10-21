@@ -1,5 +1,6 @@
 import { commonRequest } from "./apiCall";
-import { BASE_URL } from "./helper";
+import { BASE_URL, LOCALMART_BASE_URL } from "./helper";
+
 
 //Get All Categories
 export const getAllCategories = async () => {
@@ -141,24 +142,24 @@ export const deleteChat = async (chatId, token) => {
 
 //User Login
 export const userLogin = async (email, password) => {
-  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/authenticate`, { email, password });
+  return await commonRequest("POST", `${LOCALMART_BASE_URL}/auth/authenticate`, { email, password });
 };
 
 //Register OTP with Email
 export const registerOtpWithEmail = async (email) => {
-  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/get-verification-otp`, { email });
+  return await commonRequest("POST", `${LOCALMART_BASE_URL}/auth/get-verification-otp`, { email });
 };
 
 //Verify OTP with Email
 export const verifyOtpWithEmail = async (email, otp) => {
-  return await commonRequest("POST", `https://stage-api.localmart.app:8443/auth/verify-account`, { email, otp });
+  return await commonRequest("POST", `${LOCALMART_BASE_URL}/auth/verify-account`, { email, otp });
 };
 
 //Register User Details
 export const registerUserDetails = async (userData, token) => {
   return await commonRequest(
     "POST",
-    `https://stage-api.localmart.app:8443/auth/completeUserProfile`,
+    `${LOCALMART_BASE_URL}/auth/completeUserProfile`,
     userData,
     token ? { Authorization: token } : undefined
   );
@@ -166,7 +167,7 @@ export const registerUserDetails = async (userData, token) => {
 
 //Get All Countries
 export const getAllCountries = async () => {
-  return await commonRequest("GET", `https://stage-api.localmart.app:8443/locations/countries`);
+  return await commonRequest("GET", `${LOCALMART_BASE_URL}/locations/countries`);
 };
 
 // Get states by country id
@@ -174,7 +175,7 @@ export const getStatesByCountryId = async (countryId) => {
   const encoded = encodeURIComponent(countryId);
   return await commonRequest(
     "GET",
-    `https://stage-api.localmart.app:8443/locations/countries/${encoded}/states`
+    `${LOCALMART_BASE_URL}/locations/countries/${encoded}/states`
   );
 };
 
@@ -183,7 +184,7 @@ export const getCitiesByStateId = async (stateId) => {
   const encodedStateId = encodeURIComponent(stateId);
   return await commonRequest(
     "GET",
-    `https://stage-api.localmart.app:8443/locations/states/${encodedStateId}/cities`
+    `${LOCALMART_BASE_URL}/locations/states/${encodedStateId}/cities`
   );
 };
 
@@ -191,7 +192,7 @@ export const getCitiesByStateId = async (stateId) => {
 export const getUserDetails = async (token) => {
   return await commonRequest(
     "GET",
-    `https://stage-api.localmart.app:8443/auth/user-details`,
+    `${LOCALMART_BASE_URL}/auth/user-details`,
     null,
     token ? { Authorization: token } : undefined
   );
@@ -201,7 +202,7 @@ export const getUserDetails = async (token) => {
 export const updateUserDetails = async (payload, token) => {
   return await commonRequest(
     "PUT",
-    `https://stage-api.localmart.app:8443/auth/update-details`,
+    `${LOCALMART_BASE_URL}/auth/update-details`,
     payload,
     token ? { Authorization: token } : undefined
   );
@@ -212,7 +213,7 @@ export const updateUserDetails = async (payload, token) => {
 export const uploadProfilePicture = async (formData, token) => {
   return await commonRequest(
     "POST",
-    `https://stage-api.localmart.app:8443/auth/upload-profile-picture`,
+    `${LOCALMART_BASE_URL}/auth/upload-profile-picture`,
     formData,
     token ? { Authorization: token } : undefined
   );

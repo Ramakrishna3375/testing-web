@@ -4,6 +4,7 @@ import Header from "../Header&Footer/Header";
 import Footer from "../Header&Footer/Footer";
 import { getUserDetails, updateUserDetails, getCitiesByStateId, getAllCountries, getStatesByCountryId, uploadProfilePicture } from '../../Services/api';
 import UserProfile from '../../assets/Website logos/UserProfile.jpg';
+import { Skeleton, SkeletonCircle } from '../SkeletonLoader/FilesLoader';
 
 
 const ProfilePage = () => {
@@ -345,7 +346,40 @@ const ProfilePage = () => {
 
         <div className="bg-white rounded-2xl shadow p-5 sm:p-8">
           {loading ? (
-            <div className="text-gray-600">Loading . . .</div>
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 md:col-span-4 flex flex-col items-center text-center">
+                <SkeletonCircle size={112} className="mb-3" /> {/* w-28 h-28 */}
+                <Skeleton className="h-6 w-3/4 mb-1" />
+                <Skeleton className="h-4 w-1/2 mb-3" />
+                <Skeleton className="h-8 w-40 rounded-full" />
+              </div>
+              <div className="col-span-12 md:col-span-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Array.from({ length: 2 }).map((_, panelIdx) => (
+                    <div key={panelIdx} className="bg-gray-50 rounded-xl p-4 flex flex-col gap-3">
+                      {Array.from({ length: 5 }).map((_, rowIdx) => (
+                        <div key={rowIdx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-2 border-b border-gray-200">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-6">
+                  <Skeleton className="h-6 w-40 mb-3" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {Array.from({ length: 2 }).map((_, addrIdx) => (
+                      <div key={addrIdx} className="border rounded-xl p-4 bg-white">
+                        <Skeleton className="h-5 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-full mb-1" />
+                        <Skeleton className="h-4 w-5/6" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : error ? (
             <div className="text-red-500">{error}</div>
           ) : !user ? (

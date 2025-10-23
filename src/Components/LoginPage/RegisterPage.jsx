@@ -13,6 +13,7 @@ import { registerUserDetails } from "../../Services/api";
 import { getCitiesByStateId } from "../../Services/api";
 import { getAllCountries } from "../../Services/api";
 import { getStatesByCountryId } from "../../Services/api";
+import { Skeleton } from '../SkeletonLoader/FilesLoader';
 
 const CompleteRegistration = () => {
   const navigate = useNavigate();
@@ -621,6 +622,23 @@ const CompleteRegistration = () => {
 
                     {showRegistrationFields && (
                       <div className="grid grid-cols-12 gap-4 w-full">
+                        {isRegistering ? (
+                          <>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-28 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-6"><Skeleton className="h-28 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-4"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-4"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-4"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                            <div className="col-span-12 md:col-span-4"><Skeleton className="h-12 w-full rounded-2xl" /></div>
+                          </>
+                        ) : (
+                          <>
                         {/* First Name */}
                         <div className="col-span-12 md:col-span-6 flex items-center border border-gray-300 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 md:py-4 min-h-[48px] md:min-h-[56px] bg-white text-black overflow-hidden">
                             <span className="mr-3 flex-shrink-0">
@@ -806,39 +824,49 @@ const CompleteRegistration = () => {
                               onChange={e => setSelectedPincode(e.target.value)}
                             />
                           </div>
-                      </div>
+                        </>
+                      )}
+                    </div>
                     )}
 
                     {showOtpSection && (
                       <div className="w-full flex flex-col gap-4 mt-4">
                         <p className="text-black text-lg font-medium">Enter OTP</p>
-                        <div className="flex justify-between gap-2">
-                          {otp.map((digit, index) => (
-                            <input
-                              key={index}
-                              type="text"
-                              maxLength="1"
-                              value={digit}
-                              onChange={e => {
-                                const newOtp = [...otp];
-                                newOtp[index] = e.target.value;
-                                setOtp(newOtp);
-                                // Move to next input if a digit is entered
-                                if (e.target.value && index < 5) {
-                                  document.getElementById(`otp-input-${index + 1}`).focus();
-                                }
-                              }}
-                              onKeyDown={e => {
-                                // Move to previous input on backspace if current is empty
-                                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                                  document.getElementById(`otp-input-${index - 1}`).focus();
-                                }
-                              }}
-                              className="w-12 h-12 text-center text-xl font-semibold border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                              id={`otp-input-${index}`}
-                            />
-                          ))}
-                        </div>
+                        {isVerifyingOtp ? (
+                          <div className="flex justify-between gap-2">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                              <Skeleton key={i} className="w-12 h-12 rounded-lg" />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex justify-between gap-2">
+                            {otp.map((digit, index) => (
+                              <input
+                                key={index}
+                                type="text"
+                                maxLength="1"
+                                value={digit}
+                                onChange={e => {
+                                  const newOtp = [...otp];
+                                  newOtp[index] = e.target.value;
+                                  setOtp(newOtp);
+                                  // Move to next input if a digit is entered
+                                  if (e.target.value && index < 5) {
+                                    document.getElementById(`otp-input-${index + 1}`).focus();
+                                  }
+                                }}
+                                onKeyDown={e => {
+                                  // Move to previous input on backspace if current is empty
+                                  if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                                    document.getElementById(`otp-input-${index - 1}`).focus();
+                                  }
+                                }}
+                                className="w-12 h-12 text-center text-xl font-semibold border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                id={`otp-input-${index}`}
+                              />
+                            ))}
+                          </div>
+                        )}
                         <div className="flex justify-between items-center mt-2">
                           <span className="text-gray-500">{otpTimer > 0 ? `${Math.floor(otpTimer/60)}:${String(otpTimer%60).padStart(2,'0')}` : ''}</span>
                           {showResendOtp && (

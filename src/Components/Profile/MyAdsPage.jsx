@@ -4,6 +4,7 @@ import Header from '../Header&Footer/Header';
 import Footer from '../Header&Footer/Footer';
 import { getMyAds } from '../../Services/api';
 import { FaMapMarkerAlt, FaEye } from "react-icons/fa";
+import { Skeleton } from '../SkeletonLoader/FilesLoader';
 
 const MyAdsPage = () => {
   const navigate = useNavigate();
@@ -102,7 +103,23 @@ const MyAdsPage = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">My Ads</h1>
 
           {loading ? (
-            <div className="text-center text-gray-500">Loading your ads...</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+                  <Skeleton className="w-full h-40" />
+                  <div className="p-4 flex flex-col flex-grow">
+                    <Skeleton className="h-6 w-20 mb-2" />
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <div className="flex items-center justify-between mt-auto">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : error ? (
             <div className="text-center text-red-500">{error}</div>
           ) : myAds.length === 0 ? (

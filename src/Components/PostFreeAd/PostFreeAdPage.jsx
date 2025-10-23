@@ -3,6 +3,7 @@ import { getAllCategories, getAllSubCategories } from "../../Services/api";
 import { useNavigate } from "react-router-dom";
 import Header from '../Header&Footer/Header';
 import Footer from "../Header&Footer/Footer";
+import { Skeleton } from '../SkeletonLoader/FilesLoader';
 
 export default function PostFreeAdPage() {
   const navigate = useNavigate();
@@ -88,8 +89,13 @@ export default function PostFreeAdPage() {
          <div className="md:hidden top-20 bg-white z-20 border-b border-gray-300 overflow-x-auto px-2 py-1.5 scrollbar-hide">
         <div className="flex gap-2 min-w-max">
           {loadingCategories ? (
-            <div className="py-8 text-center text-xl text-blue-600 font-semibold w-full">
-              Loading categories . . .
+            <div className="flex gap-2 min-w-max">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center justify-center rounded-md border border-gray-300 p-2 min-w-[70px] max-w-[90px]">
+                  <Skeleton className="h-5 w-5 mb-1 rounded-full" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              ))}
             </div>
           ) : categories.map((cat) => (
             <button
@@ -115,9 +121,14 @@ export default function PostFreeAdPage() {
   <h2 className="text-lg font-semibold mb-4">Select a category</h2>
   <ul className="space-y-3">
     {loadingCategories ? (
-              <div className="py-8 text-center text-lg text-blue-600 font-semibold w-full">
-                Loading categories . . .
-              </div>
+              <ul className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <li key={i} className="flex items-center gap-2 border border-gray-300 p-4 rounded-md">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-32" />
+                  </li>
+                ))}
+              </ul>
             ) : categories.map((cat) => (
               <li
                 key={cat.name}
@@ -142,8 +153,13 @@ export default function PostFreeAdPage() {
           <>
             <h2 className="font-bold text-sm sm:text-lg mb-1 sm:mb-2">Select a subcategory</h2>
             {loadingSubCategories ? (
-              <div className="py-8 text-center text-xl text-blue-600 font-semibold">
-                Loading subcategories . . .
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-lg shadow-md p-2 sm:p-4 min-h-[120px]">
+                    <Skeleton className="w-12 h-12 sm:w-16 sm:h-16 rounded-full mb-1 sm:mb-2" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ))}
               </div>
             ) : subCategories.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">

@@ -4,6 +4,7 @@ import Header from "../Header&Footer/Header";
 import Footer from "../Header&Footer/Footer";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaMapMarkerAlt } from "react-icons/fa";
+import { Skeleton } from "../SkeletonLoader/FilesLoader";
 
 const MobilesPage = () => {
   const navigate = useNavigate();
@@ -274,10 +275,26 @@ const MobilesPage = () => {
 
           {/* Ads View section */}
           {loadingAds ? (
-  <div className="flex justify-center items-center h-40">
-    <p className="text-blue-600 text-lg font-semibold">Loading ads...</p>
-  </div>
-) : adsError ? (
+            <div className={`p-2 sm:p-2 sm:mr-2 mt-2
+              ${viewMode === "grid"
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-4"
+                : "flex flex-col gap-2"}
+              ${viewMode === "list" ? "p-3 sm:p-0 m-2 md:ml-1 gap-3" : ""}`}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={`bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3 ${viewMode === "list" ? "flex flex-row gap-3 items-center" : ""}`}>
+                  <Skeleton className={`${viewMode === "grid" ? "w-full h-32 rounded-lg mb-2" : "w-24 h-16 rounded-lg flex-shrink-0"}`} />
+                  <div className={`${viewMode === "list" ? "flex-1" : ""}`}>
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className={`h-3 mb-2 ${viewMode === "list" ? "w-3/4" : "w-full"}`} />
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-3 w-12 ml-auto" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : adsError ? (
   <div className="flex justify-center items-center h-40">
     <p className="text-red-600 text-lg font-semibold">{adsError}</p>
   </div>

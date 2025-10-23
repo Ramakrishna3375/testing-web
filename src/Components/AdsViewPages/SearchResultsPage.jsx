@@ -4,6 +4,7 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { searchAdsByTitle } from "../../Services/api";
 import Header from '../Header&Footer/Header';
 import Footer from "../Header&Footer/Footer";
+import { Skeleton } from "../SkeletonLoader/FilesLoader";
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -69,8 +70,20 @@ const SearchResultsPage = () => {
       <h2 className="text-xl font-semibold mb-4">Search Results for "{query}"</h2>
 
       {loadingAds ? (
-        <div className="py-8 text-center text-xl text-blue-600 font-semibold">
-          Loading ads . . .
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 p-2 sm:p-0 sm:gap-3 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-2.5 sm:p-3">
+              <Skeleton className="w-full h-34 sm:h-35 rounded-xl mb-2" />
+              <div className="mt-1">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-3 w-5/6 mb-2" />
+                <div className="flex items-center">
+                  <Skeleton className="h-3 w-24" />
+                  <span className="ml-auto"><Skeleton className="h-3 w-12" /></span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : adsError ? (
         <div className="py-8 text-center text-red-600 font-semibold">{adsError}</div>

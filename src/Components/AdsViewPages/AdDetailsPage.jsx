@@ -4,6 +4,7 @@ import Header from "../Header&Footer/Header";
 import Footer from "../Header&Footer/Footer";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { IoIosShareAlt } from "react-icons/io";
+import { Skeleton } from '../SkeletonLoader/FilesLoader';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -157,7 +158,74 @@ const ProductDetailPage = () => {
 
   if (loadingAd) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-lg text-gray-500">Loading...</div>
+      <div className="text-sm">
+        <Header />
+        
+        {/* Breadcrumb Skeleton */}
+        <div className="flex flex-row sm:flex-row items-start sm:items-center text-sm sm:text-xl font-semibold max-w-6xl mx-auto py-3 px-4 sm:px-0">
+          <div className="flex flex-wrap gap-1 sm:gap-2 ml-2 sm:ml-9">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex items-center sm:mt-0 ml-auto sm:ml-auto gap-4">
+            <Skeleton className="h-6 w-6 rounded" />
+            <Skeleton className="h-6 w-6 rounded" />
+          </div>
+        </div>
+
+        {/* Product Section Skeleton */}
+        <div className="max-w-7xl px-2 md:px-6 lg:px-8 pb-5 sm:pb-10 mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-stretch gap-8 xl:gap-14">
+            
+            {/* Image Carousel Skeleton */}
+            <div className="relative w-full max-w-xl mx-auto lg:mx-0 flex items-center justify-center shadow bg-white rounded-2xl aspect-[4/2.5] h-[19rem] sm:h-[25rem] lg:h-auto">
+              <Skeleton className="w-full h-full rounded-xl" />
+            </div>
+
+            {/* Product Info Skeleton */}
+            <div className="flex-1 flex flex-col justify-between mt-6 lg:mt-0 gap-6">
+              <div className="border border-gray-200 rounded-2xl shadow bg-white p-4 md:p-5 flex flex-col gap-3">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-6 w-48" />
+              </div>
+              <div className="border border-gray-200 rounded-2xl shadow bg-white p-4 md:p-5 flex flex-col gap-4">
+                <div className="flex flex-row sm:flex-row gap-4 sm:gap-6 md:gap-8">
+                  <div className="flex-1 text-center">
+                    <Skeleton className="h-4 w-16 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-24 mx-auto" />
+                  </div>
+                  <div className="flex-1 text-center">
+                    <Skeleton className="h-4 w-20 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-28 mx-auto" />
+                  </div>
+                  <div className="flex-1 text-center">
+                    <Skeleton className="h-4 w-24 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-20 mx-auto" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Description Skeleton */}
+          <div className="mt-10 max-w-6xl mx-auto px-2 sm:px-0">
+            <Skeleton className="h-8 w-32 mb-5" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+        </div>
+
+        <Footer />
+      </div>
     );
   }
   if (adError) {

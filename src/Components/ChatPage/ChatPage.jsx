@@ -8,6 +8,7 @@ import { useSocket } from '../../hooks/useSocket.js';
 import UserProfile from '../../assets/Website logos/UserProfile.jpg';
 import socketService from '../../hooks/socketService';
 import { FaTrash, FaCheckDouble } from 'react-icons/fa';
+import { Skeleton } from '../SkeletonLoader/FilesLoader';
  
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -832,7 +833,20 @@ const ChatPage = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {loadingInbox ? (
-                <div className="flex items-center justify-center h-full text-gray-500">Loading chats...</div>
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="rounded-lg p-3 bg-gray-100">
+                      <div className="flex items-start gap-2">
+                        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-4 w-24 mb-2" />
+                          <Skeleton className="h-3 w-32 mb-1" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : filteredMessages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-gray-500">
                   <div className="text-center">
@@ -917,7 +931,19 @@ const ChatPage = () => {
                   <div className="relative z-10 h-full overflow-y-auto p-3 pb-4">
                     <div className="min-h-full flex flex-col">
                       {loadingChat ? (
-                        <div className="flex items-center justify-center h-full text-gray-500">Loading chat...</div>
+                        <div className="space-y-3">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className={`flex mb-3 items-end gap-2 ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                              {i % 2 !== 0 && (
+                                <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                              )}
+                              <Skeleton className={`max-w-[70%] p-3 rounded-2xl h-12 ${i % 2 === 0 ? 'bg-blue-100' : 'bg-gray-200'}`} />
+                              {i % 2 === 0 && (
+                                <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       ) : messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full text-gray-500">
                           <div className="text-center">

@@ -6,6 +6,7 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { getAllCategories, getAllActiveAds, getBanners, searchAdsByCity } from "../Services/api";
 import Header from './Header&Footer/Header';
 import Footer from "./Header&Footer/Footer";
+import { Skeleton } from './SkeletonLoader/FilesLoader';
 
 const adImages = [
   advertise1, advertise2
@@ -293,7 +294,14 @@ const HomePage = () => {
       <div className="sm:hidden top-14 bg-white z-10 p-1 pb-1 shadow">
         <div className="flex overflow-x-auto w-full gap-2 pb-1.5 scrollbar-hide">
           {loadingCategories ? (
-            <div className="px-3 py-2">Loading...</div>
+            <div className="flex gap-2 min-w-max">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center justify-center rounded-md border border-gray-300 p-2 min-w-[70px] max-w-[90px]">
+                  <Skeleton className="h-5 w-5 mb-1 rounded-full" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              ))}
+            </div>
           ) : catError ? (
             <div className="px-3 py-2 text-red-600">Error loading categories</div>
           ) : (
@@ -330,7 +338,14 @@ const HomePage = () => {
     <div className="hidden sm:block top-20 h-120 w-58 md:w-44 lg:w-60 min-w-[160px] max-w-[250px] bg-white rounded-lg p-3 shadow overflow-y-auto">
       <h3 className="text-lg font-semibold mb-1 text-center">All Categories</h3>
       {loadingCategories ? (
-        <div className="p-2">Loading...</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-lg shadow-md p-4 min-h-[120px]">
+              <Skeleton className="w-12 h-12 rounded-full mb-2" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ))}
+        </div>
       ) : catError ? (
         <div className="p-2 text-red-600">Failed to load categories</div>
       ) : (
@@ -375,7 +390,9 @@ const HomePage = () => {
 
           {/* Banner Section */}
           {loadingBanners ? (
-            <div className="py-8 text-center text-xl text-blue-600 font-semibold">Loading . . .</div>
+            <div className="relative w-full h-64 sm:h-80 lg:h-96">
+              <Skeleton className="w-full h-full rounded-lg" />
+            </div>
           ) : bannerError ? (
             <div className="py-8 text-center text-red-600 font-semibold">{bannerError}</div>
           ) : (
@@ -422,8 +439,18 @@ const HomePage = () => {
            {/* LocalMart Recommended */}
           <h2 className="text-lg sm:text-lg font-semibold mb-2">LocalMart Recommended</h2>
         {(loadingAds || (!selectedLocationState && showAllPremium && loadingPremium)) ? (
-          <div className="py-8 text-center text-xl text-blue-600 font-semibold">
-            Loading . . .
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                <Skeleton className="w-full h-32 rounded-lg mb-2" />
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-3 w-full mb-1" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : adsError ? (
           <div className="py-8 text-center text-red-600 font-semibold">
@@ -513,8 +540,18 @@ const HomePage = () => {
           {/* Recently Ad Grid */}
          <h2 className="text-lg sm:text-lg font-semibold mb-2 mt-4">Recently Added</h2>
         {(loadingAds || (!selectedLocationState && showAllRecent && loadingRecent)) ? (
-          <div className="py-8 text-center text-xl text-blue-600 font-semibold">
-            Loading . . .
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                <Skeleton className="w-full h-32 rounded-lg mb-2" />
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-3 w-full mb-1" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : adsError ? (
           <div className="py-8 text-center text-red-600 font-semibold">
